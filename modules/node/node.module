@@ -923,6 +923,7 @@ function node_load_multiple($nids = array(), $conditions = array(), $reset = FAL
  *   A fully-populated node object.
  */
 function node_load($nid = NULL, $vid = NULL, $reset = FALSE) {
+  if (!is_numeric($nid)) return FALSE;
   $nids = (isset($nid) ? array($nid) : array());
   $conditions = (isset($vid) ? array('vid' => $vid) : array());
   $node = node_load_multiple($nids, $conditions, $reset);
