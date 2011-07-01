@@ -5052,7 +5052,7 @@ function drupal_cron_run() {
 
     // Record cron time
     variable_set('cron_last', REQUEST_TIME);
-    watchdog('cron', 'Cron run completed.', array(), WATCHDOG_NOTICE);
+    //watchdog('cron', 'Cron run completed.', array(), WATCHDOG_NOTICE);
 
     // Release cron lock.
     lock_release('cron');
