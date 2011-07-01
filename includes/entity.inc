@@ -160,6 +160,11 @@ class DrupalDefaultEntityController implements DrupalEntityControllerInterface {
   public function load($ids = array(), $conditions = array()) {
     $entities = array();
 
+    // workaround: taxonomy term id returns as a string instead of an array containing a string (cause is unknown)
+    if ($ids && !is_array($ids)){
+      $ids = array($ids);
+    }
+
     // Revisions are not statically cached, and require a different query to
     // other conditions, so separate the revision id into its own variable.
     if ($this->revisionKey && isset($conditions[$this->revisionKey])) {
