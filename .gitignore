@@ -4,3 +4,10 @@ sites/*/settings*.php
 # Ignore paths that contain user-generated content.
 sites/*/files
 sites/*/private
+
+# Custom ignores
+sites/default/deprecated
+sites/private_files
+sites/public_files
+info.php
+*.swp
