@@ -160,11 +160,6 @@ class DrupalDefaultEntityController implements DrupalEntityControllerInterface {
   public function load($ids = array(), $conditions = array()) {
     $entities = array();
 
-    // workaround: taxonomy term id returns as a string instead of an array containing a string (cause is unknown)
-    if ($ids && !is_array($ids)){
-      $ids = array($ids);
-    }
-
     // Revisions are not statically cached, and require a different query to
     // other conditions, so separate the revision id into its own variable.
     if ($this->revisionKey && isset($conditions[$this->revisionKey])) {
@@ -633,8 +628,6 @@ class EntityFieldQuery {
   /**
    * Adds a condition on field values.
    *
-   * @param $type
-   *   The condition array the given conditions should be added to.
    * @param $field
    *   Either a field name or a field array.
    * @param $column
@@ -1332,3 +1325,8 @@ class EntityFieldQuery {
   }
 
 }
+
+/**
+ * Exception thrown when a malformed entity is passed.
+ */
+class EntityMalformedException extends Exception { }

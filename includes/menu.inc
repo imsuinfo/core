@@ -1425,7 +1425,6 @@ function menu_tree_check_access(&$tree, $node_links = array()) {
     $select->condition('n.status', 1);
     $select->condition('n.nid', $nids, 'IN');
     $select->addTag('node_access');
-    $select->addTag('menu_tree_check_access');
     $nids = $select->execute()->fetchCol();
     foreach ($nids as $nid) {
       foreach ($node_links[$nid] as $mlid => $link) {
@@ -2341,7 +2340,7 @@ function menu_set_active_trail($new_trail = NULL) {
  *   menu link ('node/5' if it exists, or fallback to 'node/%').
  *
  * @return
- *   A fully translated menu link, or NULL if not matching menu link was
+ *   A fully translated menu link, or NULL if no matching menu link was
  *   found. The most specific menu link ('node/5' preferred over 'node/%') in
  *   the most preferred menu (as defined by menu_get_active_menu_names()) is
  *   returned.
