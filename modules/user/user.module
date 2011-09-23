@@ -359,6 +359,7 @@ class UserController extends DrupalDefaultEntityController {
  * @see user_load_multiple()
  */
 function user_load($uid, $reset = FALSE) {
+  if (!is_numeric($uid)) return FALSE;
   $users = user_load_multiple(array($uid), array(), $reset);
   return reset($users);
 }
