@@ -796,6 +796,15 @@ function user_access($string, $account = NULL) {
 
   if (!isset($account)) {
     $account = $user;
+
+    if (!is_object($user)){
+      $account = user_load();
+    }
+  }
+
+  if (!is_object($account)){
+    watchdog('user', "user_access() called with an invalid account, passed string is '%string'", array('%string' => check_plain($string)), WATCHDOG_ERROR);
+    return FALSE;
   }
 
   // User #1 has all privileges:
