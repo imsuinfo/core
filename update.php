@@ -149,7 +149,6 @@ function update_helpful_links() {
 function update_results_page() {
   drupal_set_title('Drupal database update');
   $links = update_helpful_links();
-  $output = '';
 
   update_task_list();
   // Report end result.
@@ -160,10 +159,10 @@ function update_results_page() {
     $log_message = ' All errors have been logged.';
   }
 
-  if (isset($_SESSION['update_success']) && $_SESSION['update_success']) {
+  if ($_SESSION['update_success']) {
     $output = '<p>Updates were attempted. If you see no failures below, you may proceed happily to the <a href="' . base_path() . '?q=admin">administration pages</a>. Otherwise, you may need to update your database manually.' . $log_message . '</p>';
   }
-  else if (!empty($_SESSION['updates_remaining'])) {
+  else {
     list($module, $version) = array_pop(reset($_SESSION['updates_remaining']));
     $output = '<p class="error">The update process was aborted prematurely while running <strong>update #' . $version . ' in ' . $module . '.module</strong>.' . $log_message;
     if (module_exists('dblog')) {
@@ -457,7 +456,7 @@ else {
   $output = update_access_denied_page();
 }
 if (isset($output) && $output) {
-  // Explictly start a session so that the update.php token will be accepted.
+  // Explicitly start a session so that the update.php token will be accepted.
   drupal_session_start();
   // We defer the display of messages until all updates are done.
   $progress_page = ($batch = batch_get()) && isset($batch['running']);
