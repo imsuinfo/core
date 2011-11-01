@@ -122,6 +122,45 @@ class FormsTestCase extends DrupalWebTestCase {
   }
 
   /**
+   * Tests #required checkboxes and radios.
+   *
+   * This test programmatically submits a test form containing several types of
+   * input elements. The form is submitted twice, once with values and once
+   * without, and each is checked for the proper #required error messages.
+   *
+   * @see form_test_validate_required_form()
+   */
+  function testRequiredCheckboxesRadio() {
+    $form = $form_state = array();
+    $form = form_test_validate_required_form($form, $form_state);
+
+    // Verify each error message shows when required value not selected.
+    $edit = array();
+    $this->drupalPost('form-test/validate-required', $edit, 'Submit');
+
+    foreach (array('textfield', 'checkboxes', 'select', 'radios') as $key) {
+      $this->assertText(t('!name field is required.', array('!name' => $form[$key]['#title'])));
+    }
+
+    // The unhelpful catch-all generic error should not appear.
+    $this->assertNoText(t('An illegal choice has been detected. Please contact the site administrator.'));
+
+    // Verify that no error appears with valid values.
+    $edit = array(
+      'textfield' => $this->randomString(),
+      'checkboxes[foo]' => TRUE,
+      'select' => 'foo',
+      'radios' => 'bar',
+    );
+    $this->drupalPost('form-test/validate-required', $edit, 'Submit');
+
+    foreach (array('textfield', 'checkboxes', 'select', 'radios') as $key) {
+      $this->assertNoText(t('!name field is required.', array('!name' => $form[$key]['#title'])));
+    }
+    $this->assertNoText(t('An illegal choice has been detected. Please contact the site administrator.'));
+  }
+
+  /**
    * Test default value handling for checkboxes.
    *
    * @see _form_test_checkbox()
@@ -521,7 +560,7 @@ class FormValidationTestCase extends DrupalWebTestCase {
    */
   function testValidateLimitErrors() {
     $edit = array(
-      'test' => 'invalid', 
+      'test' => 'invalid',
       'test_numeric_index[0]' => 'invalid',
       'test_substring[foo]' => 'invalid',
     );
