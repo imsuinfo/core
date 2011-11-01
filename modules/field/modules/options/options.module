@@ -105,7 +105,7 @@ function options_field_widget_form(&$form, &$form_state, $field, $instance, $lan
       $element += array(
         '#type' => $multiple ? 'checkboxes' : 'radios',
         // Radio buttons need a scalar value.
-        '#default_value' => $multiple || empty($default_value) ? $default_value : reset($default_value),
+        '#default_value' => $multiple ? $default_value : reset($default_value),
         '#options' => $options,
       );
       break;
