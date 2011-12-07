@@ -23,6 +23,12 @@ function form_test_menu() {
     'access arguments' => array('access content'),
     'type' => MENU_CALLBACK,
   );
+  $items['form-test/validate-required'] = array(
+    'title' => 'Form #required validation',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('form_test_validate_required_form'),
+    'access callback' => TRUE,
+  );
   $items['form-test/limit-validation-errors'] = array(
     'title' => 'Form validation with some error suppression',
     'page callback' => 'drupal_get_form',
@@ -329,6 +335,43 @@ function form_test_validate_form_validate(&$form, &$form_state) {
     // Trigger a form validation error to see our changes.
     form_set_error('');
   }
+}
+
+/**
+ * Form constructor for a form to test the #required property.
+ */
+function form_test_validate_required_form($form, &$form_state) {
+  $form['textfield'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Textfield',
+    '#required' => TRUE,
+  );
+  $form['checkboxes'] = array(
+    '#type' => 'checkboxes',
+    '#title' => 'Checkboxes',
+    '#options' => drupal_map_assoc(array('foo', 'bar')),
+    '#required' => TRUE,
+  );
+  $form['select'] = array(
+    '#type' => 'select',
+    '#title' => 'Select',
+    '#options' => drupal_map_assoc(array('foo', 'bar')),
+    '#required' => TRUE,
+  );
+  $form['radios'] = array(
+    '#type' => 'radios',
+    '#title' => 'Radios',
+    '#options' => drupal_map_assoc(array('foo', 'bar')),
+    '#required' => TRUE,
+  );
+  $form['radios_optional'] = array(
+    '#type' => 'radios',
+    '#title' => 'Radios (optional)',
+    '#options' => drupal_map_assoc(array('foo', 'bar')),
+  );
+  $form['actions'] = array('#type' => 'actions');
+  $form['actions']['submit'] = array('#type' => 'submit', '#value' => 'Submit');
+  return $form;
 }
 
 /**

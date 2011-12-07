@@ -2231,6 +2231,42 @@ function form_type_checkbox_value($element, $input = FALSE) {
 }
 
 /**
+ * Form value callback: Determines the value for a radio form element.
+ *
+ * @param $element
+ *   The form element whose value is being populated.
+ * @param $input
+ *   (optional) The incoming input to populate the form element. If FALSE, the
+ *   element's default value is returned. Defaults to FALSE.
+ *
+ * @return
+ *   The data that will appear in the $element_state['values'] collection for
+ *   this element.
+ */
+function form_type_radios_value(&$element, $input = FALSE) {
+  // If there is data from a form submission, use that.
+  if ($input !== FALSE) {
+    // Check if the user submission had no value for this element.
+    if (!isset($input)) {
+      // Flag as a garbage value so that form builder will not automatically
+      // replace the NULL value with an empty string.
+      $element['#has_garbage_value'] = TRUE;
+      // There was a user submission so validation is a must. This way, the
+      // required checker will produce an error as necessary.
+      $element['#needs_validation'] = TRUE;
+    }
+    // The value stays the same, but the flags above will ensure it is
+    // processed properly.
+    return $input;
+  }
+
+  // When $input is FALSE, return the default if it exists.
+  if (isset($element['#default_value'])) {
+    return $element['#default_value'];
+  }
+}
+
+/**
  * Helper function to determine the value for a checkboxes form element.
  *
  * @param $element
@@ -2948,7 +2984,9 @@ function form_process_radios($element) {
         // The key is sanitized in drupal_attributes() during output from the
         // theme function.
         '#return_value' => $key,
-        '#default_value' => isset($element['#default_value']) ? $element['#default_value'] : NULL,
+        // Use default or FALSE. A value of FALSE means that the radio button is
+        // not 'checked'.
+        '#default_value' => isset($element['#default_value']) ? $element['#default_value'] : FALSE,
         '#attributes' => $element['#attributes'],
         '#parents' => $element['#parents'],
         '#id' => drupal_html_id('edit-' . implode('-', $parents_for_id)),
