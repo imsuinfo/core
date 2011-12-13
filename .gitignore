@@ -7,7 +7,7 @@ sites/*/private
 
 # Custom ignores
 sites/default/deprecated
-sites/private_files
-sites/public_files
+files
+private
 info.php
 *.swp
