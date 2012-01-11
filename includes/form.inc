@@ -4023,6 +4023,12 @@ function theme_form_element($variables) {
   }
   // Add element's #type and #name as class to aid with JS/CSS selectors.
   $attributes['class'] = array('form-item');
+  if (!empty($element['#required'])) {
+    $attributes['class'][] = 'required';
+  }
+  if (isset($element['#parents']) && form_get_error($element)) {
+    $attributes['class'][] = 'error';
+  }
   if (!empty($element['#type'])) {
     $attributes['class'][] = 'form-type-' . strtr($element['#type'], '_', '-');
   }
