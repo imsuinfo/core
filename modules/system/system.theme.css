@@ -112,6 +112,9 @@ input.form-radio {
 .form-item select.error {
   border: 2px solid red;
 }
+div.form-item.error {
+  background-image: none;
+}
 
 /**
  * Inline items.
