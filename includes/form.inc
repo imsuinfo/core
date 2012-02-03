@@ -16,7 +16,7 @@
  * \@see user_pass_validate().
  * \@see user_pass_submit().
  *
- * @} End of "defgroup forms".
+ * @}
  */
 
 /**
@@ -156,6 +156,8 @@ function drupal_get_form($form_id) {
  *       automatically loaded by form_get_cache(). By default the current menu
  *       router item's 'file' definition is added, if any. Use
  *       form_load_include() to add include files from a form constructor.
+ *     - base_form_id: Identification for a base form, as declared in a
+ *       hook_forms() implementation.
  *   - rebuild_info: Internal. Similar to 'build_info', but pertaining to
  *     drupal_rebuild_form().
  *   - rebuild: Normally, after the entire form processing is completed and
@@ -2231,42 +2233,6 @@ function form_type_checkbox_value($element, $input = FALSE) {
 }
 
 /**
- * Form value callback: Determines the value for a radio form element.
- *
- * @param $element
- *   The form element whose value is being populated.
- * @param $input
- *   (optional) The incoming input to populate the form element. If FALSE, the
- *   element's default value is returned. Defaults to FALSE.
- *
- * @return
- *   The data that will appear in the $element_state['values'] collection for
- *   this element.
- */
-function form_type_radios_value(&$element, $input = FALSE) {
-  // If there is data from a form submission, use that.
-  if ($input !== FALSE) {
-    // Check if the user submission had no value for this element.
-    if (!isset($input)) {
-      // Flag as a garbage value so that form builder will not automatically
-      // replace the NULL value with an empty string.
-      $element['#has_garbage_value'] = TRUE;
-      // There was a user submission so validation is a must. This way, the
-      // required checker will produce an error as necessary.
-      $element['#needs_validation'] = TRUE;
-    }
-    // The value stays the same, but the flags above will ensure it is
-    // processed properly.
-    return $input;
-  }
-
-  // When $input is FALSE, return the default if it exists.
-  if (isset($element['#default_value'])) {
-    return $element['#default_value'];
-  }
-}
-
-/**
  * Helper function to determine the value for a checkboxes form element.
  *
  * @param $element
@@ -2984,9 +2950,7 @@ function form_process_radios($element) {
         // The key is sanitized in drupal_attributes() during output from the
         // theme function.
         '#return_value' => $key,
-        // Use default or FALSE. A value of FALSE means that the radio button is
-        // not 'checked'.
-        '#default_value' => isset($element['#default_value']) ? $element['#default_value'] : FALSE,
+        '#default_value' => isset($element['#default_value']) ? $element['#default_value'] : NULL,
         '#attributes' => $element['#attributes'],
         '#parents' => $element['#parents'],
         '#id' => drupal_html_id('edit-' . implode('-', $parents_for_id)),
@@ -3386,6 +3350,13 @@ function form_process_machine_name($element, &$form_state) {
     'replace_pattern' => '[^a-z0-9_]+',
     'replace' => '_',
   );
+
+  // By default, machine names are restricted to Latin alphanumeric characters.
+  // So, default to LTR directionality.
+  if (!isset($element['#attributes'])) {
+    $element['#attributes'] = array();
+  }
+  $element['#attributes'] += array('dir' => 'ltr');
 
   // The source element defaults to array('name'), but may have been overidden.
   if (empty($element['#machine_name']['source'])) {
@@ -3824,13 +3795,27 @@ function theme_password($variables) {
  * Expand weight elements into selects.
  */
 function form_process_weight($element) {
-  for ($n = (-1 * $element['#delta']); $n <= $element['#delta']; $n++) {
-    $weights[$n] = $n;
-  }
-  $element['#options'] = $weights;
-  $element['#type'] = 'select';
   $element['#is_weight'] = TRUE;
-  $element += element_info('select');
+
+  // If the number of options is small enough, use a select field.
+  $max_elements = variable_get('drupal_weight_select_max', DRUPAL_WEIGHT_SELECT_MAX);
+  if ($element['#delta'] <= $max_elements) {
+    $element['#type'] = 'select';
+    for ($n = (-1 * $element['#delta']); $n <= $element['#delta']; $n++) {
+      $weights[$n] = $n;
+    }
+    $element['#options'] = $weights;
+    $element += element_info('select');
+  }
+  // Otherwise, use a text field.
+  else {
+    $element['#type'] = 'textfield';
+    // Use a field big enough to fit most weights.
+    $element['#size'] = 10;
+    $element['#element_validate'] = array('element_validate_integer');
+    $element += element_info('textfield');
+  }
+
   return $element;
 }
 
@@ -3920,12 +3905,6 @@ function theme_form_element($variables) {
   }
   // Add element's #type and #name as class to aid with JS/CSS selectors.
   $attributes['class'] = array('form-item');
-  if (!empty($element['#required'])) {
-    $attributes['class'][] = 'required';
-  }
-  if (isset($element['#parents']) && form_get_error($element)) {
-    $attributes['class'][] = 'error';
-  }
   if (!empty($element['#type'])) {
     $attributes['class'][] = 'form-type-' . strtr($element['#type'], '_', '-');
   }
@@ -4020,7 +3999,7 @@ function theme_form_element_label($variables) {
   $t = get_t();
 
   // If title and required marker are both empty, output no label.
-  if (empty($element['#title']) && empty($element['#required'])) {
+  if ((!isset($element['#title']) || $element['#title'] === '') && empty($element['#required'])) {
     return '';
   }
 
