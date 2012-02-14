@@ -557,7 +557,6 @@ function user_save($account, $edit = array(), $category = 'account') {
       if ($account->status != $account->original->status) {
         // The user's status is changing; conditionally send notification email.
         $op = $account->status == 1 ? 'status_activated' : 'status_blocked';
-        _user_mail_notify($op, $account);
       }
 
       // Update $edit with any interim changes to $account.
@@ -3929,7 +3928,6 @@ function user_register_submit($form, &$form_state) {
   }
   // No e-mail verification required; log in user immediately.
   elseif (!$admin && !variable_get('user_email_verification', TRUE) && $account->status) {
-    _user_mail_notify('register_no_approval_required', $account);
     $form_state['uid'] = $account->uid;
     user_login_submit(array(), $form_state);
     drupal_set_message(t('Registration successful. You are now logged in.'));
