@@ -145,28 +145,29 @@ function update_helpful_links() {
   // NOTE: we can't use l() here because the URL would point to
   // 'update.php?q=admin'.
   $links[] = '<a href="' . base_path() . '">Front page</a>';
-  $links[] = '<a href="' . base_path() . '?q=admin">Administration pages</a>';
+  if (user_access('access administration pages')) {
+    $links[] = '<a href="' . base_path() . '?q=admin">Administration pages</a>';
+  }
   return $links;
 }
 
 function update_results_page() {
   drupal_set_title('Drupal database update');
   $links = update_helpful_links();
-  $output = '';
 
   update_task_list();
   // Report end result.
-  if (module_exists('dblog')) {
+  if (module_exists('dblog') && user_access('access site reports')) {
     $log_message = ' All errors have been <a href="' . base_path() . '?q=admin/reports/dblog">logged</a>.';
   }
   else {
     $log_message = ' All errors have been logged.';
   }
 
-  if (isset($_SESSION['update_success']) && $_SESSION['update_success']) {
-    $output = '<p>Updates were attempted. If you see no failures below, you may proceed happily to the <a href="' . base_path() . '?q=admin">administration pages</a>. Otherwise, you may need to update your database manually.' . $log_message . '</p>';
+  if ($_SESSION['update_success']) {
+    $output = '<p>Updates were attempted. If you see no failures below, you may proceed happily back to your <a href="' . base_path() . '">site</a>. Otherwise, you may need to update your database manually.' . $log_message . '</p>';
   }
-  else if (!empty($_SESSION['updates_remaining'])) {
+  else {
     list($module, $version) = array_pop(reset($_SESSION['updates_remaining']));
     $output = '<p class="error">The update process was aborted prematurely while running <strong>update #' . $version . ' in ' . $module . '.module</strong>.' . $log_message;
     if (module_exists('dblog')) {

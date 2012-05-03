@@ -151,7 +151,7 @@ class FormsTestCase extends DrupalWebTestCase {
       $expected_key = array_search($error[0], $expected);
       // If the error message is not one of the expected messages, fail.
       if ($expected_key === FALSE) {
-        $this->fail("Invalid error message: {$error[0]}");
+        $this->fail(format_string("Unexpected error message: @error", array('@error' => $error[0])));
       }
       // Remove the expected message from the list once it is found.
       else {
@@ -161,8 +161,18 @@ class FormsTestCase extends DrupalWebTestCase {
 
     // Fail if any expected messages were not found.
     foreach ($expected as $not_found) {
-      $this->fail("Error message not shown: $not_found");
+      $this->fail(format_string("Found error message: @error", array('@error' => $not_found)));
     }
+
+    // Verify that input elements are still empty.
+    $this->assertFieldByName('textfield', '');
+    $this->assertNoFieldChecked('edit-checkboxes-foo');
+    $this->assertNoFieldChecked('edit-checkboxes-bar');
+    $this->assertOptionSelected('edit-select', '');
+    $this->assertNoFieldChecked('edit-radios-foo');
+    $this->assertNoFieldChecked('edit-radios-bar');
+    $this->assertNoFieldChecked('edit-radios-optional-foo');
+    $this->assertNoFieldChecked('edit-radios-optional-bar');
 
     // Submit again with required fields set and verify that there are no
     // error messages.
@@ -172,8 +182,9 @@ class FormsTestCase extends DrupalWebTestCase {
       'select' => 'foo',
       'radios' => 'bar',
     );
-    $this->drupalPost('form-test/validate-required', $edit, 'Submit');
+    $this->drupalPost(NULL, $edit, 'Submit');
     $this->assertNoFieldByXpath('//div[contains(@class, "error")]', FALSE, 'No error message is displayed when all required fields are filled.');
+    $this->assertRaw("The form_test_validate_required_form form was submitted successfully.", 'Validation form submitted successfully.');
   }
 
   /**
@@ -655,12 +666,12 @@ class FormsElementsLabelsTestCase extends DrupalWebTestCase {
     $this->assertTrue(isset($elements[0]), t("Label 0 found radios."));
 
     // Exercise various defaults for checkboxes and modifications to ensure
-    // appropriate override and correct behaviour.
+    // appropriate override and correct behavior.
     $elements = $this->xpath('//input[@id="edit-form-checkbox-test"]/following-sibling::label[@for="edit-form-checkbox-test" and @class="option"]');
     $this->assertTrue(isset($elements[0]), t("Label follows field and label option class correct for a checkbox by default."));
 
     // Exercise various defaults for textboxes and modifications to ensure
-    // appropriate override and correct behaviour.
+    // appropriate override and correct behavior.
     $elements = $this->xpath('//label[@for="edit-form-textfield-test-title-and-required"]/child::span[@class="form-required"]/parent::*/following-sibling::input[@id="edit-form-textfield-test-title-and-required"]');
     $this->assertTrue(isset($elements[0]), t("Label precedes textfield, with required marker inside label."));
 
@@ -692,6 +703,12 @@ class FormsElementsLabelsTestCase extends DrupalWebTestCase {
 
     $elements = $this->xpath('//div[@id="form-test-textfield-title-suffix"]/preceding-sibling::div[contains(@class, \'form-item-form-textfield-test-title\')]');
     $this->assertTrue(isset($elements[0]), t("Properly places the #suffix element before the form item."));
+
+    // Check title attribute for radios and checkboxes.
+    $elements = $this->xpath('//div[@id="edit-form-checkboxes-title-attribute"]');
+    $this->assertEqual($elements[0]['title'], 'Checkboxes test' . ' (' . t('Required') . ')', 'Title attribute found.');
+    $elements = $this->xpath('//div[@id="edit-form-radios-title-attribute"]');
+    $this->assertEqual($elements[0]['title'], 'Radios test' . ' (' . t('Required') . ')', 'Title attribute found.');
   }
 }
 
