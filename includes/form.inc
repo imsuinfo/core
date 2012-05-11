@@ -2867,24 +2867,48 @@ function form_get_options($element, $key) {
  */
 function theme_fieldset($variables) {
   $element = $variables['element'];
+
+  if (empty($element['#children'])) return '';
+
+  $as_div = FALSE;
+  if (isset($element['#as_div']) && $element['#as_div']) {
+    $as_div = TRUE;
+  }
+
   element_set_attributes($element, array('id'));
   _form_set_class($element, array('form-wrapper'));
 
-  $output = '<fieldset' . drupal_attributes($element['#attributes']) . '>';
-  if (!empty($element['#title'])) {
-    // Always wrap fieldset legends in a SPAN for CSS positioning.
-    $output .= '<legend><span class="fieldset-legend">' . $element['#title'] . '</span></legend>';
+  if ($as_div) {
+    $output = '<div' . drupal_attributes($element['#attributes']) . '>';
+    $output .= '<div class="fieldset-wrapper">';
+    if (!empty($element['#description'])) {
+      $output .= '<div class="fieldset-description">' . $element['#description'] . '</div>';
+    }
+    $output .= $element['#children'];
+    if (isset($element['#value'])) {
+      $output .= $element['#value'];
+    }
+    $output .= '</div>';
+    $output .= "</div>\n";
   }
-  $output .= '<div class="fieldset-wrapper">';
-  if (!empty($element['#description'])) {
-    $output .= '<div class="fieldset-description">' . $element['#description'] . '</div>';
+  else {
+    $output = '<fieldset' . drupal_attributes($element['#attributes']) . '>';
+    if (!empty($element['#title'])) {
+      // Always wrap fieldset legends in a SPAN for CSS positioning.
+      $output .= '<legend><span class="fieldset-legend">' . $element['#title'] . '</span></legend>';
+    }
+    $output .= '<div class="fieldset-wrapper">';
+    if (!empty($element['#description'])) {
+      $output .= '<div class="fieldset-description">' . $element['#description'] . '</div>';
+    }
+    $output .= $element['#children'];
+    if (isset($element['#value'])) {
+      $output .= $element['#value'];
+    }
+    $output .= '</div>';
+    $output .= "</fieldset>\n";
   }
-  $output .= $element['#children'];
-  if (isset($element['#value'])) {
-    $output .= $element['#value'];
-  }
-  $output .= '</div>';
-  $output .= "</fieldset>\n";
+
   return $output;
 }
 
@@ -3149,6 +3173,7 @@ function form_process_radios($element) {
         '#id' => drupal_html_id('edit-' . implode('-', $parents_for_id)),
         '#ajax' => isset($element['#ajax']) ? $element['#ajax'] : NULL,
         '#weight' => $weight,
+        '#fieldset' => FALSE,
       );
     }
   }
@@ -3287,6 +3312,7 @@ function form_process_checkboxes($element) {
         '#attributes' => $element['#attributes'],
         '#ajax' => isset($element['#ajax']) ? $element['#ajax'] : NULL,
         '#weight' => $weight,
+        '#fieldset' => FALSE,
       );
     }
   }
@@ -3819,6 +3845,9 @@ function form_process_vertical_tabs($element, &$form_state) {
  */
 function theme_vertical_tabs($variables) {
   $element = $variables['element'];
+
+  if (empty($element['#children'])) return '';
+
   // Add required JavaScript and Stylesheet.
   drupal_add_library('system', 'drupal.vertical-tabs');
 
@@ -4143,12 +4172,44 @@ function theme_form_element($variables) {
   if (!empty($element['#attributes']['disabled'])) {
     $attributes['class'][] = 'form-disabled';
   }
-  $output = '<div' . drupal_attributes($attributes) . '>' . "\n";
+
+  $wrap_with_fieldset = FALSE;
+  if (!empty($element['#type'])) {
+    if ($element['#type'] == 'checkbox') {
+      $wrap_with_fieldset = TRUE;
+    }
+    elseif ($element['#type'] == 'checkboxes') {
+      $wrap_with_fieldset = TRUE;
+    }
+    elseif ($element['#type'] == 'radio') {
+      $wrap_with_fieldset = TRUE;
+    }
+    elseif ($element['#type'] == 'radios') {
+      $wrap_with_fieldset = TRUE;
+    }
+  }
+
+  if ($wrap_with_fieldset && isset($element['#fieldset']) && !$element['#fieldset']) {
+    $wrap_with_fieldset = FALSE;
+  }
 
   // If #title is not set, we don't display any label or required marker.
-  if (!isset($element['#title'])) {
-    $element['#title_display'] = 'none';
+  if (isset($element['#title'])) {
+    $legend = $element['#title'];
   }
+  else {
+    $element['#title_display'] = 'none';
+    $legend = '';
+  }
+
+  if ($wrap_with_fieldset) {
+    $element['#fieldset'] = FALSE;
+    $output = '<fieldset' . drupal_attributes($attributes) . '>' . "\n" . '<legend class="element-invisible">' . $legend . '</legend>'. "\n";
+  }
+  else {
+    $output = '<div' . drupal_attributes($attributes) . '>' . "\n";
+  }
+
   $prefix = isset($element['#field_prefix']) ? '<span class="field-prefix">' . $element['#field_prefix'] . '</span> ' : '';
   $suffix = isset($element['#field_suffix']) ? ' <span class="field-suffix">' . $element['#field_suffix'] . '</span>' : '';
 
@@ -4175,7 +4236,12 @@ function theme_form_element($variables) {
     $output .= '<div class="description">' . $element['#description'] . "</div>\n";
   }
 
-  $output .= "</div>\n";
+  if ($wrap_with_fieldset) {
+    $output .= "</fieldset>\n";
+  }
+  else {
+    $output .= "</div>\n";
+  }
 
   return $output;
 }
