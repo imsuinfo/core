@@ -234,7 +234,6 @@ function node_form($form, &$form_state, $node) {
   // Node options for administrators
   $form['options'] = array(
     '#type' => 'fieldset',
-    '#access' => user_access('administer nodes'),
     '#title' => t('Publishing options'),
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
@@ -249,16 +248,19 @@ function node_form($form, &$form_state, $node) {
   );
   $form['options']['status'] = array(
     '#type' => 'checkbox',
+    '#access' => user_access('administer nodes'),
     '#title' => t('Published'),
     '#default_value' => $node->status,
   );
   $form['options']['promote'] = array(
     '#type' => 'checkbox',
+    '#access' => user_access('administer nodes'),
     '#title' => t('Promoted to front page'),
     '#default_value' => $node->promote,
   );
   $form['options']['sticky'] = array(
     '#type' => 'checkbox',
+    '#access' => user_access('administer nodes'),
     '#title' => t('Sticky at top of lists'),
     '#default_value' => $node->sticky,
   );
