@@ -170,6 +170,18 @@ Drupal.verticalTab.prototype = {
     else {
       this.item.closest('.vertical-tabs').hide();
     }
+
+    // If no items are visible, hide the table.
+    var visibleItems = false;
+    this.item.siblings().each(function() {
+      if ($(this).is(':visible')) {
+        visibleItems = true;
+        return;
+      }
+    });
+    if (!visibleItems) {
+      this.item.closest('.vertical-tabs').hide();
+    }
     return this;
   }
 };
