@@ -2757,6 +2757,9 @@ function form_get_options($element, $key) {
  */
 function theme_fieldset($variables) {
   $element = $variables['element'];
+
+  if (empty($element['#children'])) return '';
+
   element_set_attributes($element, array('id'));
   _form_set_class($element, array('form-wrapper'));
 
@@ -3738,6 +3741,9 @@ function form_process_vertical_tabs($element, &$form_state) {
  */
 function theme_vertical_tabs($variables) {
   $element = $variables['element'];
+
+  if (empty($element['#children'])) return '';
+
   // Add required JavaScript and Stylesheet.
   drupal_add_library('system', 'drupal.vertical-tabs');
 
