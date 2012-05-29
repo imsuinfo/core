@@ -7746,7 +7746,7 @@ function entity_get_controller($entity_type) {
   if (!isset($controllers[$entity_type])) {
     $type_info = entity_get_info($entity_type);
     $class = $type_info['controller class'];
-    $controllers[$entity_type] = new $class($entity_type);
+    $controllers[$entity_type] = empty($class) ? new DrupalDefaultEntityController($entity_type) : new $class($entity_type);
   }
   return $controllers[$entity_type];
 }
