@@ -219,7 +219,7 @@ function block_block_info() {
  */
 function block_block_configure($delta = 0) {
   if ($delta && is_numeric($delta) && (int) $delta == $delta) {
-    $custom_block = block_custom_block_get((int)$delta);
+    $custom_block = block_custom_block_get($delta);
   }
   else {
     $custom_block = array();
