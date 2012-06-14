@@ -218,8 +218,8 @@ function block_block_info() {
  * Implements hook_block_configure().
  */
 function block_block_configure($delta = 0) {
-  if ($delta) {
-    $custom_block = block_custom_block_get($delta);
+  if ($delta && is_numeric($delta) && (int) $delta == $delta) {
+    $custom_block = block_custom_block_get((int)$delta);
   }
   else {
     $custom_block = array();
