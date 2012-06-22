@@ -344,28 +344,6 @@ interface MailSystemInterface {
 function drupal_wrap_mail($text, $indent = '') {
   // Convert CRLF into LF.
   $text = str_replace("\r", '', $text);
-  // See if soft-wrapping is allowed.
-  $clean_indent = _drupal_html_to_text_clean($indent);
-  $soft = strpos($clean_indent, ' ') === FALSE;
-  // Check if the string has line breaks.
-  if (strpos($text, "\n") !== FALSE) {
-    // Remove trailing spaces to make existing breaks hard.
-    $text = preg_replace('/ +\n/m', "\n", $text);
-    // Wrap each line at the needed width.
-    $lines = explode("\n", $text);
-    array_walk($lines, '_drupal_wrap_mail_line', array('soft' => $soft, 'length' => strlen($indent)));
-    $text = implode("\n", $lines);
-  }
-  else {
-    // Wrap this line.
-    _drupal_wrap_mail_line($text, 0, array('soft' => $soft, 'length' => strlen($indent)));
-  }
-  // Empty lines with nothing but spaces.
-  $text = preg_replace('/^ +\n/m', "\n", $text);
-  // Space-stuff special lines.
-  $text = preg_replace('/^(>| |From)/m', ' $1', $text);
-  // Apply indentation. We only include non-'>' indentation on the first line.
-  $text = $indent . substr(preg_replace('/^/m', $clean_indent, $text), strlen($indent));
 
   return $text;
 }
