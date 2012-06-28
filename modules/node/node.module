@@ -2387,7 +2387,7 @@ function node_form_block_custom_block_delete_alter(&$form, &$form_state) {
 function node_form_block_custom_block_delete_submit($form, &$form_state) {
   db_delete('block_node_type')
     ->condition('module', 'block')
-    ->condition('delta', $form_state['values']['bid'])
+    ->condition('delta', $form_state['values']['delta'])
     ->execute();
 }
 
