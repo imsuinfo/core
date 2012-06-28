@@ -632,7 +632,7 @@ function block_custom_block_delete($form, &$form_state, $module, $delta) {
   $block = block_load($module, $delta);
   $custom_block = block_custom_block_get($block->delta);
   $form['info'] = array('#type' => 'hidden', '#value' => $custom_block['info'] ? $custom_block['info'] : $custom_block['title']);
-  $form['bid'] = array('#type' => 'hidden', '#value' => $block->delta);
+  $form['delta'] = array('#type' => 'hidden', '#value' => $block->delta);
 
   return confirm_form($form, t('Are you sure you want to delete the block %name?', array('%name' => $custom_block['info'])), 'admin/structure/block', '', t('Delete'), t('Cancel'));
 }
@@ -644,15 +644,15 @@ function block_custom_block_delete($form, &$form_state, $module, $delta) {
  */
 function block_custom_block_delete_submit($form, &$form_state) {
   db_delete('block_custom')
-    ->condition('bid', $form_state['values']['bid'])
+    ->condition('bid', $form_state['values']['delta'])
     ->execute();
   db_delete('block')
     ->condition('module', 'block')
-    ->condition('delta', $form_state['values']['bid'])
+    ->condition('delta', $form_state['values']['delta'])
     ->execute();
   db_delete('block_role')
     ->condition('module', 'block')
-    ->condition('delta', $form_state['values']['bid'])
+    ->condition('delta', $form_state['values']['delta'])
     ->execute();
   drupal_set_message(t('The block %name has been removed.', array('%name' => $form_state['values']['info'])));
   cache_clear_all();
