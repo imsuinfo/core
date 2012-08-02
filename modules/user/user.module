@@ -159,6 +159,10 @@ function user_entity_info() {
       'uri callback' => 'user_uri',
       'label callback' => 'format_username',
       'fieldable' => TRUE,
+      // $user->language is only the preferred user language for the user
+      // interface textual elements. As it is not necessarily related to the
+      // language assigned to fields, we do not define it as the entity language
+      // key.
       'entity keys' => array(
         'id' => 'uid',
       ),
@@ -359,7 +363,6 @@ class UserController extends DrupalDefaultEntityController {
  * @see user_load_multiple()
  */
 function user_load($uid, $reset = FALSE) {
-  if (!is_numeric($uid) || (float) $uid !== round($uid)) return FALSE;
   $users = user_load_multiple(array($uid), array(), $reset);
   return reset($users);
 }
@@ -549,6 +552,7 @@ function user_save($account, $edit = array(), $category = 'account') {
       if ($account->status != $account->original->status) {
         // The user's status is changing; conditionally send notification email.
         $op = $account->status == 1 ? 'status_activated' : 'status_blocked';
+        _user_mail_notify($op, $account);
       }
 
       // Update $edit with any interim changes to $account.
@@ -788,15 +792,6 @@ function user_access($string, $account = NULL) {
 
   if (!isset($account)) {
     $account = $user;
-
-    if (!is_object($user)){
-      $account = user_load();
-    }
-  }
-
-  if (!is_object($account)){
-    watchdog('user', "user_access() called with an invalid account, passed string is '%string'", array('%string' => check_plain($string)), WATCHDOG_ERROR);
-    return FALSE;
   }
 
   // User #1 has all privileges:
@@ -828,7 +823,12 @@ function user_access($string, $account = NULL) {
 /**
  * Checks for usernames blocked by user administration.
  *
- * @return boolean TRUE for blocked users, FALSE for active.
+ * @param $name
+ *   A string containing a name of the user.
+ *
+ * @return
+ *   Object with property 'name' (the user name), if the user is blocked;
+ *   FALSE if the user is not blocked.
  */
 function user_is_blocked($name) {
   return db_select('users')
@@ -3716,7 +3716,8 @@ function user_register_form($form, &$form_state) {
 
   // Attach field widgets, and hide the ones where the 'user_register_form'
   // setting is not on.
-  field_attach_form('user', $form['#user'], $form, $form_state);
+  $langcode = entity_language('user', $form['#user']);
+  field_attach_form('user', $form['#user'], $form, $form_state, $langcode);
   foreach (field_info_instances('user', 'user') as $field_name => $instance) {
     if (empty($instance['settings']['user_register_form'])) {
       $form[$field_name]['#access'] = FALSE;
@@ -3804,6 +3805,7 @@ function user_register_submit($form, &$form_state) {
   }
   // No e-mail verification required; log in user immediately.
   elseif (!$admin && !variable_get('user_email_verification', TRUE) && $account->status) {
+    _user_mail_notify('register_no_approval_required', $account);
     $form_state['uid'] = $account->uid;
     user_login_submit(array(), $form_state);
     drupal_set_message(t('Registration successful. You are now logged in.'));

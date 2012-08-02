@@ -15,6 +15,13 @@ function node_page_edit($node) {
   return drupal_get_form($node->type . '_node_form', $node);
 }
 
+/**
+ * Page callback: Displays add content links for available content types.
+ *
+ * Redirects to node/add/[type] if only one content type is available.
+ *
+ * @see node_menu()
+ */
 function node_add_page() {
   $item = menu_get_item();
   $content = system_admin_menu_block($item);
@@ -234,6 +241,7 @@ function node_form($form, &$form_state, $node) {
   // Node options for administrators
   $form['options'] = array(
     '#type' => 'fieldset',
+    '#access' => user_access('administer nodes'),
     '#title' => t('Publishing options'),
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
@@ -248,19 +256,16 @@ function node_form($form, &$form_state, $node) {
   );
   $form['options']['status'] = array(
     '#type' => 'checkbox',
-    '#access' => user_access('administer nodes'),
     '#title' => t('Published'),
     '#default_value' => $node->status,
   );
   $form['options']['promote'] = array(
     '#type' => 'checkbox',
-    '#access' => user_access('administer nodes'),
     '#title' => t('Promoted to front page'),
     '#default_value' => $node->promote,
   );
   $form['options']['sticky'] = array(
     '#type' => 'checkbox',
-    '#access' => user_access('administer nodes'),
     '#title' => t('Sticky at top of lists'),
     '#default_value' => $node->sticky,
   );
@@ -301,7 +306,7 @@ function node_form($form, &$form_state, $node) {
   }
   $form += array('#submit' => array());
 
-  field_attach_form('node', $node, $form, $form_state, $node->language);
+  field_attach_form('node', $node, $form, $form_state, entity_language('node', $node));
   return $form;
 }
 
