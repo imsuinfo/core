@@ -246,3 +246,17 @@ html.js .js-hide {
   overflow: visible;
   height: auto;
 }
+
+
+/**
+ * Enable clearfix hack for known problematic modules and paths, but only those.
+ */
+#views-preview-wrapper .clearfix:after,
+#views-ui-edit-form .clearfix:after {
+  content: ".";
+  display: block;
+  height: 0;
+  clear: both;
+  visibility: hidden;
+}
+
