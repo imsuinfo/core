@@ -309,6 +309,10 @@ function _field_invoke_multiple($op, $entity_type, $entities, &$a = NULL, &$b = 
     $instances = _field_invoke_get_instances($entity_type, $bundle, $options);
 
     foreach ($instances as $instance) {
+      if (empty($instance)) {
+        continue;
+      }
+
       $field_id = $instance['field_id'];
       $field_name = $instance['field_name'];
       $field = field_info_field_by_id($field_id);
