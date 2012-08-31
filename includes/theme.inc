@@ -997,7 +997,7 @@ function drupal_find_base_themes($themes, $key, $used_keys = array()) {
  * @see template_preprocess()
  * @see template_process()
  */
-function theme($hook, $variables = array()) {
+function theme($hook, array $variables = array()) {
   // If called before all modules are loaded, we do not necessarily have a full
   // theme registry to work with, and therefore cannot process the theme
   // request properly. See also _theme_load_registry().
