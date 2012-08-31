@@ -3932,20 +3932,7 @@ function _menu_router_save($menu, $masks) {
 function _menu_site_is_offline($check_only = FALSE) {
   // Check if site is in maintenance mode.
   if (variable_get('maintenance_mode', 0)) {
-    if (user_access('access site in maintenance mode')) {
-      // Ensure that the maintenance mode message is displayed only once
-      // (allowing for page redirects) and specifically suppress its display on
-      // the maintenance mode settings page.
-      if (!$check_only && $_GET['q'] != 'admin/config/development/maintenance') {
-        if (user_access('administer site configuration')) {
-          drupal_set_message(t('Operating in maintenance mode. <a href="@url">Go online.</a>', array('@url' => url('admin/config/development/maintenance'))), 'status', FALSE);
-        }
-        else {
-          drupal_set_message(t('Operating in maintenance mode.'), 'status', FALSE);
-        }
-      }
-    }
-    else {
+    if (!user_access('access site in maintenance mode')) {
       return TRUE;
     }
   }
