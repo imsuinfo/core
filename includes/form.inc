@@ -3756,6 +3756,8 @@ function theme_button($variables) {
     $element['#attributes']['class'][] = 'form-button-disabled';
   }
 
+  $element['#attributes']['class'][] = strtolower($element['#button_type'] . '-' . $element['#value']);
+
   return '<input' . drupal_attributes($element['#attributes']) . ' />';
 }
 
@@ -3784,6 +3786,8 @@ function theme_image_button($variables) {
   if (!empty($element['#attributes']['disabled'])) {
     $element['#attributes']['class'][] = 'form-button-disabled';
   }
+
+  $element['#attributes']['class'][] = strtolower($element['#button_type'] . '-' . $element['#value']);
 
   return '<input' . drupal_attributes($element['#attributes']) . ' />';
 }
