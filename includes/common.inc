@@ -5156,7 +5156,7 @@ function drupal_cron_run() {
 
     // Record cron time.
     variable_set('cron_last', REQUEST_TIME);
-    //watchdog('cron', 'Cron run completed.', array(), WATCHDOG_NOTICE);
+    watchdog('cron', 'Cron run completed.', array(), WATCHDOG_NOTICE);
 
     // Release cron lock.
     lock_release('cron');
@@ -7676,7 +7676,7 @@ function entity_get_controller($entity_type) {
   if (!isset($controllers[$entity_type])) {
     $type_info = entity_get_info($entity_type);
     $class = $type_info['controller class'];
-    $controllers[$entity_type] = empty($class) ? new DrupalDefaultEntityController($entity_type) : new $class($entity_type);
+    $controllers[$entity_type] = new $class($entity_type);
   }
   return $controllers[$entity_type];
 }
