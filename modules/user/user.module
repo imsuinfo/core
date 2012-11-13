@@ -187,7 +187,7 @@ function user_entity_info() {
 }
 
 /**
- * Entity uri callback.
+ * Entity URI callback.
  */
 function user_uri($user) {
   return array(
@@ -363,7 +363,6 @@ class UserController extends DrupalDefaultEntityController {
  * @see user_load_multiple()
  */
 function user_load($uid, $reset = FALSE) {
-  if (!is_numeric($uid) || (float) $uid !== round($uid)) return FALSE;
   $users = user_load_multiple(array($uid), array(), $reset);
   return reset($users);
 }
@@ -553,6 +552,7 @@ function user_save($account, $edit = array(), $category = 'account') {
       if ($account->status != $account->original->status) {
         // The user's status is changing; conditionally send notification email.
         $op = $account->status == 1 ? 'status_activated' : 'status_blocked';
+        _user_mail_notify($op, $account);
       }
 
       // Update $edit with any interim changes to $account.
@@ -792,15 +792,6 @@ function user_access($string, $account = NULL) {
 
   if (!isset($account)) {
     $account = $user;
-
-    if (!is_object($user)){
-      $account = user_load();
-    }
-  }
-
-  if (!is_object($account)){
-    watchdog('user', "user_access() called with an invalid account, passed string is '%string'", array('%string' => check_plain($string)), WATCHDOG_ERROR);
-    return FALSE;
   }
 
   // User #1 has all privileges:
@@ -1316,7 +1307,6 @@ function user_login_block($form) {
   );
   $form['pass'] = array('#type' => 'password',
     '#title' => t('Password'),
-    '#maxlength' => 60,
     '#size' => 15,
     '#required' => TRUE,
   );
@@ -1882,7 +1872,7 @@ function user_menu_link_alter(&$link) {
  */
 function user_translated_menu_link_alter(&$link) {
   // Hide the "User account" link for anonymous users.
-  if ($link['link_path'] == 'user' && $link['module'] == 'system' && user_is_anonymous()) {
+  if ($link['link_path'] == 'user' && $link['module'] == 'system' && !$GLOBALS['user']->uid) {
     $link['hidden'] = 1;
   }
 }
@@ -2583,6 +2573,14 @@ function user_build_content($account, $view_mode = 'full', $langcode = NULL) {
   // Remove previously built content, if exists.
   $account->content = array();
 
+  // Allow modules to change the view mode.
+  $context = array(
+    'entity_type' => 'user',
+    'entity' => $account,
+    'langcode' => $langcode,
+  );
+  drupal_alter('entity_view_mode', $view_mode, $context);
+
   // Build fields content.
   field_attach_prepare_view('user', array($account->uid => $account), $view_mode, $langcode);
   entity_prepare_view('user', array($account->uid => $account), $langcode);
@@ -2591,6 +2589,10 @@ function user_build_content($account, $view_mode = 'full', $langcode = NULL) {
   // Populate $account->content with a render() array.
   module_invoke_all('user_view', $account, $view_mode, $langcode);
   module_invoke_all('entity_view', $account, 'user', $view_mode, $langcode);
+
+  // Make sure the current view mode is stored if no module has already
+  // populated the related key.
+  $account->content += array('#view_mode' => $view_mode);
 }
 
 /**
@@ -3814,6 +3816,7 @@ function user_register_submit($form, &$form_state) {
   }
   // No e-mail verification required; log in user immediately.
   elseif (!$admin && !variable_get('user_email_verification', TRUE) && $account->status) {
+    _user_mail_notify('register_no_approval_required', $account);
     $form_state['uid'] = $account->uid;
     user_login_submit(array(), $form_state);
     drupal_set_message(t('Registration successful. You are now logged in.'));
