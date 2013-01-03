@@ -2757,9 +2757,6 @@ function form_get_options($element, $key) {
  */
 function theme_fieldset($variables) {
   $element = $variables['element'];
-
-  if (empty($element['#children'])) return '';
-
   element_set_attributes($element, array('id'));
   _form_set_class($element, array('form-wrapper'));
 
@@ -3741,9 +3738,6 @@ function form_process_vertical_tabs($element, &$form_state) {
  */
 function theme_vertical_tabs($variables) {
   $element = $variables['element'];
-
-  if (empty($element['#children'])) return '';
-
   // Add required JavaScript and Stylesheet.
   drupal_add_library('system', 'drupal.vertical-tabs');
 
@@ -3786,8 +3780,6 @@ function theme_button($variables) {
     $element['#attributes']['class'][] = 'form-button-disabled';
   }
 
-  $element['#attributes']['class'][] = strtolower($element['#button_type'] . '-' . $element['#value']);
-
   return '<input' . drupal_attributes($element['#attributes']) . ' />';
 }
 
@@ -3816,8 +3808,6 @@ function theme_image_button($variables) {
   if (!empty($element['#attributes']['disabled'])) {
     $element['#attributes']['class'][] = 'form-button-disabled';
   }
-
-  $element['#attributes']['class'][] = strtolower($element['#button_type'] . '-' . $element['#value']);
 
   return '<input' . drupal_attributes($element['#attributes']) . ' />';
 }
@@ -4064,12 +4054,6 @@ function theme_form_element($variables) {
   }
   // Add element's #type and #name as class to aid with JS/CSS selectors.
   $attributes['class'] = array('form-item');
-  if (!empty($element['#required'])) {
-    $attributes['class'][] = 'required';
-  }
-  if (isset($element['#parents']) && form_get_error($element)) {
-    $attributes['class'][] = 'error';
-  }
   if (!empty($element['#type'])) {
     $attributes['class'][] = 'form-type-' . strtr($element['#type'], '_', '-');
   }

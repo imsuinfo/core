@@ -966,18 +966,10 @@ function image_style_url($style_name, $path) {
   // actual file path, this avoids bootstrapping PHP once the files are built.
   if (!variable_get('clean_url') && file_uri_scheme($uri) == 'public' && !file_exists($uri)) {
     $directory_path = file_stream_wrapper_get_instance_by_uri($uri)->getDirectoryPath();
-    $url = url($directory_path . '/' . file_uri_target($uri), array('absolute' => TRUE));
-  }
-  else {
-    $url = file_create_url($uri);
+    return url($directory_path . '/' . file_uri_target($uri), array('absolute' => TRUE));
   }
 
-  // never provide absolute urls for images originating from this server.
-  if (!empty($GLOBALS['base_url'])) {
-    return preg_replace('`^' . $GLOBALS['base_url'] . '`i', '', $url);
-  }
-
-  return $url;
+  return file_create_url($uri);
 }
 
 /**
