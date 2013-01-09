@@ -5199,7 +5199,12 @@ function drupal_cron_run() {
   $GLOBALS['user'] = drupal_anonymous_user();
 
   // Try to allocate enough time to run all the hook_cron implementations.
-  drupal_set_time_limit(240);
+  $max_execution_time = ini_get('max_execution_time');
+
+  if ($max_execution_time < 240) {
+    $max_execution_time = 240;
+    drupal_set_time_limit($max_execution_time);
+  }
 
   $return = FALSE;
   // Grab the defined cron queues.
@@ -5207,7 +5212,7 @@ function drupal_cron_run() {
   drupal_alter('cron_queue_info', $queues);
 
   // Try to acquire cron lock.
-  if (!lock_acquire('cron', 240.0)) {
+  if (!lock_acquire('cron', (float) $max_execution_time)) {
     // Cron is still running normally.
     watchdog('cron', 'Attempting to re-run cron while it is already running.', array(), WATCHDOG_WARNING);
   }
