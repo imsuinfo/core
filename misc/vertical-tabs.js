@@ -50,8 +50,8 @@ Drupal.behaviors.verticalTabs = {
       if (!tab_focus) {
         // If the current URL has a fragment and one of the tabs contains an
         // element that matches the URL fragment, activate that tab.
-        if (window.location.hash && $(window.location.hash, this).length) {
-          tab_focus = $(window.location.hash, this).closest('.vertical-tabs-pane');
+        if (window.location.hash && $(this).find(window.location.hash).length) {
+          tab_focus = $(this).find(window.location.hash).closest('.vertical-tabs-pane');
         }
         else {
           tab_focus = $('> .vertical-tabs-pane:first', this);
@@ -132,8 +132,6 @@ Drupal.verticalTab.prototype = {
    * Shows a vertical tab pane.
    */
   tabShow: function () {
-    // Display the list of tabs
-    this.item.parents('.vertical-tabs').show();
     // Display the tab.
     this.item.show();
     // Update .first marker for items. We need recurse from parent to retain the
@@ -165,17 +163,6 @@ Drupal.verticalTab.prototype = {
     var $firstTab = this.fieldset.siblings('.vertical-tabs-pane:not(.vertical-tab-hidden):first');
     if ($firstTab.length) {
       $firstTab.data('verticalTab').focus();
-    }
-    // If no items are visible, hide the table
-    var visibleItems = false;
-    this.item.siblings().each(function() {
-      if ($(this).is(':visible')) {
-        visibleItems = true;
-        return;
-      }
-    });
-    if (!visibleItems) {
-      this.item.parents('.vertical-tabs').hide();
     }
     return this;
   }
