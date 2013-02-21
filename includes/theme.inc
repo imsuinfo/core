@@ -994,7 +994,7 @@ function drupal_find_base_themes($themes, $key, $used_keys = array()) {
  * @see template_preprocess()
  * @see template_process()
  */
-function theme($hook, array $variables = array()) {
+function theme($hook, $variables = array()) {
   // If called before all modules are loaded, we do not necessarily have a full
   // theme registry to work with, and therefore cannot process the theme
   // request properly. See also _theme_load_registry().
@@ -2515,7 +2515,7 @@ function template_preprocess_html(&$variables) {
  */
 function template_preprocess_page(&$variables) {
   // Move some variables to the top level for themer convenience and template cleanliness.
-  $variables['show_messages'] = isset($variables['page']['#show_messages']) ? $variables['page']['#show_messages'] : TRUE;
+  $variables['show_messages'] = $variables['page']['#show_messages'];
 
   foreach (system_region_list($GLOBALS['theme']) as $region_key => $region_name) {
     if (!isset($variables['page'][$region_key])) {
