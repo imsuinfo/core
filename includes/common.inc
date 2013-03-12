@@ -5040,14 +5040,7 @@ function drupal_get_private_key() {
  *   An additional value to base the token on.
  */
 function drupal_get_token($value = '') {
-  // For mixed HTTP(S) sessions, use a constant identifier so that tokens can be shared between protocols.
-  if (variable_get('https', FALSE) && $GLOBALS['is_https'] && isset($_COOKIE[substr(session_name(), 1)])) {
-    $session_id = $_COOKIE[substr(session_name(), 1)];
-  }
-  else {
-    $session_id = session_id();
-  }
-  return drupal_hmac_base64($value, $session_id . drupal_get_private_key() . drupal_get_hash_salt());
+  return drupal_hmac_base64($value, session_id() . drupal_get_private_key() . drupal_get_hash_salt());
 }
 
 /**
@@ -5076,10 +5069,10 @@ function _drupal_bootstrap_full() {
     return;
   }
   $called = TRUE;
-  require_once DRUPAL_ROOT . '/includes/path.inc';
+  require_once DRUPAL_ROOT . '/' . variable_get('path_inc', 'includes/path.inc');
   require_once DRUPAL_ROOT . '/includes/theme.inc';
   require_once DRUPAL_ROOT . '/includes/pager.inc';
-  require_once DRUPAL_ROOT . '/includes/menu.inc';
+  require_once DRUPAL_ROOT . '/' . variable_get('menu_inc', 'includes/menu.inc');
   require_once DRUPAL_ROOT . '/includes/tablesort.inc';
   require_once DRUPAL_ROOT . '/includes/file.inc';
   require_once DRUPAL_ROOT . '/includes/unicode.inc';
@@ -5199,12 +5192,7 @@ function drupal_cron_run() {
   $GLOBALS['user'] = drupal_anonymous_user();
 
   // Try to allocate enough time to run all the hook_cron implementations.
-  $max_execution_time = ini_get('max_execution_time');
-
-  if ($max_execution_time < 240) {
-    $max_execution_time = 240;
-    drupal_set_time_limit($max_execution_time);
-  }
+  drupal_set_time_limit(240);
 
   $return = FALSE;
   // Grab the defined cron queues.
@@ -5212,7 +5200,7 @@ function drupal_cron_run() {
   drupal_alter('cron_queue_info', $queues);
 
   // Try to acquire cron lock.
-  if (!lock_acquire('cron', (float) $max_execution_time)) {
+  if (!lock_acquire('cron', 240.0)) {
     // Cron is still running normally.
     watchdog('cron', 'Attempting to re-run cron while it is already running.', array(), WATCHDOG_WARNING);
   }
@@ -5238,7 +5226,7 @@ function drupal_cron_run() {
 
     // Record cron time.
     variable_set('cron_last', REQUEST_TIME);
-    //watchdog('cron', 'Cron run completed.', array(), WATCHDOG_NOTICE);
+    watchdog('cron', 'Cron run completed.', array(), WATCHDOG_NOTICE);
 
     // Release cron lock.
     lock_release('cron');
@@ -7758,7 +7746,7 @@ function entity_get_controller($entity_type) {
   if (!isset($controllers[$entity_type])) {
     $type_info = entity_get_info($entity_type);
     $class = $type_info['controller class'];
-    $controllers[$entity_type] = empty($class) ? new DrupalDefaultEntityController($entity_type) : new $class($entity_type);
+    $controllers[$entity_type] = new $class($entity_type);
   }
   return $controllers[$entity_type];
 }
