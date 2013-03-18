@@ -392,7 +392,7 @@ function file_create_url($uri) {
     else {
       // If this is not a properly formatted stream, then it is a shipped file.
       // Therefore, return the urlencoded URI with the base URL prepended.
-      return $GLOBALS['base_url'] . '/' . drupal_encode_path($uri);
+      return $GLOBALS['base_path'] . drupal_encode_path($uri);
     }
   }
   elseif ($scheme == 'http' || $scheme == 'https') {
@@ -919,20 +919,28 @@ function file_unmanaged_copy($source, $destination = NULL, $replace = FILE_EXIST
     $destination = file_build_uri(drupal_basename($source));
   }
 
+  $scheme = file_uri_scheme($destination);
 
-  // Prepare the destination directory.
-  if (file_prepare_directory($destination)) {
-    // The destination is already a directory, so append the source basename.
-    $destination = file_stream_wrapper_uri_normalize($destination . '/' . drupal_basename($source));
+  $wrapper = FALSE;
+  if (!empty($scheme)) {
+    $wrapper = file_stream_wrapper_get_class($scheme);
   }
-  else {
-    // Perhaps $destination is a dir/file?
-    $dirname = drupal_dirname($destination);
-    if (!file_prepare_directory($dirname)) {
-      // The destination is not valid.
-      watchdog('file', 'File %file could not be copied, because the destination directory %destination is not configured correctly.', array('%file' => $original_source, '%destination' => $dirname));
-      drupal_set_message(t('The specified file %file could not be copied, because the destination directory is not properly configured. This may be caused by a problem with file or directory permissions. More information is available in the system log.', array('%file' => $original_source)), 'error');
-      return FALSE;
+
+  if (!$wrapper || !property_exists($wrapper, 'directoryless')) {
+    // Prepare the destination directory.
+    if (file_prepare_directory($destination)) {
+      // The destination is already a directory, so append the source basename.
+      $destination = file_stream_wrapper_uri_normalize($destination . '/' . drupal_basename($source));
+    }
+    else {
+      // Perhaps $destination is a dir/file?
+      $dirname = drupal_dirname($destination);
+      if (!file_prepare_directory($dirname)) {
+        // The destination is not valid.
+        watchdog('file', 'File %file could not be copied, because the destination directory %destination is not configured correctly.', array('%file' => $original_source, '%destination' => $dirname));
+        drupal_set_message(t('The specified file %file could not be copied, because the destination directory is not properly configured. This may be caused by a problem with file or directory permissions. More information is available in the system log.', array('%file' => $original_source)), 'error');
+        return FALSE;
+      }
     }
   }
 
@@ -995,6 +1003,16 @@ function file_build_uri($path) {
  *   and FILE_EXISTS_ERROR is specified.
  */
 function file_destination($destination, $replace) {
+  $scheme = file_uri_scheme($destination);
+
+  if ($scheme) {
+    $wrappers = (array) file_get_stream_wrappers(STREAM_WRAPPERS_REMOTE);
+
+    if (array_key_exists($scheme, $wrappers)) {
+      return $destination;
+    }
+  }
+
   if (file_exists($destination)) {
     switch ($replace) {
       case FILE_EXISTS_REPLACE:
