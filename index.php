@@ -38,29 +38,46 @@ $arguments = explode('/', $uri);
 if (isset($arguments[1]) && $arguments[1] == 'f') {
   try {
     _drupal_root_db_prepare_();
-    mcneese_file_db_return_file($arguments);
+
+    if (function_exists('mcneese_file_db_return_file')) {
+      mcneese_file_db_return_file($arguments);
+      unset($uri);
+      unset($arguments);
+    } else {
+      unset($uri);
+      unset($arguments);
+      drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
+      drupal_not_found();
+      drupal_exit();
+    }
   }
   catch (Exception $e) {
     drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
     throw $e;
   }
 }
-else if (isset($arguments[1]) && $arguments[1] == 'files' && count($arguments) > 6 && $arguments[2] == 'styles') {
+else if (count($arguments) > 6 && $arguments[1] == 'files' && $arguments[2] == 'styles') {
   drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
 
-  //if (($arguments[4] == mcneese_file_db_unrestricted_stream_wrapper::SCHEME || $arguments[4] == mcneese_file_db_restricted_stream_wrapper::SCHEME) && $arguments[5] == 'f') {
-  if ($arguments[4] == mcneese_file_db_unrestricted_stream_wrapper::SCHEME && $arguments[5] == 'f') {
-    $file_uri = DRUPAL_ROOT . $uri;
+  if (module_exists('mcneese_file_db')) {
+    //if (($arguments[4] == mcneese_file_db_unrestricted_stream_wrapper::SCHEME || $arguments[4] == mcneese_file_db_restricted_stream_wrapper::SCHEME) && $arguments[5] == 'f') {
+    if ($arguments[4] == mcneese_file_db_unrestricted_stream_wrapper::SCHEME && $arguments[5] == 'f') {
+      $file_uri = DRUPAL_ROOT . $uri;
 
-    if (!file_exists($file_uri) || empty($arguments[8])) {
-      mcneese_file_db_generate_image_style($arguments);
-      exit();
+      if (!file_exists($file_uri) || empty($arguments[8])) {
+        mcneese_file_db_generate_image_style($arguments);
+        drupal_exit();
+      }
     }
   }
 
+  unset($uri);
+  unset($arguments);
   menu_execute_active_handler();
 }
 else {
+  unset($uri);
+  unset($arguments);
   drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
   menu_execute_active_handler();
 }
