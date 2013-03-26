@@ -3050,7 +3050,7 @@ function _registry_check_code($type, $name = NULL) {
 
   if (!isset($lookup_cache)) {
     $lookup_cache = array();
-    if ($cache = cache_get('lookup_cache', 'cache_bootstrap')) {
+    if (function_exists('cache_get') && $cache = cache_get('lookup_cache', 'cache_bootstrap')) {
       $lookup_cache = $cache->data;
     }
   }
@@ -3066,7 +3066,7 @@ function _registry_check_code($type, $name = NULL) {
   // Called from drupal_page_footer, we write to permanent storage if there
   // changes to the lookup cache for this request.
   if ($type == REGISTRY_WRITE_LOOKUP_CACHE) {
-    if ($cache_update_needed) {
+    if ($cache_update_needed && function_exists('cache_set')) {
       cache_set('lookup_cache', $lookup_cache, 'cache_bootstrap');
     }
     return;
