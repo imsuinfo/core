@@ -15,9 +15,7 @@ function _drupal_root_db_prepare_() {
   drupal_bootstrap(DRUPAL_BOOTSTRAP_CONFIGURATION);
 
   require_once DRUPAL_ROOT . '/includes/database/database.inc';
-  require_once DRUPAL_ROOT . '/includes/cache.inc';
-  spl_autoload_register('drupal_autoload_class');
-  spl_autoload_register('drupal_autoload_interface');
+  require_once DRUPAL_ROOT . '/includes/stream_wrappers.inc';
 
   require_once DRUPAL_ROOT . '/sites/all/modules/mcneese/mcneese_file_db/mcneese_file_db.module';
   require_once DRUPAL_ROOT . '/sites/all/modules/mcneese/mcneese_file_db/classes/mcneese_file_db_stream_wrapper.inc';
@@ -60,14 +58,9 @@ else if (count($arguments) > 6 && $arguments[1] == 'files' && $arguments[2] == '
   drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
 
   if (module_exists('mcneese_file_db')) {
-    //if (($arguments[4] == mcneese_file_db_unrestricted_stream_wrapper::SCHEME || $arguments[4] == mcneese_file_db_restricted_stream_wrapper::SCHEME) && $arguments[5] == 'f') {
-    if ($arguments[4] == mcneese_file_db_unrestricted_stream_wrapper::SCHEME && $arguments[5] == 'f') {
-      $file_uri = DRUPAL_ROOT . $uri;
-
-      if (!file_exists($file_uri) || empty($arguments[8])) {
-        mcneese_file_db_generate_image_style($arguments);
-        drupal_exit();
-      }
+    //if (($arguments[4] == mcneese_file_db_unrestricted_stream_wrapper::SCHEME || $arguments[4] == mcneese_file_db_restricted_stream_wrapper::SCHEME) && ($arguments[5] == MCNEESE_FILE_DB_FILE_PATH || $arguments[5] == MCNEESE_FILE_DB_PATH_BY_HASH)) {
+    if ($arguments[4] == mcneese_file_db_unrestricted_stream_wrapper::SCHEME && ($arguments[5] == MCNEESE_FILE_DB_FILE_PATH || $arguments[5] == MCNEESE_FILE_DB_PATH_BY_HASH)) {
+      mcneese_file_db_generate_image_style($arguments);
     }
   }
 
