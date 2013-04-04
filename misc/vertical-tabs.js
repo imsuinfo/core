@@ -26,7 +26,7 @@ Drupal.behaviors.verticalTabs = {
 
       // Create the tab column.
       var tab_list = $('<ul class="vertical-tabs-list"></ul>');
-      $(this).wrap('<div class="vertical-tabs clearfix"></div>').before(tab_list);
+      $(this).wrap('<div class="vertical-tabs"></div>').before(tab_list);
 
       // Transform each fieldset into a tab.
       $fieldsets.each(function () {
