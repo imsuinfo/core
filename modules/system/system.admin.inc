@@ -2510,11 +2510,11 @@ function theme_admin_page($variables) {
     }
   }
 
-  $output = '<div class="admin clearfix">';
+  $output = '<div class="admin">';
   $output .= theme('system_compact_link');
 
   foreach ($container as $id => $data) {
-    $output .= '<div class="' . $id . ' clearfix">';
+    $output .= '<div class="' . $id . '">';
     $output .= $data;
     $output .= '</div>';
   }
@@ -2562,10 +2562,10 @@ function theme_system_admin_index($variables) {
     }
   }
 
-  $output = '<div class="admin clearfix">';
+  $output = '<div class="admin">';
   $output .= theme('system_compact_link');
   foreach ($container as $id => $data) {
-    $output .= '<div class="' . $id . ' clearfix">';
+    $output .= '<div class="' . $id . '">';
     $output .= $data;
     $output .= '</div>';
   }
@@ -2754,7 +2754,7 @@ function theme_system_themes_page($variables) {
       continue;
     }
     // Start new theme group.
-    $output .= '<div class="system-themes-list system-themes-list-'. $state .' clearfix"><h2>'. $title .'</h2>';
+    $output .= '<div class="system-themes-list system-themes-list-'. $state .'"><h2>'. $title .'</h2>';
 
     foreach ($theme_groups[$state] as $theme) {
 
