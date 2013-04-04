@@ -78,7 +78,7 @@ function user_filter_form() {
 
   $form['filters']['status'] = array(
     '#type' => 'container',
-    '#attributes' => array('class' => array('clearfix')),
+    '#attributes' => array('class' => array('')),
     '#prefix' => ($i ? '<div class="additional-filters">' . t('and where') . '</div>' : ''),
   );
   $form['filters']['status']['filters'] = array(

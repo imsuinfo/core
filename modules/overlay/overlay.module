@@ -412,7 +412,7 @@ function theme_overlay_disable_message($variables) {
   $output = '<h3 class="element-invisible">' . t('Options for the administrative overlay') . '</h3>' . $output;
 
   // Wrap in a container for styling.
-  $output = '<div id="overlay-disable-message" class="clearfix">' . $output . '</div>';
+  $output = '<div id="overlay-disable-message" class="">' . $output . '</div>';
 
   return $output;
 }
@@ -488,7 +488,6 @@ function template_preprocess_overlay(&$variables) {
   $variables['tabs'] = menu_primary_local_tasks();
   $variables['title'] = drupal_get_title();
   $variables['disable_overlay'] = overlay_disable_message();
-  $variables['content_attributes_array']['class'][] = 'clearfix';
 }
 
 /**
