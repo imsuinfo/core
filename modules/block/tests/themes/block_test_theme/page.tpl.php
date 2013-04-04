@@ -10,7 +10,7 @@
 
   <div id="page-wrapper"><div id="page">
 
-    <div id="header"><div class="section clearfix">
+    <div id="header"><div class="section">
 
       <?php if ($logo): ?>
         <a href="<?php print $front_page; ?>" title="<?php print t('Home'); ?>" rel="home" id="logo">
@@ -44,8 +44,8 @@
 
     <?php if ($main_menu || $secondary_menu): ?>
       <div id="navigation"><div class="section">
-        <?php print theme('links__system_main_menu', array('links' => $main_menu, 'attributes' => array('id' => 'main-menu', 'class' => array('links', 'inline', 'clearfix')), 'heading' => t('Main menu'))); ?>
-        <?php print theme('links__system_secondary_menu', array('links' => $secondary_menu, 'attributes' => array('id' => 'secondary-menu', 'class' => array('links', 'inline', 'clearfix')), 'heading' => t('Secondary menu'))); ?>
+        <?php print theme('links__system_main_menu', array('links' => $main_menu, 'attributes' => array('id' => 'main-menu', 'class' => array('links', 'inline')), 'heading' => t('Main menu'))); ?>
+        <?php print theme('links__system_secondary_menu', array('links' => $secondary_menu, 'attributes' => array('id' => 'secondary-menu', 'class' => array('links', 'inline')), 'heading' => t('Secondary menu'))); ?>
       </div></div> <!-- /.section, /#navigation -->
     <?php endif; ?>
 
@@ -55,7 +55,7 @@
 
     <?php print $messages; ?>
 
-    <div id="main-wrapper"><div id="main" class="clearfix">
+    <div id="main-wrapper"><div id="main" class="">
 
       <div id="content" class="column"><div class="section">
         <?php if ($page['highlighted']): ?><div id="highlighted"><?php print render($page['highlighted']); ?></div><?php endif; ?>
