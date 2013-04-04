@@ -247,24 +247,16 @@ html.js .js-hide {
   height: auto;
 }
 
+
 /**
- * Markup free clearing.
- *
- * @see http://perishablepress.com/press/2009/12/06/new-clearfix-hack
+ * Enable clearfix hack for known problematic modules and paths, but only those.
  */
-.clearfix:after {
+#views-preview-wrapper .clearfix:after,
+#views-ui-edit-form .clearfix:after {
   content: ".";
   display: block;
   height: 0;
   clear: both;
   visibility: hidden;
-}
-/* IE6 */
-* html .clearfix {
-  height: 1%;
-}
-/* IE7 */
-*:first-child + html .clearfix {
-  min-height: 1%;
 }
 
