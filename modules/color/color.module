@@ -274,7 +274,7 @@ function theme_color_scheme_form($variables) {
   drupal_add_js($preview_js_path, array('weight' => -1));
 
   $output  = '';
-  $output .= '<div class="color-form clearfix">';
+  $output .= '<div class="color-form">';
   // Color schemes
   $output .= drupal_render($form['scheme']);
   // Palette
