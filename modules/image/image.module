@@ -254,7 +254,7 @@ function image_form_system_file_system_settings_alter(&$form, &$form_state) {
 }
 
 /**
- * Submit handler for the file system settings form.
+ * Form submission handler for system_file_system_settings().
  *
  * Adds a menu rebuild after the public file path has been changed, so that the
  * menu router item depending on that file path will be regenerated.
@@ -312,9 +312,9 @@ function image_file_download($uri) {
     return -1;
   }
 
-  // Private file access for the original files. Note that we only
-  // check access for non-temporary images, since file.module will
-  // grant access for all temporary files.
+  // Private file access for the original files. Note that we only check access
+  // for non-temporary images, since file.module will grant access for all
+  // temporary files.
   $files = file_load_multiple(array(), array('uri' => $uri));
   if (count($files)) {
     $file = reset($files);
@@ -537,7 +537,7 @@ function image_field_update_instance($instance, $prior_instance) {
 }
 
 /**
- * Clear cached versions of a specific file in all styles.
+ * Clears cached versions of a specific file in all styles.
  *
  * @param $path
  *   The Drupal file path to the original image.
@@ -553,7 +553,7 @@ function image_path_flush($path) {
 }
 
 /**
- * Get an array of all styles and their settings.
+ * Gets an array of all styles and their settings.
  *
  * @return
  *   An array of styles keyed by the image style ID (isid).
@@ -614,7 +614,9 @@ function image_styles() {
 }
 
 /**
- * Load a style by style name or ID. May be used as a loader for menu items.
+ * Loads a style by style name or ID.
+ *
+ * May be used as a loader for menu items.
  *
  * @param $name
  *   The name of the style.
@@ -623,6 +625,7 @@ function image_styles() {
  * @param $include
  *   If set, this loader will restrict to a specific type of image style, may be
  *   one of the defined Image style storage constants.
+ *
  * @return
  *   An image style array containing the following keys:
  *   - "isid": The unique image style ID.
@@ -660,12 +663,20 @@ function image_style_load($name = NULL, $isid = NULL, $include = NULL) {
 }
 
 /**
- * Save an image style.
+ * Saves an image style.
  *
- * @param style
- *   An image style array.
- * @return
- *   An image style array. In the case of a new style, 'isid' will be populated.
+ * @param array $style
+ *   An image style array containing:
+ *   - name: A unique name for the style.
+ *   - isid: (optional) An image style ID.
+ *
+ * @return array
+ *   An image style array containing:
+ *   - name: An unique name for the style.
+ *   - old_name: The original name for the style.
+ *   - isid: An image style ID.
+ *   - is_new: TRUE if this is a new style, and FALSE if it is an existing
+ *     style.
  */
 function image_style_save($style) {
   if (isset($style['isid']) && is_numeric($style['isid'])) {
@@ -692,13 +703,14 @@ function image_style_save($style) {
 }
 
 /**
- * Delete an image style.
+ * Deletes an image style.
  *
  * @param $style
  *   An image style array.
  * @param $replacement_style_name
  *   (optional) When deleting a style, specify a replacement style name so
  *   that existing settings (if any) may be converted to a new style.
+ *
  * @return
  *   TRUE on success.
  */
@@ -717,14 +729,17 @@ function image_style_delete($style, $replacement_style_name = '') {
 }
 
 /**
- * Load all the effects for an image style.
+ * Loads all the effects for an image style.
  *
- * @param $style
- *   An image style array.
- * @return
+ * @param array $style
+ *   An image style array containing:
+ *   - isid: The unique image style ID that contains this image effect.
+ *
+ * @return array
  *   An array of image effects associated with specified image style in the
  *   format array('isid' => array()), or an empty array if the specified style
  *   has no effects.
+ * @see image_effects()
  */
 function image_style_effects($style) {
   $effects = image_effects();
@@ -739,10 +754,11 @@ function image_style_effects($style) {
 }
 
 /**
- * Get an array of image styles suitable for using as select list options.
+ * Gets an array of image styles suitable for using as select list options.
  *
  * @param $include_empty
  *   If TRUE a <none> option will be inserted in the options array.
+ *
  * @return
  *   Array of image styles both key and value are set to style name.
  */
@@ -763,7 +779,7 @@ function image_style_options($include_empty = TRUE) {
 }
 
 /**
- * Menu callback; Given a style and image path, generate a derivative.
+ * Page callback: Generates a derivative, given a style and image path.
  *
  * After generating an image, transfer it to the requesting agent.
  *
@@ -838,9 +854,7 @@ function image_style_deliver($style, $scheme) {
 
   if ($success) {
     $image = image_load($derivative_uri);
-    if (is_object($image)) {
-      file_transfer($image->source, array('Content-Type' => $image->info['mime_type'], 'Content-Length' => $image->info['file_size']));
-    }
+    file_transfer($image->source, array('Content-Type' => $image->info['mime_type'], 'Content-Length' => $image->info['file_size']));
   }
   else {
     watchdog('image', 'Unable to generate the derived image located at %path.', array('%path' => $derivative_uri));
@@ -933,7 +947,7 @@ function image_style_transform_dimensions($style_name, array &$dimensions) {
 }
 
 /**
- * Flush cached media for a style.
+ * Flushes cached media for a style.
  *
  * @param $style
  *   An image style array.
@@ -965,12 +979,13 @@ function image_style_flush($style) {
 }
 
 /**
- * Return the URL for an image derivative given a style and image path.
+ * Returns the URL for an image derivative given a style and image path.
  *
  * @param $style_name
  *   The name of the style to be used with this image.
  * @param $path
  *   The path to the image.
+ *
  * @return
  *   The absolute URL where a style image can be downloaded, suitable for use
  *   in an <img> tag. Requesting the URL will cause the image to be created.
@@ -981,7 +996,7 @@ function image_style_url($style_name, $path) {
   // The token query is added even if the 'image_allow_insecure_derivatives'
   // variable is TRUE, so that the emitted links remain valid if it is changed
   // back to the default FALSE.
-  $token_query = array(IMAGE_DERIVATIVE_TOKEN => image_style_path_token($style_name, $path));
+  $token_query = array(IMAGE_DERIVATIVE_TOKEN => image_style_path_token($style_name, file_stream_wrapper_uri_normalize($path)));
 
   // If not using clean URLs, the image derivative callback is only available
   // with the query string. If the file does not exist, use url() to ensure
@@ -989,21 +1004,12 @@ function image_style_url($style_name, $path) {
   // actual file path, this avoids bootstrapping PHP once the files are built.
   if (!variable_get('clean_url') && file_uri_scheme($uri) == 'public' && !file_exists($uri)) {
     $directory_path = file_stream_wrapper_get_instance_by_uri($uri)->getDirectoryPath();
-    $url = url($directory_path . '/' . file_uri_target($uri), array('absolute' => TRUE, 'query' => $token_query));
-  }
-  else {
-    $file_url = file_create_url($uri);
-
-    // Append the query string with the token.
-    $url = $file_url . (strpos($file_url, '?') !== FALSE ? '&' : '?') . drupal_http_build_query($token_query);
+    return url($directory_path . '/' . file_uri_target($uri), array('absolute' => TRUE, 'query' => $token_query));
   }
 
-  // never provide absolute urls for images originating from this server.
-  if (!empty($GLOBALS['base_url'])) {
-    return preg_replace('`^' . $GLOBALS['base_url'] . '`i', '', $url);
-  }
-
-  return $url;
+  $file_url = file_create_url($uri);
+  // Append the query string with the token.
+  return $file_url . (strpos($file_url, '?') !== FALSE ? '&' : '?') . drupal_http_build_query($token_query);
 }
 
 /**
@@ -1028,7 +1034,7 @@ function image_style_path_token($style_name, $uri) {
 }
 
 /**
- * Return the URI of an image when using a style.
+ * Returns the URI of an image when using a style.
  *
  * The path returned by this function may not exist. The default generation
  * method only creates images when they are requested by a user's browser.
@@ -1037,6 +1043,7 @@ function image_style_path_token($style_name, $uri) {
  *   The name of the style to be used with this image.
  * @param $uri
  *   The URI or path to the image.
+ *
  * @return
  *   The URI to an image style image.
  * @see image_style_url()
@@ -1049,27 +1056,16 @@ function image_style_path($style_name, $uri) {
   else {
     $path = $uri;
     $scheme = file_default_scheme();
-
-    $wrappers = file_get_stream_wrappers(STREAM_WRAPPERS_READ);
-    unset($wrappers[$scheme]);
-
-    // find out which stream it belongs to by a walkthrough of available streams.
-    foreach ($wrappers as $wrapper_scheme => $wrapper) {
-
-      if (file_exists($wrapper_scheme . '://' . $uri)) {
-        $scheme = $wrapper_scheme;
-        break;
-      }
-    }
   }
   return $scheme . '://styles/' . $style_name . '/' . $scheme . '/' . $path;
 }
 
 /**
- * Save a default image style to the database.
+ * Saves a default image style to the database.
  *
  * @param style
  *   An image style array provided by a module.
+ *
  * @return
  *   An image style array. The returned style array will include the new 'isid'
  *   assigned to the style.
@@ -1087,7 +1083,7 @@ function image_default_style_save($style) {
 }
 
 /**
- * Revert the changes made by users to a default image style.
+ * Reverts the changes made by users to a default image style.
  *
  * @param style
  *   An image style array.
@@ -1104,7 +1100,10 @@ function image_default_style_revert($style) {
 }
 
 /**
- * Pull in image effects exposed by modules implementing hook_image_effect_info().
+ * Returns a set of image effects.
+ *
+ * These image effects are exposed by modules implementing
+ * hook_image_effect_info().
  *
  * @return
  *   An array of image effects to be used when transforming images.
@@ -1146,7 +1145,7 @@ function image_effect_definitions() {
 }
 
 /**
- * Load the definition for an image effect.
+ * Loads the definition for an image effect.
  *
  * The effect definition is a set of core properties for an image effect, not
  * containing any user-settings. The definition defines various functions to
@@ -1158,6 +1157,7 @@ function image_effect_definitions() {
  *   The name of the effect definition to load.
  * @param $style
  *   An image style array to which this effect will be added.
+ *
  * @return
  *   An array containing the image effect definition with the following keys:
  *   - "effect": The unique name for the effect being performed. Usually prefixed
@@ -1185,7 +1185,7 @@ function image_effect_definition_load($effect, $style_name = NULL) {
 }
 
 /**
- * Load all image effects from the database.
+ * Loads all image effects from the database.
  *
  * @return
  *   An array of all image effects.
@@ -1217,7 +1217,7 @@ function image_effects() {
 }
 
 /**
- * Load a single image effect.
+ * Loads a single image effect.
  *
  * @param $ieid
  *   The image effect ID.
@@ -1226,6 +1226,7 @@ function image_effects() {
  * @param $include
  *   If set, this loader will restrict to a specific type of image style, may be
  *   one of the defined Image style storage constants.
+ *
  * @return
  *   An image effect array, consisting of the following keys:
  *   - "ieid": The unique image effect ID.
@@ -1247,10 +1248,11 @@ function image_effect_load($ieid, $style_name, $include = NULL) {
 }
 
 /**
- * Save an image effect.
+ * Saves an image effect.
  *
  * @param $effect
  *   An image effect array.
+ *
  * @return
  *   An image effect array. In the case of a new effect, 'ieid' will be set.
  */
@@ -1267,7 +1269,7 @@ function image_effect_save($effect) {
 }
 
 /**
- * Delete an image effect.
+ * Deletes an image effect.
  *
  * @param $effect
  *   An image effect array.
@@ -1279,12 +1281,13 @@ function image_effect_delete($effect) {
 }
 
 /**
- * Given an image object and effect, perform the effect on the file.
+ * Applies an image effect to the image object.
  *
  * @param $image
  *   An image object returned by image_load().
  * @param $effect
  *   An image effect array.
+ *
  * @return
  *   TRUE on success. FALSE if unable to perform the image effect on the image.
  */
@@ -1335,7 +1338,7 @@ function theme_image_style($variables) {
 }
 
 /**
- * Accept a keyword (center, top, left, etc) and return it as a pixel offset.
+ * Accepts a keyword (center, top, left, etc) and returns it as a pixel offset.
  *
  * @param $value
  * @param $current_pixels

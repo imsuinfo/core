@@ -242,7 +242,7 @@ function install_begin_request(&$install_state) {
   require_once DRUPAL_ROOT . '/includes/common.inc';
   require_once DRUPAL_ROOT . '/includes/file.inc';
   require_once DRUPAL_ROOT . '/includes/install.inc';
-  require_once DRUPAL_ROOT . '/includes/path.inc';
+  require_once DRUPAL_ROOT . '/' . variable_get('path_inc', 'includes/path.inc');
 
   // Load module basics (needed for hook invokes).
   include_once DRUPAL_ROOT . '/includes/module.inc';
@@ -1041,7 +1041,21 @@ function install_select_profile(&$install_state) {
 }
 
 /**
- * Selects an installation profile from a list or from a $_POST submission.
+ * Selects an installation profile.
+ *
+ * A profile will be selected if:
+ * - Only one profile is available,
+ * - A profile was submitted through $_POST,
+ * - Exactly one of the profiles is marked as "exclusive".
+ * If multiple profiles are marked as "exclusive" then no profile will be
+ * selected.
+ *
+ * @param array $profiles
+ *   An associative array of profiles with the machine-readable names as keys.
+ *
+ * @return
+ *   The machine-readable name of the selected profile or NULL if no profile was
+ *   selected.
  */
 function _install_select_profile($profiles) {
   if (sizeof($profiles) == 0) {
@@ -1061,6 +1075,23 @@ function _install_select_profile($profiles) {
       }
     }
   }
+  // Check for a profile marked as "exclusive" and ensure that only one
+  // profile is marked as such.
+  $exclusive_profile = NULL;
+  foreach ($profiles as $profile) {
+    $profile_info = install_profile_info($profile->name);
+    if (!empty($profile_info['exclusive'])) {
+      if (empty($exclusive_profile)) {
+        $exclusive_profile = $profile->name;
+      }
+      else {
+        // We found a second "exclusive" profile. There's no way to choose
+        // between them, so we ignore the property.
+        return;
+      }
+    }
+  }
+  return $exclusive_profile;
 }
 
 /**

@@ -777,9 +777,8 @@ class DrupalPublicStreamWrapper extends DrupalLocalStreamWrapper {
    * Return the HTML URI of a public file.
    */
   function getExternalUrl() {
-    global $base_path;
     $path = str_replace('\\', '/', $this->getTarget());
-    return $base_path . self::getDirectoryPath() . '/' . drupal_encode_path($path);
+    return $GLOBALS['base_url'] . '/' . self::getDirectoryPath() . '/' . drupal_encode_path($path);
   }
 }
 
@@ -807,7 +806,7 @@ class DrupalPrivateStreamWrapper extends DrupalLocalStreamWrapper {
    */
   function getExternalUrl() {
     $path = str_replace('\\', '/', $this->getTarget());
-    return url('system/files/' . $path, array('absolute' => FALSE));
+    return url('system/files/' . $path, array('absolute' => TRUE));
   }
 }
 
@@ -832,6 +831,6 @@ class DrupalTemporaryStreamWrapper extends DrupalLocalStreamWrapper {
    */
   public function getExternalUrl() {
     $path = str_replace('\\', '/', $this->getTarget());
-    return url('system/temporary/' . $path, array('absolute' => FALSE));
+    return url('system/temporary/' . $path, array('absolute' => TRUE));
   }
 }

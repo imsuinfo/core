@@ -363,7 +363,6 @@ class UserController extends DrupalDefaultEntityController {
  * @see user_load_multiple()
  */
 function user_load($uid, $reset = FALSE) {
-  if (!is_numeric($uid) || (float) $uid !== round($uid)) return FALSE;
   $users = user_load_multiple(array($uid), array(), $reset);
   return reset($users);
 }
@@ -553,6 +552,7 @@ function user_save($account, $edit = array(), $category = 'account') {
       if ($account->status != $account->original->status) {
         // The user's status is changing; conditionally send notification email.
         $op = $account->status == 1 ? 'status_activated' : 'status_blocked';
+        _user_mail_notify($op, $account);
       }
 
       // Update $edit with any interim changes to $account.
@@ -792,15 +792,6 @@ function user_access($string, $account = NULL) {
 
   if (!isset($account)) {
     $account = $user;
-
-    if (!is_object($user)){
-      $account = user_load();
-    }
-  }
-
-  if (!is_object($account)){
-    watchdog('user', "user_access() called with an invalid account, passed string is '%string'", array('%string' => check_plain($string)), WATCHDOG_ERROR);
-    return FALSE;
   }
 
   // User #1 has all privileges:
@@ -1526,15 +1517,33 @@ function theme_user_list($variables) {
   return theme('item_list', array('items' => $items, 'title' => $title));
 }
 
+/**
+ * Determines if the current user is anonymous.
+ *
+ * @return bool
+ *   TRUE if the user is anonymous, FALSE if the user is authenticated.
+ */
 function user_is_anonymous() {
   // Menu administrators can see items for anonymous when administering.
   return !$GLOBALS['user']->uid || !empty($GLOBALS['menu_admin']);
 }
 
+/**
+ * Determines if the current user is logged in.
+ *
+ * @return bool
+ *   TRUE if the user is logged in, FALSE if the user is anonymous.
+ */
 function user_is_logged_in() {
   return (bool) $GLOBALS['user']->uid;
 }
 
+/**
+ * Determines if the current user has access to the user registration page.
+ *
+ * @return bool
+ *   TRUE if the user is not already logged in and can register for an account.
+ */
 function user_register_access() {
   return user_is_anonymous() && variable_get('user_register', USER_REGISTER_VISITORS_ADMINISTRATIVE_APPROVAL);
 }
@@ -3362,7 +3371,7 @@ function user_filters() {
   $options = array();
   foreach (module_implements('permission') as $module) {
     $function = $module . '_permission';
-    if ($permissions = $function('permission')) {
+    if ($permissions = $function()) {
       asort($permissions);
       foreach ($permissions as $permission => $description) {
         $options[t('@module module', array('@module' => $module))][$permission] = t($permission);
@@ -3829,6 +3838,7 @@ function user_register_submit($form, &$form_state) {
   }
   // No e-mail verification required; log in user immediately.
   elseif (!$admin && !variable_get('user_email_verification', TRUE) && $account->status) {
+    _user_mail_notify('register_no_approval_required', $account);
     $form_state['uid'] = $account->uid;
     user_login_submit(array(), $form_state);
     drupal_set_message(t('Registration successful. You are now logged in.'));

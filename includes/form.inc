@@ -1130,10 +1130,6 @@ function drupal_validate_form($form_id, &$form, &$form_state) {
       form_set_error('form_token', t('The form has become outdated. Copy any unsaved work in the form below and then <a href="@link">reload this page</a>.', array('@link' => $url)));
     }
   }
-  // Ensure the correct protocol when #https is set.
-  if (!empty($form['#https']) && !$GLOBALS['is_https']) {
-    form_set_error(NULL, t('This form requires HTTPS.  Contact the site administrator if the problem persists.'));
-  }
 
   _form_validate($form, $form_state, $form_id);
   $validated_forms[$form_id] = TRUE;
@@ -2761,9 +2757,6 @@ function form_get_options($element, $key) {
  */
 function theme_fieldset($variables) {
   $element = $variables['element'];
-
-  if (empty($element['#children'])) return '';
-
   element_set_attributes($element, array('id'));
   _form_set_class($element, array('form-wrapper'));
 
@@ -3065,7 +3058,6 @@ function form_process_radios($element) {
  */
 function theme_checkbox($variables) {
   $element = $variables['element'];
-  $t = get_t();
   $element['#attributes']['type'] = 'checkbox';
   element_set_attributes($element, array('id', 'name', '#return_value' => 'value'));
 
@@ -3669,35 +3661,6 @@ function form_pre_render_fieldset($element) {
 /**
  * Creates a group formatted as vertical tabs.
  *
- * Note that autocomplete callbacks should include special handling as the
- * user's input may contain forward slashes. If the user-submitted string has a
- * '/' in the text that is sent in the autocomplete request, the menu system
- * will split the text and pass it to the callback as multiple arguments.
- *
- * Suppose your autocomplete path in the menu system is 'mymodule_autocomplete.'
- * In your form you have:
- * @code
- * '#autocomplete_path' => 'mymodule_autocomplete/' . $some_key . '/' . $some_id,
- * @endcode
- * The user types in "keywords" so the full path called is:
- * 'mymodule_autocomplete/$some_key/$some_id/keywords'
- *
- * You should include code similar to the following to handle slashes in the
- * input:
- * @code
- * function mymodule_autocomplete_callback($arg1, $arg2, $keywords) {
- *   $args = func_get_args();
- *   // We need to remove $arg1 and $arg2 from the beginning of the array so we
- *   // are left with the keywords.
- *   array_shift($args);
- *   array_shift($args);
- *   // We store the user's original input in $keywords, including any slashes.
- *   $keywords = implode('/', $args);
- *
- *   // Your code here.
- * }
- * @endcode
- *
  * @param $element
  *   An associative array containing the properties and children of the
  *   fieldset.
@@ -3745,9 +3708,6 @@ function form_process_vertical_tabs($element, &$form_state) {
  */
 function theme_vertical_tabs($variables) {
   $element = $variables['element'];
-
-  if (empty($element['#children'])) return '';
-
   // Add required JavaScript and Stylesheet.
   drupal_add_library('system', 'drupal.vertical-tabs');
 
@@ -3790,8 +3750,6 @@ function theme_button($variables) {
     $element['#attributes']['class'][] = 'form-button-disabled';
   }
 
-  $element['#attributes']['class'][] = strtolower($element['#button_type'] . '-' . $element['#value']);
-
   return '<input' . drupal_attributes($element['#attributes']) . ' />';
 }
 
@@ -3820,8 +3778,6 @@ function theme_image_button($variables) {
   if (!empty($element['#attributes']['disabled'])) {
     $element['#attributes']['class'][] = 'form-button-disabled';
   }
-
-  $element['#attributes']['class'][] = strtolower($element['#button_type'] . '-' . $element['#value']);
 
   return '<input' . drupal_attributes($element['#attributes']) . ' />';
 }
@@ -4053,8 +4009,6 @@ function theme_file($variables) {
  */
 function theme_form_element($variables) {
   $element = &$variables['element'];
-  // This is also used in the installer, pre-database setup.
-  $t = get_t();
 
   // This function is invoked as theme wrapper, but the rendered form element
   // may not necessarily have been processed by form_builder().
@@ -4068,12 +4022,6 @@ function theme_form_element($variables) {
   }
   // Add element's #type and #name as class to aid with JS/CSS selectors.
   $attributes['class'] = array('form-item');
-  if (!empty($element['#required'])) {
-    $attributes['class'][] = 'required';
-  }
-  if (isset($element['#parents']) && form_get_error($element)) {
-    $attributes['class'][] = 'error';
-  }
   if (!empty($element['#type'])) {
     $attributes['class'][] = 'form-type-' . strtr($element['#type'], '_', '-');
   }
@@ -4219,7 +4167,7 @@ function _form_set_class(&$element, $class = array()) {
   if (!empty($element['#required'])) {
     $element['#attributes']['class'][] = 'required';
   }
-  if (isset($element['#parents']) && form_get_error($element) !== NULL) {
+  if (isset($element['#parents']) && form_get_error($element) !== NULL && !empty($element['#validated'])) {
     $element['#attributes']['class'][] = 'error';
   }
 }

@@ -218,8 +218,8 @@ function block_block_info() {
  * Implements hook_block_configure().
  */
 function block_block_configure($delta = 0) {
-  if ($delta && is_numeric($delta) && (float) $delta === round($delta)) {
-    $custom_block = (array) block_custom_block_get($delta);
+  if ($delta) {
+    $custom_block = block_custom_block_get($delta);
   }
   else {
     $custom_block = array();
@@ -740,7 +740,7 @@ function _block_load_blocks() {
 /**
  * Implements hook_block_list_alter().
  *
- * Checks the page, user role, and user-specific visibilty settings.
+ * Checks the page, user role, and user-specific visibility settings.
  * Removes the block if the visibility conditions are not met.
  */
 function block_block_list_alter(&$blocks) {
