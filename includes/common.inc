@@ -2289,7 +2289,17 @@ function url($path = NULL, array $options = array()) {
   }
 
   $base = $options['absolute'] ? $options['base_url'] . '/' : base_path();
-  $prefix = empty($path) ? rtrim($options['prefix'], '/') : $options['prefix'];
+
+  if (empty($path)) {
+    $prefix = rtrim($options['prefix'], '/');
+  }
+  else {
+    $prefix = $options['prefix'];
+
+    if (substr($path, 0, 1) == '/') {
+      $path = substr($path, 1);
+    }
+  }
 
   // With Clean URLs.
   if (!empty($GLOBALS['conf']['clean_url'])) {
