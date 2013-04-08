@@ -979,6 +979,16 @@ function file_build_uri($path) {
  *   and FILE_EXISTS_ERROR is specified.
  */
 function file_destination($destination, $replace) {
+  $scheme = file_uri_scheme($destination);
+
+  if ($scheme) {
+    $wrappers = (array) file_get_stream_wrappers(STREAM_WRAPPERS_REMOTE);
+
+    if (array_key_exists($scheme, $wrappers)) {
+      return $destination;
+    }
+  }
+
   if (file_exists($destination)) {
     switch ($replace) {
       case FILE_EXISTS_REPLACE:
