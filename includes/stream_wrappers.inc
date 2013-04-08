@@ -37,6 +37,11 @@ define('STREAM_WRAPPERS_ALL', 0x0000);
 define('STREAM_WRAPPERS_LOCAL', 0x0001);
 
 /**
+ * Stream wrapper bit flag -- refers to a remote file system location.
+ */
+define('STREAM_WRAPPERS_REMOTE', 0x0002);
+
+/**
  * Stream wrapper bit flag -- wrapper is readable (almost always true).
  */
 define('STREAM_WRAPPERS_READ', 0x0004);
