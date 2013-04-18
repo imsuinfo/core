@@ -3188,7 +3188,12 @@ function ip_address() {
   $ip_address = &drupal_static(__FUNCTION__);
 
   if (!isset($ip_address)) {
-    $ip_address = $_SERVER['REMOTE_ADDR'];
+    if (isset($_SERVER['REMOTE_ADDR'])) {
+      $ip_address = $_SERVER['REMOTE_ADDR'];
+    }
+    else {
+      $ip_address = '127.0.0.1';
+    }
 
     if (variable_get('reverse_proxy', 0)) {
       $reverse_proxy_header = variable_get('reverse_proxy_header', 'HTTP_X_FORWARDED_FOR');
@@ -3274,7 +3279,12 @@ class SchemaCache extends DrupalCacheArray {
    */
   public function __construct() {
     // Cache by request method.
-    parent::__construct('schema:runtime:' . ($_SERVER['REQUEST_METHOD'] == 'GET'), 'cache');
+    if (isset($_SERVER['REQUEST_METHOD'])) {
+      parent::__construct('schema:runtime:' . ($_SERVER['REQUEST_METHOD'] == 'GET'), 'cache');
+    }
+    else {
+      parent::__construct('schema:runtime:' . FALSE, 'cache');
+    }
   }
 
   /**
