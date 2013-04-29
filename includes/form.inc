@@ -2843,7 +2843,7 @@ function theme_radios($variables) {
   if (isset($element['#attributes']['title'])) {
     $attributes['title'] = $element['#attributes']['title'];
   }
-  return '<div' . drupal_attributes($attributes) . '>' . (!empty($element['#children']) ? $element['#children'] : '') . '</div>';
+  return '<fieldset' . drupal_attributes($attributes) . '>' . (!empty($element['#children']) ? $element['#children'] : '') . '</fieldset>';
 }
 
 /**
@@ -3107,7 +3107,7 @@ function theme_checkboxes($variables) {
   if (isset($element['#attributes']['title'])) {
     $attributes['title'] = $element['#attributes']['title'];
   }
-  return '<div' . drupal_attributes($attributes) . '>' . (!empty($element['#children']) ? $element['#children'] : '') . '</div>';
+  return '<fieldset' . drupal_attributes($attributes) . '>' . (!empty($element['#children']) ? $element['#children'] : '') . '</fieldset>';
 }
 
 /**
