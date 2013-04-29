@@ -3032,7 +3032,7 @@ function form_process_date($element) {
       '#type' => 'select',
       '#title' => $title,
       '#title_display' => 'invisible',
-      '#value' => $element['#value'][$type],
+      '#value' => isset($element['#value'][$type]) ? $element['#value'][$type] : NULL,
       '#attributes' => $element['#attributes'],
       '#options' => $options,
     );
