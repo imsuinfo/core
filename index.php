@@ -39,8 +39,6 @@ if (isset($arguments[1]) && $arguments[1] == 'f') {
 
     if (function_exists('mcneese_file_db_return_file')) {
       mcneese_file_db_return_file($arguments);
-      unset($uri);
-      unset($arguments);
     } else {
       unset($uri);
       unset($arguments);
@@ -67,6 +65,41 @@ else if (count($arguments) > 6 && $arguments[1] == 'files' && $arguments[2] == '
   unset($uri);
   unset($arguments);
   menu_execute_active_handler();
+}
+else if ((isset($arguments[0]) && $arguments[0] == 'files' || isset($arguments[3]) && $arguments[3] == 'files')) {
+  drupal_bootstrap(DRUPAL_BOOTSTRAP_DATABASE);
+
+  $query = db_query('select ua.source from {url_alias} ua where ua.alias = :alias', array(':alias' => $uri));
+  $result = $query->fetchField();
+
+  if (empty($result)) {
+    unset($uri);
+    unset($arguments);
+    drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
+    menu_execute_active_handler();
+  }
+  else {
+    $uri = $result;
+    $arguments = (array) explode('/', $uri);
+
+    try {
+      _drupal_root_db_prepare_();
+
+      if (function_exists('mcneese_file_db_return_file')) {
+        mcneese_file_db_return_file($arguments, FALSE);
+      } else {
+        unset($uri);
+        unset($arguments);
+        drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
+        drupal_not_found();
+        drupal_exit();
+      }
+    }
+    catch (Exception $e) {
+      drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
+      throw $e;
+    }
+  }
 }
 else {
   unset($uri);
