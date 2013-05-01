@@ -23,17 +23,26 @@ function _drupal_root_db_prepare_() {
   //require_once DRUPAL_ROOT . '/sites/all/modules/mcneese/mcneese_file_db/classes/mcneese_file_db_restricted_stream_wrapper.inc';
 }
 
+function _drupal_root_get_uri() {
+  global $base_path;
+
+  $uri = request_uri();
+
+  return substr($uri, strlen($base_path));
+}
+
 /**
  * Root directory of Drupal installation.
  */
 define('DRUPAL_ROOT', getcwd());
 
 require_once DRUPAL_ROOT . '/includes/bootstrap.inc';
+drupal_bootstrap(DRUPAL_BOOTSTRAP_CONFIGURATION);
 
-$uri = request_uri();
-$arguments = explode('/', $uri);
+$uri = _drupal_root_get_uri();
+$arguments = (array) explode('/', $uri);
 
-if (isset($arguments[1]) && $arguments[1] == 'f') {
+if (isset($arguments[0]) && $arguments[0] == 'f') {
   try {
     _drupal_root_db_prepare_();
 
@@ -52,12 +61,12 @@ if (isset($arguments[1]) && $arguments[1] == 'f') {
     throw $e;
   }
 }
-else if (count($arguments) > 6 && $arguments[1] == 'files' && $arguments[2] == 'styles') {
+else if (count($arguments) > 5 && $arguments[0] == 'files' && $arguments[1] == 'styles') {
   drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
 
   if (module_exists('mcneese_file_db')) {
-    //if (($arguments[4] == mcneese_file_db_unrestricted_stream_wrapper::SCHEME || $arguments[4] == mcneese_file_db_restricted_stream_wrapper::SCHEME) && ($arguments[5] == MCNEESE_FILE_DB_FILE_PATH || $arguments[5] == MCNEESE_FILE_DB_PATH_BY_HASH)) {
-    if ($arguments[4] == mcneese_file_db_unrestricted_stream_wrapper::SCHEME && ($arguments[5] == MCNEESE_FILE_DB_FILE_PATH || $arguments[5] == MCNEESE_FILE_DB_PATH_BY_HASH)) {
+    //if (($arguments[3] == mcneese_file_db_unrestricted_stream_wrapper::SCHEME || $arguments[3] == mcneese_file_db_restricted_stream_wrapper::SCHEME) && ($arguments[4] == MCNEESE_FILE_DB_FILE_PATH || $arguments[5] == MCNEESE_FILE_DB_PATH_BY_HASH)) {
+    if ($arguments[3] == mcneese_file_db_unrestricted_stream_wrapper::SCHEME && ($arguments[4] == MCNEESE_FILE_DB_FILE_PATH || $arguments[5] == MCNEESE_FILE_DB_PATH_BY_HASH)) {
       mcneese_file_db_generate_image_style($arguments);
     }
   }
