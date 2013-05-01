@@ -149,7 +149,15 @@ function _drupal_render_exception_safe($exception) {
  *   TRUE if an error should be displayed.
  */
 function error_displayable($error = NULL) {
-  $error_level = variable_get('error_level', ERROR_REPORTING_DISPLAY_ALL);
+  global $user;
+
+  if (!is_object($user) || !property_exists($user, 'uid') || $user->uid == 0) {
+    $error_level = variable_get('error_level_anonymous', ERROR_REPORTING_DISPLAY_ALL);
+  }
+  else {
+    $error_level = variable_get('error_level', ERROR_REPORTING_DISPLAY_ALL);
+  }
+
   $updating = (defined('MAINTENANCE_MODE') && MAINTENANCE_MODE == 'update');
   $all_errors_displayed = ($error_level == ERROR_REPORTING_DISPLAY_ALL);
   $error_needs_display = ($error_level == ERROR_REPORTING_DISPLAY_SOME &&
