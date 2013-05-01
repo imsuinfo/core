@@ -1671,7 +1671,18 @@ function system_logging_settings() {
       ERROR_REPORTING_DISPLAY_SOME => t('Errors and warnings'),
       ERROR_REPORTING_DISPLAY_ALL => t('All messages'),
     ),
-    '#description' => t('It is recommended that sites running on production environments do not display any errors.'),
+  );
+
+  $form['error_level_anonymous'] = array(
+    '#type' => 'radios',
+    '#title' => t('Error messages to display (for anonymous users)'),
+    '#default_value' => variable_get('error_level_anonymous', ERROR_REPORTING_DISPLAY_ALL),
+    '#options' => array(
+      ERROR_REPORTING_HIDE => t('None'),
+      ERROR_REPORTING_DISPLAY_SOME => t('Errors and warnings'),
+      ERROR_REPORTING_DISPLAY_ALL => t('All messages'),
+    ),
+    '#description' => t('It is recommended that sites running on production environments do not display any errors for anonymous users.'),
   );
 
   return system_settings_form($form);
