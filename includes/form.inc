@@ -3061,6 +3061,14 @@ function form_process_date($element) {
       '#attributes' => $element['#attributes'],
       '#options' => $options,
     );
+
+    if (isset($element['#empty_value'][$type])) {
+      $element[$type]['#empty_value'] = $element['#empty_value'][$type];
+    }
+
+    if (isset($element['#empty_option'][$type])) {
+      $element[$type]['#empty_option'] = $element['#empty_option'][$type];
+    }
   }
 
   return $element;
