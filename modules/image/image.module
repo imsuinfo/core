@@ -955,7 +955,7 @@ function image_style_transform_dimensions($style_name, array &$dimensions) {
  *   An image style array.
  */
 function image_style_flush($style) {
-  $style_directory = drupal_realpath(file_default_scheme() . '://styles/' . $style['name']);
+  $style_directory = drupal_realpath(image_style_default_scheme() . '://styles/' . $style['name']);
   if (is_dir($style_directory)) {
     file_unmanaged_delete_recursive($style_directory);
   }
@@ -1057,17 +1057,19 @@ function image_style_path($style_name, $uri) {
   }
   else {
     $path = $uri;
-    $scheme = file_default_scheme();
+    $scheme = image_style_default_scheme();
 
-    $wrappers = file_get_stream_wrappers(STREAM_WRAPPERS_READ);
-    unset($wrappers[$scheme]);
+    if ($scheme != 'public' && $scheme != 'private') {
+      $wrappers = file_get_stream_wrappers(STREAM_WRAPPERS_READ);
+      unset($wrappers[$scheme]);
 
-    // find out which stream it belongs to by a walkthrough of available streams.
-    foreach ($wrappers as $wrapper_scheme => $wrapper) {
+      // find out which stream it belongs to by a walkthrough of available streams.
+      foreach ($wrappers as $wrapper_scheme => $wrapper) {
 
-      if (file_exists($wrapper_scheme . '://' . $uri)) {
-        $scheme = $wrapper_scheme;
-        break;
+        if (file_exists($wrapper_scheme . '://' . $uri)) {
+          $scheme = $wrapper_scheme;
+          break;
+        }
       }
     }
   }
@@ -1381,4 +1383,24 @@ function image_filter_keyword($value, $current_pixels, $new_pixels) {
  */
 function _image_effect_definitions_sort($a, $b) {
   return strcasecmp($a['name'], $b['name']);
+}
+
+/**
+ * A standard way to load the default image scheme.
+ *
+ * Allows for a custom image scheme 'image_style_default_scheme' to be defined in
+ * the sites/default/settings.php file. Otherwise, the default file scheme is
+ * returned.
+ *
+ * @return string
+ *   A formatted scheme string.
+ */
+function image_style_default_scheme() {
+  global $conf;
+
+  if (empty($conf['image_style_default_scheme'])) {
+    return file_default_scheme();
+  }
+
+  return $conf['image_style_default_scheme'];
 }
