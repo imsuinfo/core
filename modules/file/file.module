@@ -722,8 +722,6 @@ function file_managed_file_pre_render($element) {
  */
 function theme_file_link($variables) {
   $file = $variables['file'];
-  $icon_postfix = $variables['icon_postfix'];
-  $icon_directory = $variables['icon_directory'];
 
   $url = rawurldecode(file_create_url($file->uri));
   $icon = theme('file_icon', array('file' => $file, 'icon_directory' => $icon_directory));
