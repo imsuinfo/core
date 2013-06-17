@@ -1930,9 +1930,8 @@ function _node_revision_access($node, $op = 'view', $account = NULL) {
     // There should be at least two revisions. If the vid of the given node and
     // the vid of the current revision differ, then we already have two
     // different revisions so there is no need for a separate database check.
-    // Also, if you try to revert to or delete the current revision, that's not
-    // good.
-    if ($is_current_revision && (db_query('SELECT COUNT(vid) FROM {node_revision} WHERE nid = :nid', array(':nid' => $node->nid))->fetchField() == 1 || $op == 'update' || $op == 'delete')) {
+    // Also, if you try to delete the current revision, that's not good.
+    if ($is_current_revision && (db_query('SELECT COUNT(vid) FROM {node_revision} WHERE nid = :nid', array(':nid' => $node->nid))->fetchField() == 1 || $op == 'delete')) {
       $access[$cid] = FALSE;
     }
     elseif (user_access('administer nodes', $account)) {
