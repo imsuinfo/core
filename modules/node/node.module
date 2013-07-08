@@ -3018,7 +3018,15 @@ function node_access($op, $node, $account = NULL) {
   // - At least one module says to grant access.
   // If no module specified either allow or deny, we fall back to the
   // node_access table.
-  $access = module_invoke_all('node_access', $node, $op, $account);
+  if (is_string($node) || (is_object($node) && property_exists($node, 'type'))) {
+    $access = module_invoke_all('node_access', $node, $op, $account);
+  }
+  else {
+    // if the $node variable is invalid, then deny access.
+    $access  = array();
+    $access[] = NODE_ACCESS_DENY;
+  }
+
   if (in_array(NODE_ACCESS_DENY, $access, TRUE)) {
     $rights[$account->uid][$cid][$op] = FALSE;
     return FALSE;
