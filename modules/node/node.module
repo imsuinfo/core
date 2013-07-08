@@ -960,7 +960,8 @@ function node_load_multiple($nids = array(), $conditions = array(), $reset = FAL
  *   A fully-populated node object, or FALSE if the node is not found.
  */
 function node_load($nid = NULL, $vid = NULL, $reset = FALSE) {
-  if (!is_numeric($nid) || (float)$nid !== round($nid)) return FALSE;
+  if (!is_null($nid) && (!is_numeric($nid) || (float)$nid !== round($nid))) return FALSE;
+  if (!is_null($vid) && (!is_numeric($vid) || (float)$vid !== round($vid))) return FALSE;
   $nids = (isset($nid) ? array($nid) : array());
   $conditions = (isset($vid) ? array('vid' => $vid) : array());
   $node = node_load_multiple($nids, $conditions, $reset);
@@ -3017,7 +3018,15 @@ function node_access($op, $node, $account = NULL) {
   // - At least one module says to grant access.
   // If no module specified either allow or deny, we fall back to the
   // node_access table.
-  $access = module_invoke_all('node_access', $node, $op, $account);
+  if (is_string($node) || (is_object($node) && property_exists($node, 'type'))) {
+    $access = module_invoke_all('node_access', $node, $op, $account);
+  }
+  else {
+    // if the $node variable is invalid, then deny access.
+    $access  = array();
+    $access[] = NODE_ACCESS_DENY;
+  }
+
   if (in_array(NODE_ACCESS_DENY, $access, TRUE)) {
     $rights[$account->uid][$cid][$op] = FALSE;
     return FALSE;
