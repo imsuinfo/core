@@ -549,7 +549,7 @@ function image_field_formatter_settings_summary($field, $instance, $view_mode) {
     $summary[] = $link_types[$settings['image_link']];
   }
 
-  return implode('<br />', $summary);
+  return implode('<br>', $summary);
 }
 
 /**
