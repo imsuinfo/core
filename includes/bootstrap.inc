@@ -2335,7 +2335,7 @@ function _drupal_exception_handler($exception) {
     if (error_displayable()) {
       print '<h1>Additional uncaught exception thrown while handling exception.</h1>';
       print '<h2>Original</h2><p>' . _drupal_render_exception_safe($exception) . '</p>';
-      print '<h2>Additional</h2><p>' . _drupal_render_exception_safe($exception2) . '</p><hr />';
+      print '<h2>Additional</h2><p>' . _drupal_render_exception_safe($exception2) . '</p><hr>';
     }
   }
 }
@@ -3461,7 +3461,7 @@ function _drupal_shutdown_function() {
    require_once DRUPAL_ROOT . '/includes/errors.inc';
    if (error_displayable()) {
       print '<h1>Uncaught exception thrown in shutdown function.</h1>';
-      print '<p>' . _drupal_render_exception_safe($exception) . '</p><hr />';
+      print '<p>' . _drupal_render_exception_safe($exception) . '</p><hr>';
     }
   }
 }
