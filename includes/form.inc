@@ -2876,7 +2876,7 @@ function theme_radio($variables) {
   }
   _form_set_class($element, array('form-radio'));
 
-  return '<input' . drupal_attributes($element['#attributes']) . ' />';
+  return '<input' . drupal_attributes($element['#attributes']) . '>';
 }
 
 /**
@@ -3142,7 +3142,7 @@ function theme_checkbox($variables) {
   }
   _form_set_class($element, array('form-checkbox'));
 
-  return '<input' . drupal_attributes($element['#attributes']) . ' />';
+  return '<input' . drupal_attributes($element['#attributes']) . '>';
 }
 
 /**
@@ -3831,7 +3831,7 @@ function theme_button($variables) {
 
   $element['#attributes']['class'][] = strtolower($element['#button_type'] . '-' . $element['#value']);
 
-  return '<input' . drupal_attributes($element['#attributes']) . ' />';
+  return '<input' . drupal_attributes($element['#attributes']) . '>';
 }
 
 /**
@@ -3862,7 +3862,7 @@ function theme_image_button($variables) {
 
   $element['#attributes']['class'][] = strtolower($element['#button_type'] . '-' . $element['#value']);
 
-  return '<input' . drupal_attributes($element['#attributes']) . ' />';
+  return '<input' . drupal_attributes($element['#attributes']) . '>';
 }
 
 /**
@@ -3879,7 +3879,7 @@ function theme_hidden($variables) {
   $element = $variables['element'];
   $element['#attributes']['type'] = 'hidden';
   element_set_attributes($element, array('name', 'value'));
-  return '<input' . drupal_attributes($element['#attributes']) . " />\n";
+  return '<input' . drupal_attributes($element['#attributes']) . ">\n";
 }
 
 /**
@@ -3910,10 +3910,10 @@ function theme_textfield($variables) {
     $attributes['value'] = url($element['#autocomplete_path'], array('absolute' => TRUE));
     $attributes['disabled'] = 'disabled';
     $attributes['class'][] = 'autocomplete';
-    $extra = '<input' . drupal_attributes($attributes) . ' />';
+    $extra = '<input' . drupal_attributes($attributes) . '>';
   }
 
-  $output = '<input' . drupal_attributes($element['#attributes']) . ' />';
+  $output = '<input' . drupal_attributes($element['#attributes']) . '>';
 
   return $output . $extra;
 }
@@ -3990,7 +3990,7 @@ function theme_password($variables) {
   element_set_attributes($element, array('id', 'name', 'size', 'maxlength'));
   _form_set_class($element, array('form-text'));
 
-  return '<input' . drupal_attributes($element['#attributes']) . ' />';
+  return '<input' . drupal_attributes($element['#attributes']) . '>';
 }
 
 /**
@@ -4041,7 +4041,7 @@ function theme_file($variables) {
   element_set_attributes($element, array('id', 'name', 'size'));
   _form_set_class($element, array('form-file'));
 
-  return '<input' . drupal_attributes($element['#attributes']) . ' />';
+  return '<input' . drupal_attributes($element['#attributes']) . '>';
 }
 
 /**
@@ -4517,7 +4517,7 @@ function batch_set($batch_definition) {
 
     // Tweak init_message to avoid the bottom of the page flickering down after
     // init phase.
-    $batch_set['init_message'] .= '<br/>&nbsp;';
+    $batch_set['init_message'] .= '<br>&nbsp;';
 
     // The non-concurrent workflow of batch execution allows us to save
     // numberOfItems() queries by handling our own counter.
