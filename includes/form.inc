@@ -930,7 +930,24 @@ function drupal_process_form($form_id, &$form, &$form_state) {
         }
 
         $batch['progressive'] = !$form_state['programmed'];
-        batch_process();
+
+        if (function_exists('background_batch_menu_alter')) {
+          $foreground = variable_get('batch_foreground', array());
+          $background = variable_get('batch_background', array());
+
+          if (in_array($form_id, $foreground)) {
+            batch_process(NULL, 'batch_foreground');
+          }
+          elseif (in_array($form_id, $background)) {
+            batch_process(NULL, 'batch_background');
+          }
+          else {
+            batch_process();
+          }
+        }
+        else {
+          batch_process();
+        }
 
         // Execution continues only for programmatic forms.
         // For 'regular' forms, we get redirected to the batch processing
