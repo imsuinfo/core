@@ -600,8 +600,6 @@ function search_index($sid, $module, $text) {
       // Increase or decrease score per word based on tag
       list($tagname) = explode(' ', $value, 2);
       $tagname = drupal_strtolower($tagname);
-      if (empty($tagname)) continue;
-
       // Closing or opening tag?
       if ($tagname[0] == '/') {
         $tagname = substr($tagname, 1);
@@ -637,16 +635,9 @@ function search_index($sid, $module, $text) {
             if (preg_match('!(?:node|book)/(?:view/)?([0-9]+)!i', $path, $match)) {
               $linknid = $match[1];
               if ($linknid > 0) {
-                $query = db_query('SELECT title, nid, vid FROM {node} WHERE nid = :nid', array(':nid' => $linknid), array('target' => 'slave'));
-
-                if (is_object($query)) {
-                  $node = $query->fetchObject();
-
-                  if (is_object($node)) {
-                    $link = TRUE;
-                    $linktitle = $node->title;
-                  }
-                }
+                $node = db_query('SELECT title, nid, vid FROM {node} WHERE nid = :nid', array(':nid' => $linknid), array('target' => 'slave'))->fetchObject();
+                $link = TRUE;
+                $linktitle = $node->title;
               }
             }
           }
@@ -1076,7 +1067,7 @@ function template_preprocess_search_block_form(&$variables) {
   $hidden = array();
   // Provide variables named after form keys so themers can print each element independently.
   foreach (element_children($variables['form']) as $key) {
-    $type = $variables['form'][$key]['#type'];
+    $type = isset($variables['form'][$key]['#type']) ? $variables['form'][$key]['#type'] : '';
     if ($type == 'hidden' || $type == 'token') {
       $hidden[] = drupal_render($variables['form'][$key]);
     }

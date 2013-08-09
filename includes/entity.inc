@@ -14,14 +14,6 @@
 interface DrupalEntityControllerInterface {
 
   /**
-   * Constructor.
-   *
-   * @param $entityType
-   *   The entity type for which the instance is created.
-   */
-  public function __construct($entityType);
-
-  /**
    * Resets the internal, static entity cache.
    *
    * @param $ids
@@ -119,6 +111,9 @@ class DrupalDefaultEntityController implements DrupalEntityControllerInterface {
 
   /**
    * Constructor: sets basic variables.
+   *
+   * @param $entityType
+   *   The entity type for which the instance is created.
    */
   public function __construct($entityType) {
     $this->entityType = $entityType;
@@ -159,11 +154,6 @@ class DrupalDefaultEntityController implements DrupalEntityControllerInterface {
    */
   public function load($ids = array(), $conditions = array()) {
     $entities = array();
-
-    if (empty($this->entityInfo['base table'])) {
-      watchdog('entity', "The 'base table' is missing from the entityInfo of the entity object: entity type = %entity_type, entity info = %entity_info, id key = %id_key, revision key = %revision_key", array('%entity_type' => $this->entityType, '%entity_info' => $this->entityInfo, '%id_key' => $this->idKey, '%revision_key' => $this->revisionKey), WATCHDOG_CRITICAL);
-      return $entities;
-    }
 
     // Revisions are not statically cached, and require a different query to
     // other conditions, so separate the revision id into its own variable.
@@ -371,7 +361,7 @@ class DrupalDefaultEntityController implements DrupalEntityControllerInterface {
     if ($conditions) {
       foreach ($entities as $entity) {
         $entity_values = (array) $entity;
-        if (drupal_array_diff_assoc_recursive($conditions, $entity_values)) {
+        if (array_diff_assoc($conditions, $entity_values)) {
           unset($entities[$entity->{$this->idKey}]);
         }
       }
@@ -639,7 +629,7 @@ class EntityFieldQuery {
 
   /**
    * Adds a condition on field values.
-   * 
+   *
    * Note that entities with empty field values will be excluded from the
    * EntityFieldQuery results when using this method.
    *
