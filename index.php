@@ -38,7 +38,9 @@ if (!function_exists('_drupal_root_get_uri')) {
 /**
  * Root directory of Drupal installation.
  */
-define('DRUPAL_ROOT', getcwd());
+if (!defined('DRUPAL_ROOT')) {
+  define('DRUPAL_ROOT', getcwd());
+}
 
 require_once DRUPAL_ROOT . '/includes/bootstrap.inc';
 drupal_bootstrap(DRUPAL_BOOTSTRAP_CONFIGURATION);
