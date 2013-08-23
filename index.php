@@ -83,8 +83,9 @@ else if (count($arguments) > 5 && $arguments[0] == 'files' && $arguments[1] == '
 }
 else if ((isset($arguments[0]) && $arguments[0] == 'files' || isset($arguments[3]) && $arguments[3] == 'files')) {
   drupal_bootstrap(DRUPAL_BOOTSTRAP_DATABASE);
+  $duri = rawurldecode($uri);
 
-  $query = db_query('select ua.source from {url_alias} ua where ua.alias = :alias', array(':alias' => $uri));
+  $query = db_query('select ua.source from {url_alias} ua where ua.alias = :alias or ua.alias = :dalias', array(':alias' => $uri, ':dalias' => $duri));
   $result = $query->fetchField();
 
   if (empty($result)) {
