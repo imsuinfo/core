@@ -2788,24 +2788,45 @@ function theme_fieldset($variables) {
 
   if (empty($element['#children'])) return '';
 
+  $as_div = FALSE;
+  if (isset($element['#as_div']) && $element['#as_div']) {
+    $as_div = TRUE;
+  }
+
   element_set_attributes($element, array('id'));
   _form_set_class($element, array('form-wrapper'));
 
-  $output = '<fieldset' . drupal_attributes($element['#attributes']) . '>';
-  if (!empty($element['#title'])) {
-    // Always wrap fieldset legends in a SPAN for CSS positioning.
-    $output .= '<legend><span class="fieldset-legend">' . $element['#title'] . '</span></legend>';
+  if ($as_div) {
+    $output = '<div' . drupal_attributes($element['#attributes']) . '>';
+    $output .= '<div class="fieldset-wrapper">';
+    if (!empty($element['#description'])) {
+      $output .= '<div class="fieldset-description">' . $element['#description'] . '</div>';
+    }
+    $output .= $element['#children'];
+    if (isset($element['#value'])) {
+      $output .= $element['#value'];
+    }
+    $output .= '</div>';
+    $output .= "</div>\n";
   }
-  $output .= '<div class="fieldset-wrapper">';
-  if (!empty($element['#description'])) {
-    $output .= '<div class="fieldset-description">' . $element['#description'] . '</div>';
+  else {
+    $output = '<fieldset' . drupal_attributes($element['#attributes']) . '>';
+    if (!empty($element['#title'])) {
+      // Always wrap fieldset legends in a SPAN for CSS positioning.
+      $output .= '<legend><span class="fieldset-legend">' . $element['#title'] . '</span></legend>';
+    }
+    $output .= '<div class="fieldset-wrapper">';
+    if (!empty($element['#description'])) {
+      $output .= '<div class="fieldset-description">' . $element['#description'] . '</div>';
+    }
+    $output .= $element['#children'];
+    if (isset($element['#value'])) {
+      $output .= $element['#value'];
+    }
+    $output .= '</div>';
+    $output .= "</fieldset>\n";
   }
-  $output .= $element['#children'];
-  if (isset($element['#value'])) {
-    $output .= $element['#value'];
-  }
-  $output .= '</div>';
-  $output .= "</fieldset>\n";
+
   return $output;
 }
 
