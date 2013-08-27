@@ -75,6 +75,39 @@ else if (count($arguments) > 5 && $arguments[0] == 'files' && $arguments[1] == '
     if ($arguments[3] == mcneese_file_db_unrestricted_stream_wrapper::SCHEME && ($arguments[4] == MCNEESE_FILE_DB_FILE_PATH || $arguments[5] == MCNEESE_FILE_DB_PATH_BY_HASH)) {
       mcneese_file_db_generate_image_style($arguments);
     }
+    elseif ($arguments[3] == 'public') {
+      $args1 = array_slice($arguments, 0, 3);
+      $args2 = array_slice($arguments, 4);
+      $auri = 'files/' . implode('/', $args2);
+      $duri = rawurldecode($auri);
+
+      $results = db_query('select ua.source from {url_alias} ua where (LOWER(ua.alias) = LOWER(:alias) or LOWER(ua.alias) = LOWER(:dalias)) and ua.source like :source', array(':alias' => $auri, ':dalias' => $duri, ':source' => 'f/c/%'));
+      $result = $results->fetchField();
+
+      if (empty($result)) {
+        if (function_exists('redirect_load_by_source')) {
+          $redirect = redirect_load_by_source($auri);
+
+          $parts = explode('/', $redirect->redirect);
+
+          if ($parts[0] == MCNEESE_FILE_DB_FILE_PATH && $parts[1] == MCNEESE_FILE_DB_PATH_BY_HASH) {
+            $args1[] = mcneese_file_db_unrestricted_stream_wrapper::SCHEME;
+            $args3 = array_merge($args1, $parts);
+            $nuri = implode('/', $args3);
+
+            // perform a redirect
+            header('Location: /' . $nuri, TRUE, $redirect->status_code);
+            drupal_exit($nuri);
+          }
+        }
+      }
+      else {
+        $args1[] = mcneese_file_db_unrestricted_stream_wrapper::SCHEME;
+        $args3 = array_merge($args1, explode('/', $result));
+
+        mcneese_file_db_generate_image_style($args3);
+      }
+    }
   }
 
   unset($uri);
