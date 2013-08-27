@@ -70,7 +70,7 @@ if (isset($arguments[0]) && $arguments[0] == 'f') {
 else if (count($arguments) > 5 && $arguments[0] == 'files' && $arguments[1] == 'styles') {
   drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
 
-  if (module_exists('mcneese_file_db')) {
+  if (function_exists('mcneese_file_db_generate_image_style')) {
     //if (($arguments[3] == mcneese_file_db_unrestricted_stream_wrapper::SCHEME || $arguments[3] == mcneese_file_db_restricted_stream_wrapper::SCHEME) && ($arguments[4] == MCNEESE_FILE_DB_FILE_PATH || $arguments[5] == MCNEESE_FILE_DB_PATH_BY_HASH)) {
     if ($arguments[3] == mcneese_file_db_unrestricted_stream_wrapper::SCHEME && ($arguments[4] == MCNEESE_FILE_DB_FILE_PATH || $arguments[5] == MCNEESE_FILE_DB_PATH_BY_HASH)) {
       mcneese_file_db_generate_image_style($arguments);
