@@ -88,16 +88,18 @@ else if (count($arguments) > 5 && $arguments[0] == 'files' && $arguments[1] == '
         if (function_exists('redirect_load_by_source')) {
           $redirect = redirect_load_by_source($auri);
 
-          $parts = explode('/', $redirect->redirect);
+          if (is_object($redirect)) {
+            $parts = explode('/', $redirect->redirect);
 
-          if ($parts[0] == MCNEESE_FILE_DB_FILE_PATH && $parts[1] == MCNEESE_FILE_DB_PATH_BY_HASH) {
-            $args1[] = mcneese_file_db_unrestricted_stream_wrapper::SCHEME;
-            $args3 = array_merge($args1, $parts);
-            $nuri = implode('/', $args3);
+            if ($parts[0] == MCNEESE_FILE_DB_FILE_PATH && $parts[1] == MCNEESE_FILE_DB_PATH_BY_HASH) {
+              $args1[] = mcneese_file_db_unrestricted_stream_wrapper::SCHEME;
+              $args3 = array_merge($args1, $parts);
+              $nuri = implode('/', $args3);
 
-            // perform a redirect
-            header('Location: /' . $nuri, TRUE, $redirect->status_code);
-            drupal_exit($nuri);
+              // perform a redirect
+              header('Location: /' . $nuri, TRUE, $redirect->status_code);
+              drupal_exit($nuri);
+            }
           }
         }
       }
