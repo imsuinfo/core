@@ -1992,6 +1992,11 @@ function _form_builder_handle_input_element($form_id, &$element, &$form_state) {
     }
   }
 
+  // mark required input fields.
+  if (isset($element['#required']) && $element['#required']) {
+    $element['#attributes']['required'] = 'required';
+  }
+
   // With JavaScript or other easy hacking, input can be submitted even for
   // elements with #access=FALSE or #disabled=TRUE. For security, these must
   // not be processed. Forms that set #disabled=TRUE on an element do not
