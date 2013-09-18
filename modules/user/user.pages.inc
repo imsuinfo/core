@@ -11,7 +11,7 @@
 function user_autocomplete($string = '') {
   $matches = array();
   if ($string) {
-    $result = db_select('users')->fields('users', array('name'))->condition('name', db_like($string) . '%', 'LIKE')->range(0, 10)->execute();
+    $result = db_select('users')->fields('users', array('name'))->condition('name', db_like($string) . '%', 'ILIKE')->range(0, 10)->execute();
     foreach ($result as $user) {
       $matches[$user->name] = check_plain($user->name);
     }
