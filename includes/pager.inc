@@ -351,10 +351,10 @@ function theme_pager($variables) {
   }
   // End of generation loop preparation.
 
-  $li_first = theme('pager_first', array('text' => (isset($tags[0]) ? $tags[0] : t('« first')), 'element' => $element, 'parameters' => $parameters));
-  $li_previous = theme('pager_previous', array('text' => (isset($tags[1]) ? $tags[1] : t('‹ previous')), 'element' => $element, 'interval' => 1, 'parameters' => $parameters));
-  $li_next = theme('pager_next', array('text' => (isset($tags[3]) ? $tags[3] : t('next ›')), 'element' => $element, 'interval' => 1, 'parameters' => $parameters));
-  $li_last = theme('pager_last', array('text' => (isset($tags[4]) ? $tags[4] : t('last »')), 'element' => $element, 'parameters' => $parameters));
+  $li_first = theme('pager_first', array('text' => (isset($tags[0]) ? $tags[0] : t('« first')), 'element' => $element, 'parameters' => $parameters, 'rel' => 'first'));
+  $li_previous = theme('pager_previous', array('text' => (isset($tags[1]) ? $tags[1] : t('‹ previous')), 'element' => $element, 'interval' => 1, 'parameters' => $parameters, 'rel' => 'prev'));
+  $li_next = theme('pager_next', array('text' => (isset($tags[3]) ? $tags[3] : t('next ›')), 'element' => $element, 'interval' => 1, 'parameters' => $parameters, 'rel' => 'next'));
+  $li_last = theme('pager_last', array('text' => (isset($tags[4]) ? $tags[4] : t('last »')), 'element' => $element, 'parameters' => $parameters, 'rel' => 'last'));
 
   if ($pager_total[$element] > 1) {
     if ($li_first) {
@@ -455,9 +455,17 @@ function theme_pager_first($variables) {
   global $pager_page_array;
   $output = '';
 
+  $attributes = array();
+  if (empty($variables['rel'])) {
+    $attributes['rel'] = '';
+  }
+  else {
+    $attributes['rel'] = $variables['rel'];
+  }
+
   // If we are anywhere but the first page
   if ($pager_page_array[$element] > 0) {
-    $output = theme('pager_link', array('text' => $text, 'page_new' => pager_load_array(0, $element, $pager_page_array), 'element' => $element, 'parameters' => $parameters));
+    $output = theme('pager_link', array('text' => $text, 'page_new' => pager_load_array(0, $element, $pager_page_array), 'element' => $element, 'parameters' => $parameters, 'attributes' => $attributes));
   }
 
   return $output;
@@ -485,17 +493,25 @@ function theme_pager_previous($variables) {
   global $pager_page_array;
   $output = '';
 
+  $attributes = array();
+  if (empty($variables['rel'])) {
+    $attributes['rel'] = '';
+  }
+  else {
+    $attributes['rel'] = $variables['rel'];
+  }
+
   // If we are anywhere but the first page
   if ($pager_page_array[$element] > 0) {
     $page_new = pager_load_array($pager_page_array[$element] - $interval, $element, $pager_page_array);
 
     // If the previous page is the first page, mark the link as such.
     if ($page_new[$element] == 0) {
-      $output = theme('pager_first', array('text' => $text, 'element' => $element, 'parameters' => $parameters));
+      $output = theme('pager_first', array('text' => $text, 'element' => $element, 'parameters' => $parameters, 'rel' => $attributes['rel']));
     }
     // The previous page is not the first page.
     else {
-      $output = theme('pager_link', array('text' => $text, 'page_new' => $page_new, 'element' => $element, 'parameters' => $parameters));
+      $output = theme('pager_link', array('text' => $text, 'page_new' => $page_new, 'element' => $element, 'parameters' => $parameters, 'attributes' => $attributes));
     }
   }
 
@@ -524,16 +540,24 @@ function theme_pager_next($variables) {
   global $pager_page_array, $pager_total;
   $output = '';
 
+  $attributes = array();
+  if (empty($variables['rel'])) {
+    $attributes['rel'] = '';
+  }
+  else {
+    $attributes['rel'] = $variables['rel'];
+  }
+
   // If we are anywhere but the last page
   if ($pager_page_array[$element] < ($pager_total[$element] - 1)) {
     $page_new = pager_load_array($pager_page_array[$element] + $interval, $element, $pager_page_array);
     // If the next page is the last page, mark the link as such.
     if ($page_new[$element] == ($pager_total[$element] - 1)) {
-      $output = theme('pager_last', array('text' => $text, 'element' => $element, 'parameters' => $parameters));
+      $output = theme('pager_last', array('text' => $text, 'element' => $element, 'parameters' => $parameters, 'rel' => $attributes['rel']));
     }
     // The next page is not the last page.
     else {
-      $output = theme('pager_link', array('text' => $text, 'page_new' => $page_new, 'element' => $element, 'parameters' => $parameters));
+      $output = theme('pager_link', array('text' => $text, 'page_new' => $page_new, 'element' => $element, 'parameters' => $parameters, 'attributes' => $attributes));
     }
   }
 
@@ -560,9 +584,17 @@ function theme_pager_last($variables) {
   global $pager_page_array, $pager_total;
   $output = '';
 
+  $attributes = array();
+  if (empty($variables['rel'])) {
+    $attributes['rel'] = '';
+  }
+  else {
+    $attributes['rel'] = $variables['rel'];
+  }
+
   // If we are anywhere but the last page
   if ($pager_page_array[$element] < ($pager_total[$element] - 1)) {
-    $output = theme('pager_link', array('text' => $text, 'page_new' => pager_load_array($pager_total[$element] - 1, $element, $pager_page_array), 'element' => $element, 'parameters' => $parameters));
+    $output = theme('pager_link', array('text' => $text, 'page_new' => pager_load_array($pager_total[$element] - 1, $element, $pager_page_array), 'element' => $element, 'parameters' => $parameters, 'attributes' => $attributes));
   }
 
   return $output;
