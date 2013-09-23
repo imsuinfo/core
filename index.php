@@ -30,8 +30,9 @@ if (!function_exists('_drupal_root_get_uri')) {
     global $base_path;
 
     $uri = request_uri();
+    $parsed = parse_url($uri);
 
-    return substr($uri, strlen($base_path));
+    return substr($parsed['path'], strlen($base_path));
   }
 }
 
