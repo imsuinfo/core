@@ -4,7 +4,7 @@
  * Styles for system messages.
  */
 
-div.messages {
+div.messages-wrapper > div.messages {
   background-position: 8px 8px; /* LTR */
   background-repeat: no-repeat;
   border: 1px solid;
@@ -12,52 +12,53 @@ div.messages {
   padding: 10px 10px 10px 50px; /* LTR */
 }
 
-div.status {
+div.messages-wrapper > div.status {
   background-image: url(../../misc/message-24-ok.png);
   border-color: #be7;
 }
-div.status,
-.ok {
+div.messages-wrapper > div.status,
+table.system-status-report .ok,
+div.messages-wrapper > .ok {
   color: #234600;
 }
-div.status,
-table tr.ok {
+div.messages-wrapper > div.status,
+table.system-status-report tr.ok {
   background-color: #f8fff0;
 }
 
-div.warning {
+div.messages-wrapper > div.warning {
   background-image: url(../../misc/message-24-warning.png);
   border-color: #ed5;
 }
-div.warning,
+div.messages-wrapper > div.warning,
 .warning {
   color: #840;
 }
-div.warning,
-table tr.warning {
+div.messages-wrapper > div.warning,
+table.system-status-report tr.warning {
   background-color: #fffce5;
 }
 
-div.error {
+div.messages-wrapper > div.error {
   background-image: url(../../misc/message-24-error.png);
   border-color: #ed541d;
 }
-div.error,
+div.messages-wrapper > div.error,
 .error {
   color: #8c2e0b;
 }
-div.error,
-table tr.error {
+div.messages-wrapper > div.error,
+table.system-status-report tr.error {
   background-color: #fef5f1;
 }
-div.error p.error {
+div.messages-wrapper > div.error p.error {
   color: #333;
 }
 
-div.messages ul {
+div.messages-wrapper > div.messages ul {
   margin: 0 0 0 1em; /* LTR */
   padding: 0;
 }
-div.messages ul li {
+div.messages-wrapper > div.messages ul li {
   list-style-image: none;
 }
