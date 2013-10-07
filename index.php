@@ -72,8 +72,7 @@ else if (count($arguments) > 5 && $arguments[0] == 'files' && $arguments[1] == '
   drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
 
   if (function_exists('mcneese_file_db_generate_image_style')) {
-    //if (($arguments[3] == mcneese_file_db_unrestricted_stream_wrapper::SCHEME || $arguments[3] == mcneese_file_db_restricted_stream_wrapper::SCHEME) && ($arguments[4] == MCNEESE_FILE_DB_FILE_PATH || $arguments[5] == MCNEESE_FILE_DB_PATH_BY_HASH)) {
-    if ($arguments[3] == mcneese_file_db_unrestricted_stream_wrapper::SCHEME && ($arguments[4] == MCNEESE_FILE_DB_FILE_PATH || $arguments[5] == MCNEESE_FILE_DB_PATH_BY_HASH)) {
+    if ($arguments[3] == mcneese_file_db_unrestricted_stream_wrapper::SCHEME && ($arguments[4] == MCNEESE_FILE_DB_FILE_PATH || $arguments[5] == MCNEESE_FILE_DB_PATH_BY_HASH || $arguments[5] == MCNEESE_FILE_DB_PATH_BY_ID) || $arguments[5] == MCNEESE_FILE_DB_PATH_BY_FID) {
       mcneese_file_db_generate_image_style($arguments);
     }
     elseif ($arguments[3] == 'public') {
@@ -82,7 +81,7 @@ else if (count($arguments) > 5 && $arguments[0] == 'files' && $arguments[1] == '
       $auri = 'files/' . implode('/', $args2);
       $duri = rawurldecode($auri);
 
-      $results = db_query('select ua.source from {url_alias} ua where (LOWER(ua.alias) = LOWER(:alias) or LOWER(ua.alias) = LOWER(:dalias)) and ua.source like :source', array(':alias' => $auri, ':dalias' => $duri, ':source' => 'f/c/%'));
+      $results = db_query('select ua.source from {url_alias} ua where (LOWER(ua.alias) = LOWER(:alias) or LOWER(ua.alias) = LOWER(:dalias)) and ua.source like :source', array(':alias' => $auri, ':dalias' => $duri, ':source' => 'f/%/%'));
       $result = $results->fetchField();
 
       if (empty($result)) {
@@ -92,7 +91,7 @@ else if (count($arguments) > 5 && $arguments[0] == 'files' && $arguments[1] == '
           if (is_object($redirect)) {
             $parts = explode('/', $redirect->redirect);
 
-            if ($parts[0] == MCNEESE_FILE_DB_FILE_PATH && $parts[1] == MCNEESE_FILE_DB_PATH_BY_HASH) {
+            if ($parts[0] == MCNEESE_FILE_DB_FILE_PATH && ($parts[1] == MCNEESE_FILE_DB_PATH_BY_HASH || $parts[1] == MCNEESE_FILE_DB_PATH_BY_ID || $parts[1] == MCNEESE_FILE_DB_PATH_BY_FID)) {
               $args1[] = mcneese_file_db_unrestricted_stream_wrapper::SCHEME;
               $args3 = array_merge($args1, $parts);
               $nuri = implode('/', $args3);
