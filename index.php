@@ -97,7 +97,7 @@ else if (count($arguments) > 5 && $arguments[0] == 'files' && $arguments[1] == '
               $nuri = implode('/', $args3);
 
               // perform a redirect
-              header('Location: /' . $nuri, TRUE, $redirect->status_code);
+              if (!headers_sent()) header('Location: /' . $nuri, TRUE, $redirect->status_code);
               drupal_exit($nuri);
             }
           }
