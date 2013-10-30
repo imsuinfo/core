@@ -2663,6 +2663,7 @@ function node_feed($nids = FALSE, $channel = array()) {
   $output .= "</rss>\n";
 
   drupal_add_http_header('Content-Type', 'application/rss+xml; charset=utf-8');
+  drupal_send_headers();
   print $output;
 }
 
