@@ -684,6 +684,8 @@ function drupal_encode_path($path) {
  * @see url()
  */
 function drupal_goto($path = '', array $options = array(), $http_response_code = 302) {
+  if (headers_sent()) return FALSE;
+
   // A destination in $_GET always overrides the function arguments.
   // We do not allow absolute URLs to be passed via $_GET, as this can be an attack vector.
   if (isset($_GET['destination']) && !url_is_external($_GET['destination'])) {
@@ -2610,7 +2612,8 @@ function drupal_deliver_html_page($page_callback_result) {
     switch ($page_callback_result) {
       case MENU_NOT_FOUND:
         // Print a 404 page.
-        drupal_add_http_header('Status', '404 Not Found');
+        drupal_add_http_header('Status', '404 Not Found', FALSE, 404);
+        drupal_send_headers();
 
         watchdog('page not found', check_plain($_GET['q']), NULL, WATCHDOG_WARNING);
 
@@ -2643,7 +2646,8 @@ function drupal_deliver_html_page($page_callback_result) {
 
       case MENU_ACCESS_DENIED:
         // Print a 403 page.
-        drupal_add_http_header('Status', '403 Forbidden');
+        drupal_add_http_header('Status', '403 Forbidden', FALSE, 403);
+        drupal_send_headers();
         watchdog('access denied', check_plain($_GET['q']), NULL, WATCHDOG_WARNING);
 
         // Keep old path for reference, and to allow forms to redirect to it.
@@ -2671,7 +2675,8 @@ function drupal_deliver_html_page($page_callback_result) {
       case MENU_SITE_OFFLINE:
         // Print a 503 page.
         drupal_maintenance_theme();
-        drupal_add_http_header('Status', '503 Service unavailable');
+        drupal_add_http_header('Status', '503 Service unavailable', FALSE, 503);
+        drupal_send_headers();
         drupal_set_title(t('Site under maintenance'));
         print theme('maintenance_page', array('content' => filter_xss_admin(variable_get('maintenance_mode_message',
           t('@site is currently under maintenance. We should be back shortly. Thank you for your patience.', array('@site' => variable_get('site_name', 'Drupal')))))));
@@ -2679,6 +2684,8 @@ function drupal_deliver_html_page($page_callback_result) {
     }
   }
   elseif (isset($page_callback_result)) {
+    drupal_send_headers();
+
     // Print anything besides a menu constant, assuming it's not NULL or
     // undefined.
     print drupal_render_page($page_callback_result);
