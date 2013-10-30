@@ -1982,10 +1982,10 @@ function file_transfer($uri, $headers) {
   foreach ($headers as $name => $value) {
     drupal_add_http_header($name, $value);
   }
-  drupal_send_headers();
   $scheme = file_uri_scheme($uri);
   // Transfer file in 1024 byte chunks to save memory usage.
   if ($scheme && file_stream_wrapper_valid_scheme($scheme) && $fd = fopen($uri, 'rb')) {
+    drupal_send_headers();
     while (!feof($fd)) {
       print fread($fd, 1024);
     }
