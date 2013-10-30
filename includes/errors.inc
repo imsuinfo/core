@@ -203,6 +203,7 @@ function _drupal_log_error($error, $fatal = FALSE) {
 
   if ($fatal) {
     drupal_add_http_header('Status', '500 Service unavailable (with message)');
+    drupal_send_headers();
   }
 
   if (drupal_is_cli()) {
