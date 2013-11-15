@@ -855,6 +855,7 @@ function image_style_deliver($style, $scheme) {
       // to support Retry-After.
       drupal_add_http_header('Status', '503 Service Unavailable');
       drupal_add_http_header('Retry-After', 3);
+      drupal_send_headers();
       print t('Image generation in progress. Try again shortly.');
       drupal_exit();
     }
@@ -877,6 +878,7 @@ function image_style_deliver($style, $scheme) {
   else {
     watchdog('image', 'Unable to generate the derived image located at %path.', array('%path' => $derivative_uri));
     drupal_add_http_header('Status', '500 Internal Server Error');
+    drupal_send_headers();
     print t('Error generating image.');
     drupal_exit();
   }
