@@ -57,6 +57,12 @@ function file_requirements($phase) {
     $apache = strpos($_SERVER['SERVER_SOFTWARE'], 'Apache') !== FALSE;
     $fastcgi = strpos($_SERVER['SERVER_SOFTWARE'], 'mod_fastcgi') !== FALSE || strpos($_SERVER["SERVER_SOFTWARE"], 'mod_fcgi') !== FALSE;
     $description = NULL;
+
+    // custom compiled apache may not identify itself
+    if (empty($_SERVER['SERVER_SOFTWARE'])) {
+      $apache = TRUE;
+    }
+
     if (!$apache) {
       $value = t('Not enabled');
       $description = t('Your server is not capable of displaying file upload progress. File upload progress requires an Apache server running PHP with mod_php.');
