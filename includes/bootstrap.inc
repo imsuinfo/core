@@ -362,7 +362,7 @@ abstract class DrupalCacheArray implements ArrayAccess {
    * Implements ArrayAccess::offsetGet().
    */
   public function offsetGet($offset) {
-    if (isset($this->storage[$offset]) || array_key_exists($offset, $this->storage)) {
+    if (isset($this->storage[$offset])) {
       return $this->storage[$offset];
     }
     else {
