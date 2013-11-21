@@ -390,7 +390,7 @@ function file_create_url($uri) {
     else {
       // If this is not a properly formatted stream, then it is a shipped file.
       // Therefore, return the urlencoded URI with the base URL prepended.
-      return $GLOBALS['base_path'] . drupal_encode_path($uri);
+      return $GLOBALS['base_url'] . '/' . drupal_encode_path($uri);
     }
   }
   elseif ($scheme == 'http' || $scheme == 'https') {
@@ -470,8 +470,11 @@ function file_ensure_htaccess() {
  * @param $private
  *   FALSE indicates that $directory should be an open and public directory.
  *   The default is TRUE which indicates a private and protected directory.
+ * @param $force_overwrite
+ *   Set to TRUE to attempt to overwrite the existing .htaccess file if one is
+ *   already present. Defaults to FALSE.
  */
-function file_create_htaccess($directory, $private = TRUE) {
+function file_create_htaccess($directory, $private = TRUE, $force_overwrite = FALSE) {
   if (file_uri_scheme($directory)) {
     $directory = file_stream_wrapper_uri_normalize($directory);
   }
@@ -480,28 +483,60 @@ function file_create_htaccess($directory, $private = TRUE) {
   }
   $htaccess_path =  $directory . '/.htaccess';
 
-  if (file_exists($htaccess_path)) {
+  if (file_exists($htaccess_path) && !$force_overwrite) {
     // Short circuit if the .htaccess file already exists.
     return;
   }
 
-  if ($private) {
-    // Private .htaccess file.
-    $htaccess_lines = "SetHandler Drupal_Security_Do_Not_Remove_See_SA_2006_006\nDeny from all\nOptions None\nOptions +FollowSymLinks";
-  }
-  else {
-    // Public .htaccess file.
-    $htaccess_lines = "SetHandler Drupal_Security_Do_Not_Remove_See_SA_2006_006\nOptions None\nOptions +FollowSymLinks";
-  }
+  $htaccess_lines = file_htaccess_lines($private);
 
   // Write the .htaccess file.
   if (file_put_contents($htaccess_path, $htaccess_lines)) {
     drupal_chmod($htaccess_path, 0444);
   }
   else {
-    $variables = array('%directory' => $directory, '!htaccess' => '<br>' . nl2br(check_plain($htaccess_lines)));
+    $variables = array('%directory' => $directory, '!htaccess' => '<br />' . nl2br(check_plain($htaccess_lines)));
     watchdog('security', "Security warning: Couldn't write .htaccess file. Please create a .htaccess file in your %directory directory which contains the following lines: <code>!htaccess</code>", $variables, WATCHDOG_ERROR);
   }
+}
+
+/**
+ * Returns the standard .htaccess lines that Drupal writes to file directories.
+ *
+ * @param $private
+ *   (Optional) Set to FALSE to return the .htaccess lines for an open and
+ *   public directory. The default is TRUE, which returns the .htaccess lines
+ *   for a private and protected directory.
+ *
+ * @return
+ *   A string representing the desired contents of the .htaccess file.
+ *
+ * @see file_create_htaccess()
+ */
+function file_htaccess_lines($private = TRUE) {
+  $lines = <<<EOF
+# Turn off all options we don't need.
+Options None
+Options +FollowSymLinks
+
+# Set the catch-all handler to prevent scripts from being executed.
+SetHandler Drupal_Security_Do_Not_Remove_See_SA_2006_006
+<Files *>
+  # Override the handler again if we're run later in the evaluation list.
+  SetHandler Drupal_Security_Do_Not_Remove_See_SA_2013_003
+</Files>
+
+# If we know how to do it safely, disable the PHP engine entirely.
+<IfModule mod_php5.c>
+  php_flag engine off
+</IfModule>
+EOF;
+
+  if ($private) {
+    $lines = "Deny from all\n\n" . $lines;
+  }
+
+  return $lines;
 }
 
 /**
@@ -942,16 +977,6 @@ function file_build_uri($path) {
  *   and FILE_EXISTS_ERROR is specified.
  */
 function file_destination($destination, $replace) {
-  $scheme = file_uri_scheme($destination);
-
-  if ($scheme) {
-    $wrappers = (array) file_get_stream_wrappers(STREAM_WRAPPERS_REMOTE);
-
-    if (array_key_exists($scheme, $wrappers)) {
-      return $destination;
-    }
-  }
-
   if (file_exists($destination)) {
     switch ($replace) {
       case FILE_EXISTS_REPLACE:
@@ -1932,10 +1957,10 @@ function file_transfer($uri, $headers) {
   foreach ($headers as $name => $value) {
     drupal_add_http_header($name, $value);
   }
+  drupal_send_headers();
   $scheme = file_uri_scheme($uri);
   // Transfer file in 1024 byte chunks to save memory usage.
   if ($scheme && file_stream_wrapper_valid_scheme($scheme) && $fd = fopen($uri, 'rb')) {
-    drupal_send_headers();
     while (!feof($fd)) {
       print fread($fd, 1024);
     }

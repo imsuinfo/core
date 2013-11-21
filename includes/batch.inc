@@ -132,7 +132,7 @@ function _batch_progress_page_js() {
 
   $js_setting = array(
     'batch' => array(
-      'errorMessage' => $current_set['error_message'] . '<br>' . $batch['error_message'],
+      'errorMessage' => $current_set['error_message'] . '<br />' . $batch['error_message'],
       'initMessage' => $current_set['init_message'],
       'uri' => url($batch['url'], $batch['url_options']),
     ),
@@ -189,7 +189,7 @@ function _batch_progress_page_nojs() {
     // function), it will output whatever is in the output buffer, followed by
     // the error message.
     ob_start();
-    $fallback = $current_set['error_message'] . '<br>' . $batch['error_message'];
+    $fallback = $current_set['error_message'] . '<br />' . $batch['error_message'];
     $fallback = theme('maintenance_page', array('content' => $fallback, 'show_messages' => FALSE));
 
     // We strip the end of the page using a marker in the template, so any
@@ -355,7 +355,7 @@ function _batch_process() {
     );
     $message = strtr($progress_message, $values);
     if (!empty($message)) {
-      $message .= '<br>';
+      $message .= '<br />';
     }
     if (!empty($task_message)) {
       $message .= $task_message;

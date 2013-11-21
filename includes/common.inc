@@ -2265,17 +2265,7 @@ function url($path = NULL, array $options = array()) {
   }
 
   $base = $options['absolute'] ? $options['base_url'] . '/' : base_path();
-
-  if (empty($path)) {
-    $prefix = rtrim($options['prefix'], '/');
-  }
-  else {
-    $prefix = $options['prefix'];
-
-    if (substr($path, 0, 1) == '/') {
-      $path = substr($path, 1);
-    }
-  }
+  $prefix = empty($path) ? rtrim($options['prefix'], '/') : $options['prefix'];
 
   // With Clean URLs.
   if (!empty($GLOBALS['conf']['clean_url'])) {
@@ -2611,8 +2601,7 @@ function drupal_deliver_html_page($page_callback_result) {
     switch ($page_callback_result) {
       case MENU_NOT_FOUND:
         // Print a 404 page.
-        drupal_add_http_header('Status', '404 Not Found', FALSE, 404);
-        drupal_send_headers();
+        drupal_add_http_header('Status', '404 Not Found');
 
         watchdog('page not found', check_plain($_GET['q']), NULL, WATCHDOG_WARNING);
 
@@ -2645,8 +2634,7 @@ function drupal_deliver_html_page($page_callback_result) {
 
       case MENU_ACCESS_DENIED:
         // Print a 403 page.
-        drupal_add_http_header('Status', '403 Forbidden', FALSE, 403);
-        drupal_send_headers();
+        drupal_add_http_header('Status', '403 Forbidden');
         watchdog('access denied', check_plain($_GET['q']), NULL, WATCHDOG_WARNING);
 
         // Keep old path for reference, and to allow forms to redirect to it.
@@ -2674,8 +2662,7 @@ function drupal_deliver_html_page($page_callback_result) {
       case MENU_SITE_OFFLINE:
         // Print a 503 page.
         drupal_maintenance_theme();
-        drupal_add_http_header('Status', '503 Service unavailable', FALSE, 503);
-        drupal_send_headers();
+        drupal_add_http_header('Status', '503 Service unavailable');
         drupal_set_title(t('Site under maintenance'));
         print theme('maintenance_page', array('content' => filter_xss_admin(variable_get('maintenance_mode_message',
           t('@site is currently under maintenance. We should be back shortly. Thank you for your patience.', array('@site' => variable_get('site_name', 'Drupal')))))));
@@ -2683,8 +2670,6 @@ function drupal_deliver_html_page($page_callback_result) {
     }
   }
   elseif (isset($page_callback_result)) {
-    drupal_send_headers();
-
     // Print anything besides a menu constant, assuming it's not NULL or
     // undefined.
     print drupal_render_page($page_callback_result);
@@ -5057,7 +5042,7 @@ function drupal_json_output($var = NULL) {
  */
 function drupal_get_private_key() {
   if (!($key = variable_get('drupal_private_key', 0))) {
-    $key = drupal_hash_base64(drupal_random_bytes(55));
+    $key = drupal_random_key();
     variable_set('drupal_private_key', $key);
   }
   return $key;
@@ -5077,14 +5062,7 @@ function drupal_get_private_key() {
  * @see drupal_get_hash_salt()
  */
 function drupal_get_token($value = '') {
-  // For mixed HTTP(S) sessions, use a constant identifier so that tokens can be shared between protocols.
-  if (variable_get('https', FALSE) && $GLOBALS['is_https'] && isset($_COOKIE[substr(session_name(), 1)])) {
-    $session_id = $_COOKIE[substr(session_name(), 1)];
-  }
-  else {
-    $session_id = session_id();
-  }
-  return drupal_hmac_base64($value, $session_id . drupal_get_private_key() . drupal_get_hash_salt());
+  return drupal_hmac_base64($value, session_id() . drupal_get_private_key() . drupal_get_hash_salt());
 }
 
 /**
@@ -5103,7 +5081,7 @@ function drupal_get_token($value = '') {
  */
 function drupal_valid_token($token, $value = '', $skip_anonymous = FALSE) {
   global $user;
-  return (($skip_anonymous && $user->uid == 0) || ($token == drupal_get_token($value)));
+  return (($skip_anonymous && $user->uid == 0) || ($token === drupal_get_token($value)));
 }
 
 function _drupal_bootstrap_full() {
@@ -5113,10 +5091,10 @@ function _drupal_bootstrap_full() {
     return;
   }
   $called = TRUE;
-  require_once DRUPAL_ROOT . '/includes/path.inc';
+  require_once DRUPAL_ROOT . '/' . variable_get('path_inc', 'includes/path.inc');
   require_once DRUPAL_ROOT . '/includes/theme.inc';
   require_once DRUPAL_ROOT . '/includes/pager.inc';
-  require_once DRUPAL_ROOT . '/includes/menu.inc';
+  require_once DRUPAL_ROOT . '/' . variable_get('menu_inc', 'includes/menu.inc');
   require_once DRUPAL_ROOT . '/includes/tablesort.inc';
   require_once DRUPAL_ROOT . '/includes/file.inc';
   require_once DRUPAL_ROOT . '/includes/unicode.inc';
@@ -5136,6 +5114,10 @@ function _drupal_bootstrap_full() {
   module_load_all();
   // Make sure all stream wrappers are registered.
   file_get_stream_wrappers();
+  // Ensure mt_rand is reseeded, to prevent random values from one page load
+  // being exploited to predict random values in subsequent page loads.
+  $seed = unpack("L", drupal_random_bytes(4));
+  mt_srand($seed[1]);
 
   $test_info = &$GLOBALS['drupal_test_info'];
   if (!empty($test_info['in_child_site'])) {
@@ -5236,12 +5218,7 @@ function drupal_cron_run() {
   $GLOBALS['user'] = drupal_anonymous_user();
 
   // Try to allocate enough time to run all the hook_cron implementations.
-  $max_execution_time = ini_get('max_execution_time');
-
-  if ($max_execution_time < 240) {
-    $max_execution_time = 240;
-    drupal_set_time_limit($max_execution_time);
-  }
+  drupal_set_time_limit(240);
 
   $return = FALSE;
   // Grab the defined cron queues.
@@ -5249,7 +5226,7 @@ function drupal_cron_run() {
   drupal_alter('cron_queue_info', $queues);
 
   // Try to acquire cron lock.
-  if (!lock_acquire('cron', (float) $max_execution_time)) {
+  if (!lock_acquire('cron', 240.0)) {
     // Cron is still running normally.
     watchdog('cron', 'Attempting to re-run cron while it is already running.', array(), WATCHDOG_WARNING);
   }
@@ -5275,6 +5252,7 @@ function drupal_cron_run() {
 
     // Record cron time.
     variable_set('cron_last', REQUEST_TIME);
+    watchdog('cron', 'Cron run completed.', array(), WATCHDOG_NOTICE);
 
     // Release cron lock.
     lock_release('cron');
@@ -7832,7 +7810,7 @@ function entity_get_controller($entity_type) {
   if (!isset($controllers[$entity_type])) {
     $type_info = entity_get_info($entity_type);
     $class = $type_info['controller class'];
-    $controllers[$entity_type] = empty($class) ? new DrupalDefaultEntityController($entity_type) : new $class($entity_type);
+    $controllers[$entity_type] = new $class($entity_type);
   }
   return $controllers[$entity_type];
 }

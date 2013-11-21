@@ -242,7 +242,7 @@ function install_begin_request(&$install_state) {
   require_once DRUPAL_ROOT . '/includes/common.inc';
   require_once DRUPAL_ROOT . '/includes/file.inc';
   require_once DRUPAL_ROOT . '/includes/install.inc';
-  require_once DRUPAL_ROOT . '/includes/path.inc';
+  require_once DRUPAL_ROOT . '/' . variable_get('path_inc', 'includes/path.inc');
 
   // Load module basics (needed for hook invokes).
   include_once DRUPAL_ROOT . '/includes/module.inc';
@@ -766,6 +766,15 @@ function install_system_module(&$install_state) {
   // Install system.module.
   drupal_install_system();
 
+  // Call file_ensure_htaccess() to ensure that all of Drupal's standard
+  // directories (e.g., the public and private files directories) have
+  // appropriate .htaccess files. These directories will have already been
+  // created by this point in the installer, since Drupal creates them during
+  // the install_verify_requirements() task. Note that we cannot call
+  // file_ensure_htaccess() any earlier than this, since it relies on
+  // system.module in order to work.
+  file_ensure_htaccess();
+
   // Enable the user module so that sessions can be recorded during the
   // upcoming bootstrap step.
   module_enable(array('user'), FALSE);
@@ -981,7 +990,7 @@ function install_settings_form_submit($form, &$form_state) {
     'required' => TRUE,
   );
   $settings['drupal_hash_salt'] = array(
-    'value'    => drupal_hash_base64(drupal_random_bytes(55)),
+    'value'    => drupal_random_key(),
     'required' => TRUE,
   );
   drupal_rewrite_settings($settings);

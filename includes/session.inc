@@ -227,7 +227,7 @@ function _drupal_session_write($sid, $value) {
     // uncaught exception being thrown.
     if (error_displayable()) {
       print '<h1>Uncaught exception thrown in session handler.</h1>';
-      print '<p>' . _drupal_render_exception_safe($exception) . '</p><hr>';
+      print '<p>' . _drupal_render_exception_safe($exception) . '</p><hr />';
     }
     return FALSE;
   }
@@ -263,10 +263,10 @@ function drupal_session_initialize() {
     // Less random sessions (which are much faster to generate) are used for
     // anonymous users than are generated in drupal_session_regenerate() when
     // a user becomes authenticated.
-    session_id(drupal_hash_base64(uniqid(mt_rand(), TRUE)));
+    session_id(drupal_random_key());
     if ($is_https && variable_get('https', FALSE)) {
       $insecure_session_name = substr(session_name(), 1);
-      $session_id = drupal_hash_base64(uniqid(mt_rand(), TRUE));
+      $session_id = drupal_random_key();
       $_COOKIE[$insecure_session_name] = $session_id;
     }
   }
@@ -360,7 +360,7 @@ function drupal_session_regenerate() {
       $old_insecure_session_id = $_COOKIE[$insecure_session_name];
     }
     $params = session_get_cookie_params();
-    $session_id = drupal_hash_base64(uniqid(mt_rand(), TRUE) . drupal_random_bytes(55));
+    $session_id = drupal_random_key();
     // If a session cookie lifetime is set, the session will expire
     // $params['lifetime'] seconds from the current request. If it is not set,
     // it will expire when the browser is closed.
@@ -372,7 +372,7 @@ function drupal_session_regenerate() {
   if (drupal_session_started()) {
     $old_session_id = session_id();
   }
-  session_id(drupal_hash_base64(uniqid(mt_rand(), TRUE) . drupal_random_bytes(55)));
+  session_id(drupal_random_key());
 
   if (isset($old_session_id)) {
     $params = session_get_cookie_params();

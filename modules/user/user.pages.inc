@@ -11,7 +11,7 @@
 function user_autocomplete($string = '') {
   $matches = array();
   if ($string) {
-    $result = db_select('users')->fields('users', array('name'))->condition('name', db_like($string) . '%', 'ILIKE')->range(0, 10)->execute();
+    $result = db_select('users')->fields('users', array('name'))->condition('name', db_like($string) . '%', 'LIKE')->range(0, 10)->execute();
     foreach ($result as $user) {
       $matches[$user->name] = check_plain($user->name);
     }
@@ -137,7 +137,7 @@ function user_pass_reset($form, &$form_state, $uid, $timestamp, $hashed_pass, $a
           watchdog('user', 'User %name used one-time login link at time %timestamp.', array('%name' => $account->name, '%timestamp' => $timestamp));
           drupal_set_message(t('You have just used your one-time login link. It is no longer necessary to use this link to log in. Please change your password.'));
           // Let the user's password be changed without the current password check.
-          $token = drupal_hash_base64(drupal_random_bytes(55));
+          $token = drupal_random_key();
           $_SESSION['pass_reset_' . $user->uid] = $token;
           drupal_goto('user/' . $user->uid . '/edit', array('query' => array('pass-reset-token' => $token)));
         }

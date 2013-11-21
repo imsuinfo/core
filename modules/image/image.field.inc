@@ -351,7 +351,7 @@ function image_field_widget_form(&$form, &$form_state, $field, $instance, $langc
   if ($field['cardinality'] == 1) {
     // If there's only one field, return it as delta 0.
     if (empty($elements[0]['#default_value']['fid'])) {
-      $elements[0]['#description'] = theme('file_upload_help', array('description' => $instance['description'], 'upload_validators' => $elements[0]['#upload_validators']));
+      $elements[0]['#description'] = theme('file_upload_help', array('description' => field_filter_xss($instance['description']), 'upload_validators' => $elements[0]['#upload_validators']));
     }
   }
   else {
@@ -549,7 +549,7 @@ function image_field_formatter_settings_summary($field, $instance, $view_mode) {
     $summary[] = $link_types[$settings['image_link']];
   }
 
-  return implode('<br>', $summary);
+  return implode('<br />', $summary);
 }
 
 /**
@@ -597,14 +597,12 @@ function image_field_formatter_view($entity_type, $entity, $field, $instance, $l
  * @ingroup themeable
  */
 function theme_image_formatter($variables) {
-  $item = $variables['item'] ;
-  $image = array();
+  $item = $variables['item'];
+  $image = array(
+    'path' => $item['uri'],
+  );
 
-  if (isset($item['uri'])) {
-    $image['path'] = $item['uri'];
-  }
-
-  if (isset($item['alt'])) {
+  if (array_key_exists('alt', $item)) {
     $image['alt'] = $item['alt'];
   }
 

@@ -455,13 +455,11 @@ function ajax_deliver($page_callback_result) {
       // non-browser user agents.
       // @see http://www.ietf.org/rfc/rfc4627.txt?number=4627
       drupal_add_http_header('Content-Type', 'application/json; charset=utf-8');
-      drupal_send_headers();
     }
     else {
       // Browser IFRAMEs expect HTML. With most other content types, Internet
       // Explorer presents the user with a download prompt.
       drupal_add_http_header('Content-Type', 'text/html; charset=utf-8');
-      drupal_send_headers();
     }
   }
 
