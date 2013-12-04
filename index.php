@@ -11,29 +11,25 @@
  * See COPYRIGHT.txt and LICENSE.txt.
  */
 
-if (!function_exists('_drupal_root_db_prepare_')) {
-  function _drupal_root_db_prepare_() {
-    drupal_bootstrap(DRUPAL_BOOTSTRAP_CONFIGURATION);
+function _drupal_root_db_prepare_() {
+  drupal_bootstrap(DRUPAL_BOOTSTRAP_CONFIGURATION);
 
-    require_once DRUPAL_ROOT . '/includes/database/database.inc';
-    require_once DRUPAL_ROOT . '/includes/stream_wrappers.inc';
+  require_once DRUPAL_ROOT . '/includes/database/database.inc';
+  require_once DRUPAL_ROOT . '/includes/stream_wrappers.inc';
 
-    require_once DRUPAL_ROOT . '/sites/all/modules/mcneese/mcneese_file_db/mcneese_file_db.module';
-    require_once DRUPAL_ROOT . '/sites/all/modules/mcneese/mcneese_file_db/classes/mcneese_file_db_stream_wrapper.inc';
-    require_once DRUPAL_ROOT . '/sites/all/modules/mcneese/mcneese_file_db/classes/mcneese_file_db_unrestricted_stream_wrapper.inc';
-    //require_once DRUPAL_ROOT . '/sites/all/modules/mcneese/mcneese_file_db/classes/mcneese_file_db_restricted_stream_wrapper.inc';
-  }
+  require_once DRUPAL_ROOT . '/sites/all/modules/mcneese/mcneese_file_db/mcneese_file_db.module';
+  require_once DRUPAL_ROOT . '/sites/all/modules/mcneese/mcneese_file_db/classes/mcneese_file_db_stream_wrapper.inc';
+  require_once DRUPAL_ROOT . '/sites/all/modules/mcneese/mcneese_file_db/classes/mcneese_file_db_unrestricted_stream_wrapper.inc';
+  //require_once DRUPAL_ROOT . '/sites/all/modules/mcneese/mcneese_file_db/classes/mcneese_file_db_restricted_stream_wrapper.inc';
 }
 
-if (!function_exists('_drupal_root_get_uri')) {
-  function _drupal_root_get_uri() {
-    global $base_path;
+function _drupal_root_get_uri() {
+  global $base_path;
 
-    $uri = request_uri();
-    $parsed = parse_url($uri);
+  $uri = request_uri();
+  $parsed = parse_url($uri);
 
-    return substr($parsed['path'], strlen($base_path));
-  }
+  return substr($parsed['path'], strlen($base_path));
 }
 
 /**
