@@ -11,6 +11,11 @@
  * See COPYRIGHT.txt and LICENSE.txt.
  */
 
+/**
+ * Root directory of Drupal installation.
+ */
+define('DRUPAL_ROOT', getcwd());
+
 function _drupal_root_db_prepare_() {
   drupal_bootstrap(DRUPAL_BOOTSTRAP_CONFIGURATION);
 
@@ -31,11 +36,6 @@ function _drupal_root_get_uri() {
 
   return substr($parsed['path'], strlen($base_path));
 }
-
-/**
- * Root directory of Drupal installation.
- */
-define('DRUPAL_ROOT', getcwd());
 
 require_once DRUPAL_ROOT . '/includes/bootstrap.inc';
 drupal_bootstrap(DRUPAL_BOOTSTRAP_CONFIGURATION);
