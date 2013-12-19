@@ -812,7 +812,7 @@ class DrupalPrivateStreamWrapper extends DrupalLocalStreamWrapper {
    */
   function getExternalUrl() {
     $path = str_replace('\\', '/', $this->getTarget());
-    return url('system/files/' . $path, array('absolute' => FALSE));
+    return url('system/files/' . $path, array('external' => TRUE));
   }
 }
 
@@ -837,6 +837,6 @@ class DrupalTemporaryStreamWrapper extends DrupalLocalStreamWrapper {
    */
   public function getExternalUrl() {
     $path = str_replace('\\', '/', $this->getTarget());
-    return url('system/temporary/' . $path, array('absolute' => FALSE));
+    return url('system/temporary/' . $path, array('external' => TRUE));
   }
 }
