@@ -9,7 +9,7 @@
  * Maps PHP error constants to watchdog severity levels.
  *
  * The error constants are documented at
- * http://php.net/manual/en/errorfunc.constants.php
+ * http://php.net/manual/errorfunc.constants.php
  *
  * @ingroup logging_severity_levels
  */
@@ -149,15 +149,7 @@ function _drupal_render_exception_safe($exception) {
  *   TRUE if an error should be displayed.
  */
 function error_displayable($error = NULL) {
-  global $user;
-
-  if (!is_object($user) || !property_exists($user, 'uid') || $user->uid == 0) {
-    $error_level = variable_get('error_level_anonymous', ERROR_REPORTING_DISPLAY_ALL);
-  }
-  else {
-    $error_level = variable_get('error_level', ERROR_REPORTING_DISPLAY_ALL);
-  }
-
+  $error_level = variable_get('error_level', ERROR_REPORTING_DISPLAY_ALL);
   $updating = (defined('MAINTENANCE_MODE') && MAINTENANCE_MODE == 'update');
   $all_errors_displayed = ($error_level == ERROR_REPORTING_DISPLAY_ALL);
   $error_needs_display = ($error_level == ERROR_REPORTING_DISPLAY_SOME &&
@@ -211,7 +203,6 @@ function _drupal_log_error($error, $fatal = FALSE) {
 
   if ($fatal) {
     drupal_add_http_header('Status', '500 Service unavailable (with message)');
-    drupal_send_headers();
   }
 
   if (drupal_is_cli()) {

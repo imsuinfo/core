@@ -835,7 +835,7 @@ function image_style_deliver($style, $scheme) {
     else {
       $headers = module_invoke_all('file_download', $image_uri);
       if (in_array(-1, $headers) || empty($headers)) {
-        return drupal_access_denied();
+        return MENU_ACCESS_DENIED;
       }
       if (count($headers)) {
         foreach ($headers as $name => $value) {
@@ -855,7 +855,6 @@ function image_style_deliver($style, $scheme) {
       // to support Retry-After.
       drupal_add_http_header('Status', '503 Service Unavailable');
       drupal_add_http_header('Retry-After', 3);
-      drupal_send_headers();
       print t('Image generation in progress. Try again shortly.');
       drupal_exit();
     }
@@ -871,14 +870,11 @@ function image_style_deliver($style, $scheme) {
 
   if ($success) {
     $image = image_load($derivative_uri);
-    if (is_object($image)) {
-      file_transfer($image->source, array('Content-Type' => $image->info['mime_type'], 'Content-Length' => $image->info['file_size']));
-    }
+    file_transfer($image->source, array('Content-Type' => $image->info['mime_type'], 'Content-Length' => $image->info['file_size']));
   }
   else {
     watchdog('image', 'Unable to generate the derived image located at %path.', array('%path' => $derivative_uri));
     drupal_add_http_header('Status', '500 Internal Server Error');
-    drupal_send_headers();
     print t('Error generating image.');
     drupal_exit();
   }
@@ -975,10 +971,10 @@ function image_style_transform_dimensions($style_name, array &$dimensions) {
 function image_style_flush($style) {
   // Delete the style directory in each registered wrapper.
   $wrappers = file_get_stream_wrappers(STREAM_WRAPPERS_WRITE_VISIBLE);
-  $remote = (array) file_get_stream_wrappers(STREAM_WRAPPERS_REMOTE);
   foreach ($wrappers as $wrapper => $wrapper_data) {
-    if (array_key_exists($wrapper, $remote)) continue;
-    file_unmanaged_delete_recursive($wrapper . '://styles/' . $style['name']);
+    if (file_exists($directory = $wrapper . '://styles/' . $style['name'])) {
+      file_unmanaged_delete_recursive($directory);
+    }
   }
 
   // Let other modules update as necessary on flush.
@@ -1016,10 +1012,14 @@ function image_style_flush($style) {
  */
 function image_style_url($style_name, $path) {
   $uri = image_style_path($style_name, $path);
+
+  // The passed-in $path variable can be either a relative path or a full URI.
+  $original_uri = file_uri_scheme($path) ? file_stream_wrapper_uri_normalize($path) : file_build_uri($path);
+
   // The token query is added even if the 'image_allow_insecure_derivatives'
   // variable is TRUE, so that the emitted links remain valid if it is changed
   // back to the default FALSE.
-  $token_query = array(IMAGE_DERIVATIVE_TOKEN => image_style_path_token($style_name, file_stream_wrapper_uri_normalize($path)));
+  $token_query = array(IMAGE_DERIVATIVE_TOKEN => image_style_path_token($style_name, $original_uri));
 
   // If not using clean URLs, the image derivative callback is only available
   // with the query string. If the file does not exist, use url() to ensure
@@ -1078,21 +1078,7 @@ function image_style_path($style_name, $uri) {
   }
   else {
     $path = $uri;
-    $scheme = image_style_default_scheme();
-
-    if ($scheme != 'public' && $scheme != 'private') {
-      $wrappers = file_get_stream_wrappers(STREAM_WRAPPERS_READ);
-      unset($wrappers[$scheme]);
-
-      // find out which stream it belongs to by a walkthrough of available streams.
-      foreach ($wrappers as $wrapper_scheme => $wrapper) {
-
-        if (file_exists($wrapper_scheme . '://' . $uri)) {
-          $scheme = $wrapper_scheme;
-          break;
-        }
-      }
-    }
+    $scheme = file_default_scheme();
   }
   return $scheme . '://styles/' . $style_name . '/' . $scheme . '/' . $path;
 }
@@ -1404,24 +1390,4 @@ function image_filter_keyword($value, $current_pixels, $new_pixels) {
  */
 function _image_effect_definitions_sort($a, $b) {
   return strcasecmp($a['name'], $b['name']);
-}
-
-/**
- * A standard way to load the default image scheme.
- *
- * Allows for a custom image scheme 'image_style_default_scheme' to be defined in
- * the sites/default/settings.php file. Otherwise, the default file scheme is
- * returned.
- *
- * @return string
- *   A formatted scheme string.
- */
-function image_style_default_scheme() {
-  global $conf;
-
-  if (empty($conf['image_style_default_scheme'])) {
-    return file_default_scheme();
-  }
-
-  return $conf['image_style_default_scheme'];
 }

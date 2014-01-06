@@ -29,7 +29,7 @@ function statistics_node_tracker() {
       ->fields('u', array('name'))
       ->condition(db_or()
         ->condition('a.path', 'node/' . $node->nid)
-        ->condition('a.path', 'node/' . $node->nid . '/%', 'ILIKE'))
+        ->condition('a.path', 'node/' . $node->nid . '/%', 'LIKE'))
       ->limit(30)
       ->orderByHeader($header);
 
@@ -54,9 +54,7 @@ function statistics_node_tracker() {
     $build['statistics_pager'] = array('#theme' => 'pager');
     return $build;
   }
-  else {
-    drupal_not_found();
-  }
+  return MENU_NOT_FOUND;
 }
 
 /**
@@ -99,7 +97,5 @@ function statistics_user_tracker() {
     $build['statistics_pager'] = array('#theme' => 'pager');
     return $build;
   }
-  else {
-    drupal_not_found();
-  }
+  return MENU_NOT_FOUND;
 }

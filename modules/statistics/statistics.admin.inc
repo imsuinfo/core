@@ -188,7 +188,7 @@ function statistics_top_referrers() {
   $query->addExpression('MAX(timestamp)', 'last');
   $query
     ->fields('a', array('url'))
-    ->condition('url', '%' . $_SERVER['HTTP_HOST'] . '%', 'NOT ILIKE')
+    ->condition('url', '%' . $_SERVER['HTTP_HOST'] . '%', 'NOT LIKE')
     ->condition('url', '', '<>')
     ->groupBy('url')
     ->limit(30)
@@ -197,7 +197,7 @@ function statistics_top_referrers() {
   $count_query = db_select('accesslog', 'a', array('target' => 'slave'));
   $count_query->addExpression('COUNT(DISTINCT url)');
   $count_query
-    ->condition('url', '%' . $_SERVER['HTTP_HOST'] . '%', 'NOT ILIKE')
+    ->condition('url', '%' . $_SERVER['HTTP_HOST'] . '%', 'NOT LIKE')
     ->condition('url', '', '<>');
   $query->setCountQuery($count_query);
 
@@ -263,9 +263,7 @@ function statistics_access_log($aid) {
     );
     return $build;
   }
-  else {
-    drupal_not_found();
-  }
+  return MENU_NOT_FOUND;
 }
 
 /**
@@ -304,6 +302,17 @@ function statistics_settings_form() {
     '#title' => t('Count content views'),
     '#default_value' => variable_get('statistics_count_content_views', 0),
     '#description' => t('Increment a counter each time content is viewed.'),
+  );
+  $form['content']['statistics_count_content_views_ajax'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Use Ajax to increment the counter'),
+    '#default_value' => variable_get('statistics_count_content_views_ajax', 0),
+    '#description' => t('Perform the count asynchronously after page load rather than during page generation.'),
+    '#states' => array(
+      'disabled' => array(
+        ':input[name="statistics_count_content_views"]' => array('checked' => FALSE),
+      ),
+    ),
   );
 
   return system_settings_form($form);

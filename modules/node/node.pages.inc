@@ -258,6 +258,7 @@ function node_form($form, &$form_state, $node) {
   // Node options for administrators
   $form['options'] = array(
     '#type' => 'fieldset',
+    '#access' => user_access('administer nodes'),
     '#title' => t('Publishing options'),
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
@@ -272,19 +273,16 @@ function node_form($form, &$form_state, $node) {
   );
   $form['options']['status'] = array(
     '#type' => 'checkbox',
-    '#access' => user_access('administer nodes'),
     '#title' => t('Published'),
     '#default_value' => $node->status,
   );
   $form['options']['promote'] = array(
     '#type' => 'checkbox',
-    '#access' => user_access('administer nodes'),
     '#title' => t('Promoted to front page'),
     '#default_value' => $node->promote,
   );
   $form['options']['sticky'] = array(
     '#type' => 'checkbox',
-    '#access' => user_access('administer nodes'),
     '#title' => t('Sticky at top of lists'),
     '#default_value' => $node->sticky,
   );
@@ -544,6 +542,7 @@ function node_delete_confirm_submit($form, &$form_state) {
   if ($form_state['values']['confirm']) {
     $node = node_load($form_state['values']['nid']);
     node_delete($form_state['values']['nid']);
+    cache_clear_all();
     watchdog('content', '@type: deleted %title.', array('@type' => $node->type, '%title' => $node->title));
     drupal_set_message(t('@type %title has been deleted.', array('@type' => node_type_get_name($node), '%title' => $node->title)));
   }

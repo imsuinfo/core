@@ -960,8 +960,6 @@ function node_load_multiple($nids = array(), $conditions = array(), $reset = FAL
  *   A fully-populated node object, or FALSE if the node is not found.
  */
 function node_load($nid = NULL, $vid = NULL, $reset = FALSE) {
-  if (!is_null($nid) && (!is_numeric($nid) || (float)$nid !== round($nid))) return FALSE;
-  if (!is_null($vid) && (!is_numeric($vid) || (float)$vid !== round($vid))) return FALSE;
   $nids = (isset($nid) ? array($nid) : array());
   $conditions = (isset($vid) ? array('vid' => $vid) : array());
   $node = node_load_multiple($nids, $conditions, $reset);
@@ -1181,10 +1179,8 @@ function node_save($node) {
     module_invoke_all('node_' . $op, $node);
     module_invoke_all('entity_' . $op, $node, 'node');
 
-    // Update the node access table for this node. There's no need to delete
-    // existing records if the node is new.
-    $delete = $op == 'update';
-    node_access_acquire_grants($node, $delete);
+    // Update the node access table for this node.
+    node_access_acquire_grants($node);
 
     // Clear internal properties.
     unset($node->is_new);
@@ -1938,8 +1934,9 @@ function _node_revision_access($node, $op = 'view', $account = NULL) {
     // There should be at least two revisions. If the vid of the given node and
     // the vid of the current revision differ, then we already have two
     // different revisions so there is no need for a separate database check.
-    // Also, if you try to delete the current revision, that's not good.
-    if ($is_current_revision && (db_query('SELECT COUNT(vid) FROM {node_revision} WHERE nid = :nid', array(':nid' => $node->nid))->fetchField() == 1 || $op == 'delete')) {
+    // Also, if you try to revert to or delete the current revision, that's not
+    // good.
+    if ($is_current_revision && (db_query('SELECT COUNT(vid) FROM {node_revision} WHERE nid = :nid', array(':nid' => $node->nid))->fetchField() == 1 || $op == 'update' || $op == 'delete')) {
       $access[$cid] = FALSE;
     }
     elseif (user_access('administer nodes', $account)) {
@@ -2225,8 +2222,8 @@ function node_last_changed($nid) {
 /**
  * Returns a list of all the existing revision numbers.
  *
- * @param Drupal\node\Node $node
- *   The node entity.
+ * @param $node
+ *   The node object.
  *
  * @return
  *   An associative array keyed by node revision number.
@@ -2493,7 +2490,7 @@ function node_form_block_custom_block_delete_alter(&$form, &$form_state) {
 function node_form_block_custom_block_delete_submit($form, &$form_state) {
   db_delete('block_node_type')
     ->condition('module', 'block')
-    ->condition('delta', $form_state['values']['delta'])
+    ->condition('delta', $form_state['values']['bid'])
     ->execute();
 }
 
@@ -2647,7 +2644,6 @@ function node_feed($nids = FALSE, $channel = array()) {
   $output .= "</rss>\n";
 
   drupal_add_http_header('Content-Type', 'application/rss+xml; charset=utf-8');
-  drupal_send_headers();
   print $output;
 }
 
@@ -3020,15 +3016,7 @@ function node_access($op, $node, $account = NULL) {
   // - At least one module says to grant access.
   // If no module specified either allow or deny, we fall back to the
   // node_access table.
-  if (is_string($node) || (is_object($node) && property_exists($node, 'type'))) {
-    $access = module_invoke_all('node_access', $node, $op, $account);
-  }
-  else {
-    // if the $node variable is invalid, then deny access.
-    $access  = array();
-    $access[] = NODE_ACCESS_DENY;
-  }
-
+  $access = module_invoke_all('node_access', $node, $op, $account);
   if (in_array(NODE_ACCESS_DENY, $access, TRUE)) {
     $rights[$account->uid][$cid][$op] = FALSE;
     return FALSE;
