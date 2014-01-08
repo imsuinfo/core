@@ -4105,17 +4105,19 @@ function theme_form_element($variables) {
   }
 
   $wrap_with_fieldset = FALSE;
-  if ($element['#type'] == 'checkbox') {
-    $wrap_with_fieldset = TRUE;
-  }
-  elseif ($element['#type'] == 'checkboxes') {
-    $wrap_with_fieldset = TRUE;
-  }
-  elseif ($element['#type'] == 'radio') {
-    $wrap_with_fieldset = TRUE;
-  }
-  elseif ($element['#type'] == 'radios') {
-    $wrap_with_fieldset = TRUE;
+  if (!empty($element['#type'])) {
+    if ($element['#type'] == 'checkbox') {
+      $wrap_with_fieldset = TRUE;
+    }
+    elseif ($element['#type'] == 'checkboxes') {
+      $wrap_with_fieldset = TRUE;
+    }
+    elseif ($element['#type'] == 'radio') {
+      $wrap_with_fieldset = TRUE;
+    }
+    elseif ($element['#type'] == 'radios') {
+      $wrap_with_fieldset = TRUE;
+    }
   }
 
   if ($wrap_with_fieldset && isset($element['#fieldset']) && !$element['#fieldset']) {
