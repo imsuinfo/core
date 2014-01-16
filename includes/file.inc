@@ -390,7 +390,7 @@ function file_create_url($uri) {
     else {
       // If this is not a properly formatted stream, then it is a shipped file.
       // Therefore, return the urlencoded URI with the base URL prepended.
-      return $GLOBALS['base_path'] . drupal_encode_path($uri);
+      return $GLOBALS['base_url'] . '/' . drupal_encode_path($uri);
     }
   }
   elseif ($scheme == 'http' || $scheme == 'https') {
@@ -495,7 +495,7 @@ function file_create_htaccess($directory, $private = TRUE, $force_overwrite = FA
     drupal_chmod($htaccess_path, 0444);
   }
   else {
-    $variables = array('%directory' => $directory, '!htaccess' => '<br>' . nl2br(check_plain($htaccess_lines)));
+    $variables = array('%directory' => $directory, '!htaccess' => '<br />' . nl2br(check_plain($htaccess_lines)));
     watchdog('security', "Security warning: Couldn't write .htaccess file. Please create a .htaccess file in your %directory directory which contains the following lines: <code>!htaccess</code>", $variables, WATCHDOG_ERROR);
   }
 }
@@ -979,16 +979,6 @@ function file_build_uri($path) {
  *   and FILE_EXISTS_ERROR is specified.
  */
 function file_destination($destination, $replace) {
-  $scheme = file_uri_scheme($destination);
-
-  if ($scheme) {
-    $wrappers = (array) file_get_stream_wrappers(STREAM_WRAPPERS_REMOTE);
-
-    if (array_key_exists($scheme, $wrappers)) {
-      return $destination;
-    }
-  }
-
   if (file_exists($destination)) {
     switch ($replace) {
       case FILE_EXISTS_REPLACE:
@@ -1969,10 +1959,10 @@ function file_transfer($uri, $headers) {
   foreach ($headers as $name => $value) {
     drupal_add_http_header($name, $value);
   }
+  drupal_send_headers();
   $scheme = file_uri_scheme($uri);
   // Transfer file in 1024 byte chunks to save memory usage.
   if ($scheme && file_stream_wrapper_valid_scheme($scheme) && $fd = fopen($uri, 'rb')) {
-    drupal_send_headers();
     while (!feof($fd)) {
       print fread($fd, 1024);
     }
