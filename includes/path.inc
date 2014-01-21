@@ -18,13 +18,6 @@ function drupal_path_initialize() {
   if (empty($_GET['q'])) {
     $_GET['q'] = variable_get('site_frontpage', 'node');
   }
-  else {
-    $path = strtolower($_GET['q']);
-    if ($_GET['q'] != $path) {
-      drupal_goto($path);
-      drupal_exit();
-    }
-  }
 
   $cache = &drupal_static(__FUNCTION__);
   $cache['original_path'] = $_GET['q'];
