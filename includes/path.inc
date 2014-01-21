@@ -21,12 +21,7 @@ function drupal_path_initialize() {
   else {
     $path = strtolower($_GET['q']);
     if ($_GET['q'] != $path) {
-      $options = array();
-      $options['query'] =  drupal_get_query_parameters();
-
-      $url = url($path, $options);
-
-      header('Location: ' . $url, TRUE, 302);
+      drupal_goto($path);
       drupal_exit();
     }
   }
