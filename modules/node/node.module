@@ -1972,6 +1972,26 @@ function _node_add_access() {
 }
 
 /**
+ * Access callback: Checks whether the user has permission to add a node.
+ *
+ * This is a wrapper to node_access() that converst '-' to '_'.
+ *
+ * @param string $type
+ *   The type of node to create.
+ *
+ * @return
+ *   TRUE if the user has add permission, otherwise FALSE.
+ *
+ * @see node_menu()
+ * @see node_access()
+ */
+function _node_access_type($type) {
+  $altered_type = str_replace('-', '_', $type);
+
+  return node_access('create', $altered_type);
+}
+
+/**
  * Implements hook_menu().
  */
 function node_menu() {
@@ -2048,7 +2068,7 @@ function node_menu() {
     'type' => MENU_CALLBACK,
   );
   $items['node/add'] = array(
-    'title' => 'Add content',
+    'title' => 'Add Content',
     'page callback' => 'node_add_page',
     'access callback' => '_node_add_access',
     'file' => 'node.pages.inc',
@@ -2062,23 +2082,16 @@ function node_menu() {
     // are not passed to node_feed().
     'page arguments' => array(FALSE, array()),
   );
-  // @todo Remove this loop when we have a 'description callback' property.
-  // Reset internal static cache of _node_types_build(), forces to rebuild the
-  // node type information.
-  node_type_cache_reset();
-  foreach (node_type_get_types() as $type) {
-    $type_url_str = str_replace('_', '-', $type->type);
-    $items['node/add/' . $type_url_str] = array(
-      'title' => $type->name,
-      'title callback' => 'check_plain',
-      'page callback' => 'node_add',
-      'page arguments' => array($type->type),
-      'access callback' => 'node_access',
-      'access arguments' => array('create', $type->type),
-      'description' => $type->description,
-      'file' => 'node.pages.inc',
-    );
-  }
+  $items['node/add/%'] = array(
+    'title' => 'Create Node',
+    'title callback' => 'check_plain',
+    'page callback' => 'node_add',
+    'page arguments' => array(2),
+    'access callback' => '_node_access_type',
+    'access arguments' => array(2),
+    'description' => '',
+    'file' => 'node.pages.inc',
+  );
   $items['node/%node'] = array(
     'title callback' => 'node_page_title',
     'title arguments' => array(1),
