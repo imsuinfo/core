@@ -2931,6 +2931,11 @@ function theme_fieldset($variables) {
   element_set_attributes($element, array('id'));
   _form_set_class($element, array('form-wrapper'));
 
+  $legend_attributes = array('class' => array());
+  if (isset($element['#legend_attributes']) && is_array($element['#legend_attributes'])) {
+    $legend_attributes = $element['#legend_attributes'];
+  }
+
   if ($as_div) {
     $output = '<div' . drupal_attributes($element['#attributes']) . '>';
     $output .= '<div class="fieldset-wrapper">';
@@ -2948,7 +2953,7 @@ function theme_fieldset($variables) {
     $output = '<fieldset' . drupal_attributes($element['#attributes']) . '>';
     if (!empty($element['#title'])) {
       // Always wrap fieldset legends in a SPAN for CSS positioning.
-      $output .= '<legend><span class="fieldset-legend">' . $element['#title'] . '</span></legend>';
+      $output .= '<legend' . drupal_attributes($legend_attributes) . '><span class="fieldset-legend">' . $element['#title'] . '</span></legend>';
     }
     $output .= '<div class="fieldset-wrapper">';
     if (!empty($element['#description'])) {
@@ -4297,7 +4302,7 @@ function theme_form_element($variables) {
 
   if ($wrap_with_fieldset) {
     $element['#fieldset'] = FALSE;
-    $output = '<fieldset' . drupal_attributes($attributes) . '>' . "\n" . '<legend class="element-invisible">' . $legend . '</legend>'. "\n";
+    $output = '<fieldset' . drupal_attributes($attributes) . '>' . "\n" . '<legend class="element-invisible"><span class="fieldset-legend">' . $legend . '</span></legend>'. "\n";
   }
   else {
     $output = '<div' . drupal_attributes($attributes) . '>' . "\n";
