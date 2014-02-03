@@ -49,7 +49,7 @@ function theme_node_add_list($variables) {
   foreach ($node_types as $node_type) {
     if (!node_access('create', $node_type->type)) continue;
     $processed = TRUE;
-    $type_url_str = 'node/add/' . str_replace('_', '-', $node_type->type);
+    $type_url_str = 'node/add/' . $node_type->type;
     $output .= '<dt>' . l($node_type->type, $type_url_str) . '</dt>';
     $output .= '<dd>' . filter_xss_admin($node_type->description) . '</dd>';
   }
