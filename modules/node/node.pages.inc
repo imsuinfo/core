@@ -73,10 +73,12 @@ function theme_node_add_list($variables) {
 function node_add($type) {
   global $user;
 
+  $altered_type = str_replace('-', '_', $type);
+
   $types = node_type_get_types();
-  $node = (object) array('uid' => $user->uid, 'name' => (isset($user->name) ? $user->name : ''), 'type' => $type, 'language' => LANGUAGE_NONE);
-  drupal_set_title(t('Create @name', array('@name' => $types[$type]->name)), PASS_THROUGH);
-  $output = drupal_get_form($type . '_node_form', $node);
+  $node = (object) array('uid' => $user->uid, 'name' => (isset($user->name) ? $user->name : ''), 'type' => $altered_type, 'language' => LANGUAGE_NONE);
+  drupal_set_title(t('Create @name', array('@name' => $types[$altered_type]->name)), PASS_THROUGH);
+  $output = drupal_get_form($altered_type . '_node_form', $node);
 
   return $output;
 }
