@@ -19,6 +19,20 @@ function drupal_path_initialize() {
     $_GET['q'] = variable_get('site_frontpage', 'node');
   }
 
+  $valid_string = iconv('UTF-8', 'UTF-8//IGNORE', $_GET['q']);
+  if ($valid_string === FALSE) {
+    $valid_string = iconv('ISO8859-1', 'UTF-8//IGNORE', $_GET['q']);
+    if ($valid_string === FALSE) {
+      $valid_string = iconv('UTF-16', 'UTF-8//IGNORE', $_GET['q']);
+      if ($valid_string !== FALSE) {
+        $_GET['q'] = $valid_string;
+      }
+    }
+    else {
+      $_GET['q'] = $valid_string;
+    }
+  }
+
   $cache = &drupal_static(__FUNCTION__);
   $cache['original_path'] = $_GET['q'];
   $_GET['q'] = drupal_get_normal_path($_GET['q']);
