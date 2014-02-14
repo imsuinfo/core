@@ -2607,34 +2607,21 @@ function drupal_deliver_html_page($page_callback_result) {
         // Print a 404 page.
         drupal_add_http_header('Status', '404 Not Found', FALSE, 404);
         drupal_send_headers();
-
         watchdog('page not found', check_plain($_GET['q']), NULL, WATCHDOG_WARNING);
 
-        // Check for and return a fast 404 page if configured.
-        drupal_fast_404();
+        // Custom 404 handler.
+        drupal_set_title('', PASS_THROUGH);
+        $return = '<br>';
+        $return .= '<h1 style="text-align: center;">Oops!</h1>';
+        $return .= '<h2 style="text-align: center;">This page is no longer available (404).</h2>';
+        $return .= '<div style="text-align: center;"><br>';
+        $return .= '  The page you have requested either does not exist or has been removed.<br>';
+        $return .= '  <br>';
+        $return .= '  If you think this is in error, then please use the contact information provided in the page footer.<br>';
+        $return .= '</div>';
+        $return .= '<br>';
 
-        // Keep old path for reference, and to allow forms to redirect to it.
-        if (!isset($_GET['destination'])) {
-          $_GET['destination'] = $_GET['q'];
-        }
-
-        $path = drupal_get_normal_path(variable_get('site_404', ''));
-        if ($path && $path != $_GET['q']) {
-          // Custom 404 handler. Set the active item in case there are tabs to
-          // display, or other dependencies on the path.
-          menu_set_active_item($path);
-          $return = menu_execute_active_handler($path, FALSE);
-        }
-
-        if (empty($return) || $return == MENU_NOT_FOUND || $return == MENU_ACCESS_DENIED) {
-          // Standard 404 handler.
-          drupal_set_title(t('Page not found'));
-          $return = t('The requested page "@path" could not be found.', array('@path' => request_uri()));
-        }
-
-        drupal_set_page_content($return);
-        $page = element_info('page');
-        print drupal_render_page($page);
+        print drupal_render_page($return);
         break;
 
       case MENU_ACCESS_DENIED:
@@ -2643,24 +2630,19 @@ function drupal_deliver_html_page($page_callback_result) {
         drupal_send_headers();
         watchdog('access denied', check_plain($_GET['q']), NULL, WATCHDOG_WARNING);
 
-        // Keep old path for reference, and to allow forms to redirect to it.
-        if (!isset($_GET['destination'])) {
-          $_GET['destination'] = $_GET['q'];
-        }
-
-        $path = drupal_get_normal_path(variable_get('site_403', ''));
-        if ($path && $path != $_GET['q']) {
-          // Custom 403 handler. Set the active item in case there are tabs to
-          // display or other dependencies on the path.
-          menu_set_active_item($path);
-          $return = menu_execute_active_handler($path, FALSE);
-        }
-
-        if (empty($return) || $return == MENU_NOT_FOUND || $return == MENU_ACCESS_DENIED) {
-          // Standard 403 handler.
-          drupal_set_title(t('Access denied'));
-          $return = t('You are not authorized to access this page.');
-        }
+        // Custom 403 handler.
+        drupal_set_title('', PASS_THROUGH);
+        $return = '<br>';
+        $return .= '<h1 style="text-align: center;">Oops!</h1>';
+        $return .= '<h2 style="text-align: center;">This page is restricted (403).</h2>';
+        $return .= '<div style="text-align: center;"><br>';
+        $return .= '  The page you have requested is restricted to editors or you may have followed an outdated link pointing to to a page that has been unpublished.<br>';
+        $return .= '  <br>';
+        $return .= '  Before you can proceed to view the page you have requested, you must log on to the site.<br>';
+        $return .= '  <br>';
+        $return .= '  If you are already logged in, then you probably have followed an outdated link to an obsolete page.<br>';
+        $return .= '</div>';
+        $return .= '<br>';
 
         print drupal_render_page($return);
         break;
