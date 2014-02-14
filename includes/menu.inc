@@ -445,6 +445,11 @@ function menu_set_item($path, $router_item) {
  *   be filled in based on the database values and the objects loaded.
  */
 function menu_get_item($path = NULL, $router_item = NULL) {
+  $router_items_not_found = &drupal_static(__FUNCTION__ . '-not_found');
+  if (!isset($router_items_not_found)) {
+    $router_items_not_found = array('paths' => array());
+  }
+
   $router_items = &drupal_static(__FUNCTION__);
   if (!isset($path)) {
     $path = $_GET['q'];
@@ -464,22 +469,54 @@ function menu_get_item($path = NULL, $router_item = NULL) {
     $ancestors = menu_get_ancestors($parts);
     $router_item = db_query_range('SELECT * FROM {menu_router} WHERE path IN (:ancestors) ORDER BY fit DESC', 0, 1, array(':ancestors' => $ancestors))->fetchAssoc();
 
-    if ($router_item) {
-      // Allow modules to alter the router item before it is translated and
-      // checked for access.
-      drupal_alter('menu_get_item', $router_item, $path, $original_map);
+    if (!$router_item) {
+      $router_item = array();
+      $router_item['path'] = $path;
+      $router_item['load_functions'] = array();
+      $router_item['to_arg_functions'] = array();
+      $router_item['access_callback'] = '';
+      $router_item['access_arguments'] = array();
+      $router_item['page_callback'] = '';
+      $router_item['page_arguments'] = array();
+      $router_item['delivery_callback'] = '';
+      $router_item['fit'] = 0;
+      $router_item['number_parts'] = 0;
+      $router_item['context'] = 0;
+      $router_item['tab_parent'] = '';
+      $router_item['tab_root'] = '';
+      $router_item['title'] = '';
+      $router_item['title_callback'] = '';
+      $router_item['title_arguments'] = '';
+      $router_item['theme_callback'] = '';
+      $router_item['theme_arguments'] = '';
+      $router_item['type'] = 0;
+      $router_item['description'] = '';
+      $router_item['position'] = '';
+      $router_item['weight'] = 0;
+      $router_item['include_file'] = '';
 
-      $map = _menu_translate($router_item, $original_map);
-      $router_item['original_map'] = $original_map;
-      if ($map === FALSE) {
-        $router_items[$path] = FALSE;
-        return FALSE;
+      if (is_null($path)) {
+        $router_items_not_found['null'] = &$router_item;
       }
-      if ($router_item['access']) {
-        $router_item['map'] = $map;
-        $router_item['page_arguments'] = array_merge(menu_unserialize($router_item['page_arguments'], $map), array_slice($map, $router_item['number_parts']));
-        $router_item['theme_arguments'] = array_merge(menu_unserialize($router_item['theme_arguments'], $map), array_slice($map, $router_item['number_parts']));
+      else {
+        $router_items_not_found['paths'][$path] = &$router_item;
       }
+    }
+
+    // Allow modules to alter the router item before it is translated and
+    // checked for access.
+    drupal_alter('menu_get_item', $router_item, $path, $original_map);
+
+    $map = _menu_translate($router_item, $original_map);
+    $router_item['original_map'] = $original_map;
+    if ($map === FALSE) {
+      $router_items[$path] = FALSE;
+      return FALSE;
+    }
+    if ($router_item['access']) {
+      $router_item['map'] = $map;
+      $router_item['page_arguments'] = array_merge(menu_unserialize($router_item['page_arguments'], $map), array_slice($map, $router_item['number_parts']));
+      $router_item['theme_arguments'] = array_merge(menu_unserialize($router_item['theme_arguments'], $map), array_slice($map, $router_item['number_parts']));
     }
     $router_items[$path] = $router_item;
   }
@@ -507,9 +544,16 @@ function menu_execute_active_handler($path = NULL, $deliver = TRUE) {
   $read_only_path = !empty($path) ? $path : $_GET['q'];
   drupal_alter('menu_site_status', $page_callback_result, $read_only_path);
 
+  $router_items_not_found = &drupal_static('menu_get_item-not_found');
+
   // Only continue if the site status is not set.
   if ($page_callback_result == MENU_SITE_ONLINE) {
-    if ($router_item = menu_get_item($path)) {
+    $router_item = menu_get_item($path);
+
+    if ((is_null($read_only_path) && $router_items_not_found['null']) || isset($router_items_not_found['paths'][$read_only_path])) {
+      $page_callback_result = MENU_NOT_FOUND;
+    }
+    else {
       if ($router_item['access']) {
         if ($router_item['include_file']) {
           require_once DRUPAL_ROOT . '/' . $router_item['include_file'];
@@ -519,9 +563,6 @@ function menu_execute_active_handler($path = NULL, $deliver = TRUE) {
       else {
         $page_callback_result = MENU_ACCESS_DENIED;
       }
-    }
-    else {
-      $page_callback_result = MENU_NOT_FOUND;
     }
   }
 
