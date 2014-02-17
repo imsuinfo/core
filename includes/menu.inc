@@ -470,6 +470,31 @@ function menu_get_item($path = NULL, $router_item = NULL) {
     $router_item = db_query_range('SELECT * FROM {menu_router} WHERE path IN (:ancestors) ORDER BY fit DESC', 0, 1, array(':ancestors' => $ancestors))->fetchAssoc();
 
     if (!$router_item) {
+      $router_item = array();
+      $router_item['path'] = $path;
+      $router_item['load_functions'] = array();
+      $router_item['to_arg_functions'] = array();
+      $router_item['access_callback'] = '';
+      $router_item['access_arguments'] = array();
+      $router_item['page_callback'] = '';
+      $router_item['page_arguments'] = array();
+      $router_item['delivery_callback'] = '';
+      $router_item['fit'] = 0;
+      $router_item['number_parts'] = 0;
+      $router_item['context'] = 0;
+      $router_item['tab_parent'] = '';
+      $router_item['tab_root'] = '';
+      $router_item['title'] = '';
+      $router_item['title_callback'] = '';
+      $router_item['title_arguments'] = '';
+      $router_item['theme_callback'] = '';
+      $router_item['theme_arguments'] = '';
+      $router_item['type'] = 0;
+      $router_item['description'] = '';
+      $router_item['position'] = '';
+      $router_item['weight'] = 0;
+      $router_item['include_file'] = '';
+
       if (is_null($path)) {
         $router_items_not_found['null'] = &$router_item;
       }
