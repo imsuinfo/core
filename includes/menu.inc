@@ -2612,6 +2612,7 @@ function menu_get_active_breadcrumb() {
     }
 
     foreach ($active_trail as $parent) {
+      if (!is_string($parent['title']) || !is_string($parent['href'])) continue;
       $breadcrumb[] = l($parent['title'], $parent['href'], $parent['localized_options']);
     }
   }
