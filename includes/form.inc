@@ -4479,13 +4479,22 @@ function theme_form_element_label($variables) {
   $title = filter_xss_admin($element['#title']);
 
   $attributes = array();
-  // Style the label as class option to display inline with the element.
-  if ($element['#title_display'] == 'after') {
-    $attributes['class'] = 'option';
+  if (isset($element['#title_display'])) {
+    $attributes['class'][] = 'title_display-' . $element['#title_display'];
+
+    // Show label only to screen readers to avoid disruption in visual flows.
+    if ($element['#title_display'] == 'invisible') {
+      $attributes['class'][] = 'element-invisible';
+    }
   }
-  // Show label only to screen readers to avoid disruption in visual flows.
-  elseif ($element['#title_display'] == 'invisible') {
-    $attributes['class'] = 'element-invisible';
+
+  if (isset($element['#type'])) {
+    if ($element['#type'] == 'checkbox') {
+      $attributes['class'][] = 'option';
+    }
+    elseif ($element['#type'] == 'radio') {
+      $attributes['class'][] = 'option';
+    }
   }
 
   if (!empty($element['#id'])) {
