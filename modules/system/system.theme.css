@@ -90,6 +90,9 @@ label.option {
   display: inline;
   font-weight: normal;
 }
+label.title_display-after {
+  font-weight: normal;
+}
 .form-checkboxes .form-item,
 .form-radios .form-item {
   margin-top: 0.4em;
