@@ -2146,7 +2146,7 @@ function node_menu() {
     'file' => 'node.pages.inc',
   );
   $items['node/%node/revisions/%/view'] = array(
-    'title' => 'Revisions',
+    'title' => 'View Revision',
     'load arguments' => array(3),
     'page callback' => 'node_show',
     'page arguments' => array(1, TRUE),
