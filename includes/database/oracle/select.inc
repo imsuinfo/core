@@ -10,14 +10,14 @@ class SelectQuery_oracle extends SelectQuery
 
      // expanding group by aliases
      if ($this->group)
-     foreach ($this->group as $key => &$group_field) 
+     foreach ($this->group as $key => &$group_field)
      {
-       if (isset($this->fields[$group_field])) 
+       if (isset($this->fields[$group_field]))
        {
          $field = $this->fields[$group_field];
          $group_field = (isset($field['table']) ? $field['table'] . '.' : '') . $field['field'];
        }
-       else if (isset($this->expressions[$group_field])) 
+       else if (isset($this->expressions[$group_field]))
        {
          $expression = $this->expressions[$group_field];
          $group_field = $expression['expression'];
@@ -104,7 +104,7 @@ class SelectQuery_oracle extends SelectQuery
       $query .= implode(', ', $fields);
     }
 
-   
+
     // UNION is a little odd, as the select queries to combine are passed into
     // this query, but syntactically they all end up on the same level.
     if ($this->union) {
@@ -114,7 +114,7 @@ class SelectQuery_oracle extends SelectQuery
     }
 
     if (!empty($this->range)) {
-      $start= ((int)$this->range['start']+1); 
+      $start= ((int)$this->range['start']+1);
       $end= ((int)$this->range['length']+(int)$this->range['start']);
 
       $query= 'SELECT * FROM (SELECT TAB.*, ROWNUM '.ORACLE_ROWNUM_ALIAS.' FROM ('. $query .') TAB) WHERE '.ORACLE_ROWNUM_ALIAS.' BETWEEN '. $start . " AND " . $end;
@@ -122,5 +122,5 @@ class SelectQuery_oracle extends SelectQuery
 
     return $query;
   }
-  
+
 }
