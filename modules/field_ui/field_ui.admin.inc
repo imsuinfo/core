@@ -1871,7 +1871,7 @@ function field_ui_field_edit_form($form, &$form_state, $instance) {
     '#title' => t('Help text'),
     '#default_value' => !empty($instance['description']) ? $instance['description'] : '',
     '#rows' => 5,
-    '#description' => t('Instructions to present to the user below this field on the editing form.<br>Allowed HTML tags: @tags', array('@tags' => _field_filter_xss_display_allowed_tags())),
+    '#description' => t('Instructions to present to the user below this field on the editing form.<br />Allowed HTML tags: @tags', array('@tags' => _field_filter_xss_display_allowed_tags())),
     '#weight' => -5,
   );
 
@@ -1926,7 +1926,7 @@ function field_ui_field_edit_form($form, &$form_state, $instance) {
   // Build the configurable field values.
   $description = t('Maximum number of values users can enter for this field.');
   if (field_behaviors_widget('multiple values', $instance) == FIELD_BEHAVIOR_DEFAULT) {
-    $description .= '<br>' . t("'Unlimited' will provide an 'Add more' button so the users can add as many values as they like.");
+    $description .= '<br/>' . t("'Unlimited' will provide an 'Add more' button so the users can add as many values as they like.");
   }
   $form['field']['cardinality'] = array(
     '#type' => 'select',

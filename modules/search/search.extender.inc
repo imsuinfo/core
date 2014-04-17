@@ -274,7 +274,7 @@ class SearchQuery extends SelectQueryExtender {
         foreach ($key as $or) {
           list($num_new_scores) = $this->parseWord($or);
           $any |= $num_new_scores;
-          $queryor->condition('d.data', "% $or %", 'ILIKE');
+          $queryor->condition('d.data', "% $or %", 'LIKE');
         }
         if (count($queryor)) {
           $this->conditions->condition($queryor);
@@ -286,7 +286,7 @@ class SearchQuery extends SelectQueryExtender {
       else {
         $simple_and = TRUE;
         list($num_new_scores, $num_valid_words) = $this->parseWord($key);
-        $this->conditions->condition('d.data', "% $key %", 'ILIKE');
+        $this->conditions->condition('d.data', "% $key %", 'LIKE');
         if (!$num_valid_words) {
           $this->simple = FALSE;
         }
@@ -299,7 +299,7 @@ class SearchQuery extends SelectQueryExtender {
     }
     // Negative matches.
     foreach ($this->keys['negative'] as $key) {
-      $this->conditions->condition('d.data', "% $key %", 'NOT ILIKE');
+      $this->conditions->condition('d.data', "% $key %", 'NOT LIKE');
       $this->simple = FALSE;
     }
 

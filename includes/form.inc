@@ -168,6 +168,12 @@ function drupal_get_form($form_id) {
  *       processed.
  *     - base_form_id: Identification for a base form, as declared in a
  *       hook_forms() implementation.
+ *     - immutable: If this flag is set to TRUE, a new form build id is
+ *       generated when the form is loaded from the cache. If it is subsequently
+ *       saved to the cache again, it will have another cache id and therefore
+ *       the original form and form-state will remain unaltered. This is
+ *       important when page caching is enabled in order to prevent form state
+ *       from leaking between anonymous users.
  *   - rebuild_info: Internal. Similar to 'build_info', but pertaining to
  *     drupal_rebuild_form().
  *   - rebuild: Normally, after the entire form processing is completed and
@@ -459,16 +465,24 @@ function drupal_rebuild_form($form_id, &$form_state, $old_form = NULL) {
   $form = drupal_retrieve_form($form_id, $form_state);
 
   // If only parts of the form will be returned to the browser (e.g., Ajax or
-  // RIA clients), re-use the old #build_id to not require client-side code to
-  // manually update the hidden 'build_id' input element.
+  // RIA clients), or if the form already had a new build ID regenerated when it
+  // was retrieved from the form cache, reuse the existing #build_id.
   // Otherwise, a new #build_id is generated, to not clobber the previous
   // build's data in the form cache; also allowing the user to go back to an
   // earlier build, make changes, and re-submit.
   // @see drupal_prepare_form()
-  if (isset($old_form['#build_id']) && !empty($form_state['rebuild_info']['copy']['#build_id'])) {
+  $enforce_old_build_id = isset($old_form['#build_id']) && !empty($form_state['rebuild_info']['copy']['#build_id']);
+  $old_form_is_mutable_copy = isset($old_form['#build_id_old']);
+  if ($enforce_old_build_id || $old_form_is_mutable_copy) {
     $form['#build_id'] = $old_form['#build_id'];
+    if ($old_form_is_mutable_copy) {
+      $form['#build_id_old'] = $old_form['#build_id_old'];
+    }
   }
   else {
+    if (isset($old_form['#build_id'])) {
+      $form['#build_id_old'] = $old_form['#build_id'];
+    }
     $form['#build_id'] = 'form-' . drupal_random_key();
   }
 
@@ -523,6 +537,15 @@ function form_get_cache($form_build_id, &$form_state) {
           }
         }
       }
+      // Generate a new #build_id if the cached form was rendered on a cacheable
+      // page.
+      if (!empty($form_state['build_info']['immutable'])) {
+        $form['#build_id_old'] = $form['#build_id'];
+        $form['#build_id'] = 'form-' . drupal_random_key();
+        $form['form_build_id']['#value'] = $form['#build_id'];
+        $form['form_build_id']['#id'] = $form['#build_id'];
+        unset($form_state['build_info']['immutable']);
+      }
       return $form;
     }
   }
@@ -535,15 +558,28 @@ function form_set_cache($form_build_id, $form, $form_state) {
   // 6 hours cache life time for forms should be plenty.
   $expire = 21600;
 
+  // Ensure that the form build_id embedded in the form structure is the same as
+  // the one passed in as a parameter. This is an additional safety measure to
+  // prevent legacy code operating directly with form_get_cache and
+  // form_set_cache from accidentally overwriting immutable form state.
+  if ($form['#build_id'] != $form_build_id) {
+    watchdog('form', 'Form build-id mismatch detected while attempting to store a form in the cache.', array(), WATCHDOG_ERROR);
+    return;
+  }
+
   // Cache form structure.
   if (isset($form)) {
     if ($GLOBALS['user']->uid) {
       $form['#cache_token'] = drupal_get_token();
     }
+    unset($form['#build_id_old']);
     cache_set('form_' . $form_build_id, $form, 'cache_form', REQUEST_TIME + $expire);
   }
 
   // Cache form state.
+  if (variable_get('cache', 0) && drupal_page_is_cacheable()) {
+    $form_state['build_info']['immutable'] = TRUE;
+  }
   if ($data = array_diff_key($form_state, array_flip(form_state_keys_no_cache()))) {
     cache_set('form_state_' . $form_build_id, $data, 'cache_form', REQUEST_TIME + $expire);
   }
@@ -895,24 +931,7 @@ function drupal_process_form($form_id, &$form, &$form_state) {
         }
 
         $batch['progressive'] = !$form_state['programmed'];
-
-        if (function_exists('background_batch_menu_alter')) {
-          $foreground = variable_get('batch_foreground', array());
-          $background = variable_get('batch_background', array());
-
-          if (in_array($form_id, $foreground)) {
-            batch_process(NULL, 'batch_foreground');
-          }
-          elseif (in_array($form_id, $background)) {
-            batch_process(NULL, 'batch_background');
-          }
-          else {
-            batch_process();
-          }
-        }
-        else {
-          batch_process();
-        }
+        batch_process();
 
         // Execution continues only for programmatic forms.
         // For 'regular' forms, we get redirected to the batch processing
@@ -2788,53 +2807,24 @@ function form_get_options($element, $key) {
  */
 function theme_fieldset($variables) {
   $element = $variables['element'];
-
-  if (empty($element['#children'])) return '';
-
-  $as_div = FALSE;
-  if (isset($element['#as_div']) && $element['#as_div']) {
-    $as_div = TRUE;
-  }
-
   element_set_attributes($element, array('id'));
   _form_set_class($element, array('form-wrapper'));
 
-  $legend_attributes = array('class' => array());
-  if (isset($element['#legend_attributes']) && is_array($element['#legend_attributes'])) {
-    $legend_attributes = $element['#legend_attributes'];
+  $output = '<fieldset' . drupal_attributes($element['#attributes']) . '>';
+  if (!empty($element['#title'])) {
+    // Always wrap fieldset legends in a SPAN for CSS positioning.
+    $output .= '<legend><span class="fieldset-legend">' . $element['#title'] . '</span></legend>';
   }
-
-  if ($as_div) {
-    $output = '<div' . drupal_attributes($element['#attributes']) . '>';
-    $output .= '<div class="fieldset-wrapper">';
-    if (!empty($element['#description'])) {
-      $output .= '<div class="fieldset-description">' . $element['#description'] . '</div>';
-    }
-    $output .= $element['#children'];
-    if (isset($element['#value'])) {
-      $output .= $element['#value'];
-    }
-    $output .= '</div>';
-    $output .= "</div>\n";
+  $output .= '<div class="fieldset-wrapper">';
+  if (!empty($element['#description'])) {
+    $output .= '<div class="fieldset-description">' . $element['#description'] . '</div>';
   }
-  else {
-    $output = '<fieldset' . drupal_attributes($element['#attributes']) . '>';
-    if (!empty($element['#title'])) {
-      // Always wrap fieldset legends in a SPAN for CSS positioning.
-      $output .= '<legend' . drupal_attributes($legend_attributes) . '><span class="fieldset-legend">' . $element['#title'] . '</span></legend>';
-    }
-    $output .= '<div class="fieldset-wrapper">';
-    if (!empty($element['#description'])) {
-      $output .= '<div class="fieldset-description">' . $element['#description'] . '</div>';
-    }
-    $output .= $element['#children'];
-    if (isset($element['#value'])) {
-      $output .= $element['#value'];
-    }
-    $output .= '</div>';
-    $output .= "</fieldset>\n";
+  $output .= $element['#children'];
+  if (isset($element['#value'])) {
+    $output .= $element['#value'];
   }
-
+  $output .= '</div>';
+  $output .= "</fieldset>\n";
   return $output;
 }
 
@@ -2862,7 +2852,7 @@ function theme_radio($variables) {
   }
   _form_set_class($element, array('form-radio'));
 
-  return '<input' . drupal_attributes($element['#attributes']) . '>';
+  return '<input' . drupal_attributes($element['#attributes']) . ' />';
 }
 
 /**
@@ -3018,18 +3008,10 @@ function form_process_date($element) {
       '#type' => 'select',
       '#title' => $title,
       '#title_display' => 'invisible',
-      '#value' => isset($element['#value'][$type]) ? $element['#value'][$type] : NULL,
+      '#value' => $element['#value'][$type],
       '#attributes' => $element['#attributes'],
       '#options' => $options,
     );
-
-    if (isset($element['#empty_value'][$type])) {
-      $element[$type]['#empty_value'] = $element['#empty_value'][$type];
-    }
-
-    if (isset($element['#empty_option'][$type])) {
-      $element[$type]['#empty_option'] = $element['#empty_option'][$type];
-    }
   }
 
   return $element;
@@ -3107,7 +3089,6 @@ function form_process_radios($element) {
         '#id' => drupal_html_id('edit-' . implode('-', $parents_for_id)),
         '#ajax' => isset($element['#ajax']) ? $element['#ajax'] : NULL,
         '#weight' => $weight,
-        '#fieldset' => FALSE,
       );
     }
   }
@@ -3136,7 +3117,7 @@ function theme_checkbox($variables) {
   }
   _form_set_class($element, array('form-checkbox'));
 
-  return '<input' . drupal_attributes($element['#attributes']) . '>';
+  return '<input' . drupal_attributes($element['#attributes']) . ' />';
 }
 
 /**
@@ -3247,7 +3228,6 @@ function form_process_checkboxes($element) {
         '#attributes' => $element['#attributes'],
         '#ajax' => isset($element['#ajax']) ? $element['#ajax'] : NULL,
         '#weight' => $weight,
-        '#fieldset' => FALSE,
       );
     }
   }
@@ -3778,9 +3758,6 @@ function form_process_vertical_tabs($element, &$form_state) {
  */
 function theme_vertical_tabs($variables) {
   $element = $variables['element'];
-
-  if (empty($element['#children'])) return '';
-
   // Add required JavaScript and Stylesheet.
   drupal_add_library('system', 'drupal.vertical-tabs');
 
@@ -3823,9 +3800,7 @@ function theme_button($variables) {
     $element['#attributes']['class'][] = 'form-button-disabled';
   }
 
-  $element['#attributes']['class'][] = strtolower($element['#button_type'] . '-' . $element['#value']);
-
-  return '<input' . drupal_attributes($element['#attributes']) . '>';
+  return '<input' . drupal_attributes($element['#attributes']) . ' />';
 }
 
 /**
@@ -3854,9 +3829,7 @@ function theme_image_button($variables) {
     $element['#attributes']['class'][] = 'form-button-disabled';
   }
 
-  $element['#attributes']['class'][] = strtolower($element['#button_type'] . '-' . $element['#value']);
-
-  return '<input' . drupal_attributes($element['#attributes']) . '>';
+  return '<input' . drupal_attributes($element['#attributes']) . ' />';
 }
 
 /**
@@ -3873,7 +3846,7 @@ function theme_hidden($variables) {
   $element = $variables['element'];
   $element['#attributes']['type'] = 'hidden';
   element_set_attributes($element, array('name', 'value'));
-  return '<input' . drupal_attributes($element['#attributes']) . ">\n";
+  return '<input' . drupal_attributes($element['#attributes']) . " />\n";
 }
 
 /**
@@ -3904,10 +3877,10 @@ function theme_textfield($variables) {
     $attributes['value'] = url($element['#autocomplete_path'], array('absolute' => TRUE));
     $attributes['disabled'] = 'disabled';
     $attributes['class'][] = 'autocomplete';
-    $extra = '<input' . drupal_attributes($attributes) . '>';
+    $extra = '<input' . drupal_attributes($attributes) . ' />';
   }
 
-  $output = '<input' . drupal_attributes($element['#attributes']) . '>';
+  $output = '<input' . drupal_attributes($element['#attributes']) . ' />';
 
   return $output . $extra;
 }
@@ -3984,7 +3957,7 @@ function theme_password($variables) {
   element_set_attributes($element, array('id', 'name', 'size', 'maxlength'));
   _form_set_class($element, array('form-text'));
 
-  return '<input' . drupal_attributes($element['#attributes']) . '>';
+  return '<input' . drupal_attributes($element['#attributes']) . ' />';
 }
 
 /**
@@ -4035,7 +4008,7 @@ function theme_file($variables) {
   element_set_attributes($element, array('id', 'name', 'size'));
   _form_set_class($element, array('form-file'));
 
-  return '<input' . drupal_attributes($element['#attributes']) . '>';
+  return '<input' . drupal_attributes($element['#attributes']) . ' />';
 }
 
 /**
@@ -4099,12 +4072,6 @@ function theme_form_element($variables) {
   }
   // Add element's #type and #name as class to aid with JS/CSS selectors.
   $attributes['class'] = array('form-item');
-  if (!empty($element['#required'])) {
-    $attributes['class'][] = 'required';
-  }
-  if (isset($element['#parents']) && form_get_error($element)) {
-    $attributes['class'][] = 'error';
-  }
   if (!empty($element['#type'])) {
     $attributes['class'][] = 'form-type-' . strtr($element['#type'], '_', '-');
   }
@@ -4115,44 +4082,12 @@ function theme_form_element($variables) {
   if (!empty($element['#attributes']['disabled'])) {
     $attributes['class'][] = 'form-disabled';
   }
-
-  $wrap_with_fieldset = FALSE;
-  if (!empty($element['#type'])) {
-    if ($element['#type'] == 'checkbox') {
-      $wrap_with_fieldset = TRUE;
-    }
-    elseif ($element['#type'] == 'checkboxes') {
-      $wrap_with_fieldset = TRUE;
-    }
-    elseif ($element['#type'] == 'radio') {
-      $wrap_with_fieldset = TRUE;
-    }
-    elseif ($element['#type'] == 'radios') {
-      $wrap_with_fieldset = TRUE;
-    }
-  }
-
-  if ($wrap_with_fieldset && isset($element['#fieldset']) && !$element['#fieldset']) {
-    $wrap_with_fieldset = FALSE;
-  }
+  $output = '<div' . drupal_attributes($attributes) . '>' . "\n";
 
   // If #title is not set, we don't display any label or required marker.
-  if (isset($element['#title'])) {
-    $legend = $element['#title'];
-  }
-  else {
+  if (!isset($element['#title'])) {
     $element['#title_display'] = 'none';
-    $legend = '';
   }
-
-  if ($wrap_with_fieldset) {
-    $element['#fieldset'] = FALSE;
-    $output = '<fieldset' . drupal_attributes($attributes) . '>' . "\n" . '<legend class="element-invisible"><span class="fieldset-legend">' . $legend . '</span></legend>'. "\n";
-  }
-  else {
-    $output = '<div' . drupal_attributes($attributes) . '>' . "\n";
-  }
-
   $prefix = isset($element['#field_prefix']) ? '<span class="field-prefix">' . $element['#field_prefix'] . '</span> ' : '';
   $suffix = isset($element['#field_suffix']) ? ' <span class="field-suffix">' . $element['#field_suffix'] . '</span>' : '';
 
@@ -4179,12 +4114,7 @@ function theme_form_element($variables) {
     $output .= '<div class="description">' . $element['#description'] . "</div>\n";
   }
 
-  if ($wrap_with_fieldset) {
-    $output .= "</fieldset>\n";
-  }
-  else {
-    $output .= "</div>\n";
-  }
+  $output .= "</div>\n";
 
   return $output;
 }
@@ -4247,30 +4177,17 @@ function theme_form_element_label($variables) {
   $title = filter_xss_admin($element['#title']);
 
   $attributes = array();
-  if (isset($element['#title_display'])) {
-    $attributes['class'][] = 'title_display-' . $element['#title_display'];
-
-    // Show label only to screen readers to avoid disruption in visual flows.
-    if ($element['#title_display'] == 'invisible') {
-      $attributes['class'][] = 'element-invisible';
-    }
+  // Style the label as class option to display inline with the element.
+  if ($element['#title_display'] == 'after') {
+    $attributes['class'] = 'option';
   }
-
-  if (isset($element['#type'])) {
-    if ($element['#type'] == 'checkbox') {
-      $attributes['class'][] = 'option';
-    }
-    elseif ($element['#type'] == 'radio') {
-      $attributes['class'][] = 'option';
-    }
+  // Show label only to screen readers to avoid disruption in visual flows.
+  elseif ($element['#title_display'] == 'invisible') {
+    $attributes['class'] = 'element-invisible';
   }
 
   if (!empty($element['#id'])) {
     $attributes['for'] = $element['#id'];
-  }
-
-  if (array_key_exists('#label_attributes', $element) && is_array($element['#label_attributes'])) {
-    $attributes = array_merge($attributes, $element['#label_attributes']);
   }
 
   // The leading whitespace helps visually separate fields from inline labels.
@@ -4530,7 +4447,7 @@ function batch_set($batch_definition) {
 
     // Tweak init_message to avoid the bottom of the page flickering down after
     // init phase.
-    $batch_set['init_message'] .= '<br>&nbsp;';
+    $batch_set['init_message'] .= '<br/>&nbsp;';
 
     // The non-concurrent workflow of batch execution allows us to save
     // numberOfItems() queries by handling our own counter.

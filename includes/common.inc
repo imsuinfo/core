@@ -684,8 +684,6 @@ function drupal_encode_path($path) {
  * @see url()
  */
 function drupal_goto($path = '', array $options = array(), $http_response_code = 302) {
-  if (headers_sent()) return FALSE;
-
   // A destination in $_GET always overrides the function arguments.
   // We do not allow absolute URLs to be passed via $_GET, as this can be an attack vector.
   if (isset($_GET['destination']) && !url_is_external($_GET['destination'])) {
@@ -2267,17 +2265,7 @@ function url($path = NULL, array $options = array()) {
   }
 
   $base = $options['absolute'] ? $options['base_url'] . '/' : base_path();
-
-  if (empty($path)) {
-    $prefix = rtrim($options['prefix'], '/');
-  }
-  else {
-    $prefix = $options['prefix'];
-
-    if (substr($path, 0, 1) == '/') {
-      $path = substr($path, 1);
-    }
-  }
+  $prefix = empty($path) ? rtrim($options['prefix'], '/') : $options['prefix'];
 
   // With Clean URLs.
   if (!empty($GLOBALS['conf']['clean_url'])) {
@@ -2613,44 +2601,60 @@ function drupal_deliver_html_page($page_callback_result) {
     switch ($page_callback_result) {
       case MENU_NOT_FOUND:
         // Print a 404 page.
-        drupal_add_http_header('Status', '404 Not Found', FALSE, 404);
-        drupal_send_headers();
+        drupal_add_http_header('Status', '404 Not Found');
+
         watchdog('page not found', check_plain($_GET['q']), NULL, WATCHDOG_WARNING);
 
-        // Custom 404 handler.
-        drupal_set_title('', PASS_THROUGH);
-        $return = '<br>';
-        $return .= '<h1 style="text-align: center;">Oops!</h1>';
-        $return .= '<h2 style="text-align: center;">This page is no longer available (404).</h2>';
-        $return .= '<div style="text-align: center;"><br>';
-        $return .= '  The page you have requested either does not exist or has been removed.<br>';
-        $return .= '  <br>';
-        $return .= '  If you think this is in error, then please use the contact information provided in the page footer.<br>';
-        $return .= '</div>';
-        $return .= '<br>';
+        // Check for and return a fast 404 page if configured.
+        drupal_fast_404();
 
-        print drupal_render_page($return);
+        // Keep old path for reference, and to allow forms to redirect to it.
+        if (!isset($_GET['destination'])) {
+          $_GET['destination'] = $_GET['q'];
+        }
+
+        $path = drupal_get_normal_path(variable_get('site_404', ''));
+        if ($path && $path != $_GET['q']) {
+          // Custom 404 handler. Set the active item in case there are tabs to
+          // display, or other dependencies on the path.
+          menu_set_active_item($path);
+          $return = menu_execute_active_handler($path, FALSE);
+        }
+
+        if (empty($return) || $return == MENU_NOT_FOUND || $return == MENU_ACCESS_DENIED) {
+          // Standard 404 handler.
+          drupal_set_title(t('Page not found'));
+          $return = t('The requested page "@path" could not be found.', array('@path' => request_uri()));
+        }
+
+        drupal_set_page_content($return);
+        $page = element_info('page');
+        print drupal_render_page($page);
         break;
 
       case MENU_ACCESS_DENIED:
         // Print a 403 page.
-        drupal_add_http_header('Status', '403 Forbidden', FALSE, 403);
-        drupal_send_headers();
+        drupal_add_http_header('Status', '403 Forbidden');
         watchdog('access denied', check_plain($_GET['q']), NULL, WATCHDOG_WARNING);
 
-        // Custom 403 handler.
-        drupal_set_title('', PASS_THROUGH);
-        $return = '<br>';
-        $return .= '<h1 style="text-align: center;">Oops!</h1>';
-        $return .= '<h2 style="text-align: center;">This page is restricted (403).</h2>';
-        $return .= '<div style="text-align: center;"><br>';
-        $return .= '  The page you have requested is restricted to editors or you may have followed an outdated link pointing to to a page that has been unpublished.<br>';
-        $return .= '  <br>';
-        $return .= '  Before you can proceed to view the page you have requested, you must log on to the site.<br>';
-        $return .= '  <br>';
-        $return .= '  If you are already logged in, then you probably have followed an outdated link to an obsolete page.<br>';
-        $return .= '</div>';
-        $return .= '<br>';
+        // Keep old path for reference, and to allow forms to redirect to it.
+        if (!isset($_GET['destination'])) {
+          $_GET['destination'] = $_GET['q'];
+        }
+
+        $path = drupal_get_normal_path(variable_get('site_403', ''));
+        if ($path && $path != $_GET['q']) {
+          // Custom 403 handler. Set the active item in case there are tabs to
+          // display or other dependencies on the path.
+          menu_set_active_item($path);
+          $return = menu_execute_active_handler($path, FALSE);
+        }
+
+        if (empty($return) || $return == MENU_NOT_FOUND || $return == MENU_ACCESS_DENIED) {
+          // Standard 403 handler.
+          drupal_set_title(t('Access denied'));
+          $return = t('You are not authorized to access this page.');
+        }
 
         print drupal_render_page($return);
         break;
@@ -2658,8 +2662,7 @@ function drupal_deliver_html_page($page_callback_result) {
       case MENU_SITE_OFFLINE:
         // Print a 503 page.
         drupal_maintenance_theme();
-        drupal_add_http_header('Status', '503 Service unavailable', FALSE, 503);
-        drupal_send_headers();
+        drupal_add_http_header('Status', '503 Service unavailable');
         drupal_set_title(t('Site under maintenance'));
         print theme('maintenance_page', array('content' => filter_xss_admin(variable_get('maintenance_mode_message',
           t('@site is currently under maintenance. We should be back shortly. Thank you for your patience.', array('@site' => variable_get('site_name', 'Drupal')))))));
@@ -2667,8 +2670,6 @@ function drupal_deliver_html_page($page_callback_result) {
     }
   }
   elseif (isset($page_callback_result)) {
-    drupal_send_headers();
-
     // Print anything besides a menu constant, assuming it's not NULL or
     // undefined.
     print drupal_render_page($page_callback_result);
@@ -5103,10 +5104,10 @@ function _drupal_bootstrap_full() {
     return;
   }
   $called = TRUE;
-  require_once DRUPAL_ROOT . '/includes/path.inc';
+  require_once DRUPAL_ROOT . '/' . variable_get('path_inc', 'includes/path.inc');
   require_once DRUPAL_ROOT . '/includes/theme.inc';
   require_once DRUPAL_ROOT . '/includes/pager.inc';
-  require_once DRUPAL_ROOT . '/includes/menu.inc';
+  require_once DRUPAL_ROOT . '/' . variable_get('menu_inc', 'includes/menu.inc');
   require_once DRUPAL_ROOT . '/includes/tablesort.inc';
   require_once DRUPAL_ROOT . '/includes/file.inc';
   require_once DRUPAL_ROOT . '/includes/unicode.inc';
@@ -5237,12 +5238,7 @@ function drupal_cron_run() {
   $GLOBALS['user'] = drupal_anonymous_user();
 
   // Try to allocate enough time to run all the hook_cron implementations.
-  $max_execution_time = ini_get('max_execution_time');
-
-  if ($max_execution_time < 240) {
-    $max_execution_time = 240;
-    drupal_set_time_limit($max_execution_time);
-  }
+  drupal_set_time_limit(240);
 
   $return = FALSE;
   // Grab the defined cron queues.
@@ -5250,7 +5246,7 @@ function drupal_cron_run() {
   drupal_alter('cron_queue_info', $queues);
 
   // Try to acquire cron lock.
-  if (!lock_acquire('cron', (float) $max_execution_time)) {
+  if (!lock_acquire('cron', 240.0)) {
     // Cron is still running normally.
     watchdog('cron', 'Attempting to re-run cron while it is already running.', array(), WATCHDOG_WARNING);
   }
@@ -5276,6 +5272,7 @@ function drupal_cron_run() {
 
     // Record cron time.
     variable_set('cron_last', REQUEST_TIME);
+    watchdog('cron', 'Cron run completed.', array(), WATCHDOG_NOTICE);
 
     // Release cron lock.
     lock_release('cron');
@@ -7837,7 +7834,7 @@ function entity_get_controller($entity_type) {
   if (!isset($controllers[$entity_type])) {
     $type_info = entity_get_info($entity_type);
     $class = $type_info['controller class'];
-    $controllers[$entity_type] = empty($class) ? new DrupalDefaultEntityController($entity_type) : new $class($entity_type);
+    $controllers[$entity_type] = new $class($entity_type);
   }
   return $controllers[$entity_type];
 }
