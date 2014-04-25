@@ -1859,6 +1859,28 @@ function field_ui_field_edit_form($form, &$form_state, $instance) {
     '#required' => TRUE,
     '#weight' => -20,
   );
+
+  $form['instance']['alternate_label_fieldset'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Alternate Label Settings'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#tree' => TRUE,
+    '#weight' => -19,
+  );
+
+  $form['instance']['alternate_label_fieldset']['alternate_label'] = array(
+    '#type' => 'text_format',
+    '#title' => t('Alternate Label'),
+    '#description' => t("Provide an alternative label. This is usually used for longer labels or labels that contain HTML markup."),
+    '#default_value' => empty($instance['alternate_label']['value']) ? NULL : $instance['alternate_label']['value'],
+    '#format' => empty($instance['alternate_label']['format']) ? NULL : $instance['alternate_label']['format'],
+    '#rows' => 15,
+    '#resizable' => TRUE,
+    '#wysiwyg' => TRUE,
+    '#parents' => array('instance', 'alternate_label'),
+  );
+
   $form['instance']['required'] = array(
     '#type' => 'checkbox',
     '#title' => t('Required field'),
