@@ -526,7 +526,7 @@ function file_field_widget_form(&$form, &$form_state, $field, $instance, $langco
     $elements['#file_upload_description'] = theme('file_upload_help', array('description' => '', 'upload_validators' => $elements[0]['#upload_validators']));
   }
 
-  if (isset($instance['alternate_label']['value'])) {
+  if (!empty($instance['alternate_label']['value'])) {
     if (empty($instance['alternate_label']['format'])) {
       $element['#title'] = check_plain($instance['alternate_label']['value']);
       $element['value']['#title'] = $element['#title'];

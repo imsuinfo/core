@@ -558,7 +558,7 @@ function text_field_widget_form(&$form, &$form_state, $field, $instance, $langco
     $element['summary'] = $summary_widget;
   }
 
-  if (isset($instance['alternate_label']['value'])) {
+  if (!empty($instance['alternate_label']['value'])) {
     if (empty($instance['alternate_label']['format'])) {
       $element['#title'] = check_plain($instance['alternate_label']['value']);
       $element['value']['#title'] = $element['#title'];

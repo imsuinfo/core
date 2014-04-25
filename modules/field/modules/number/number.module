@@ -359,7 +359,7 @@ function number_field_widget_form(&$form, &$form_state, $field, $instance, $lang
 
   $element['#element_validate'][] = 'number_field_widget_validate';
 
-  if (isset($instance['alternate_label']['value'])) {
+  if (!empty($instance['alternate_label']['value'])) {
     if (empty($instance['alternate_label']['format'])) {
       $element['#title'] = check_plain($instance['alternate_label']['value']);
       $element['value']['#title'] = $element['#title'];
