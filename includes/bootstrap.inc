@@ -1219,9 +1219,15 @@ function drupal_send_headers($default_headers = array(), $only_default = FALSE) 
 
   $header_names = _drupal_set_preferred_header_name();
   foreach ($default_headers as $name => $value) {
-    $value_array = array();
-    $value_array['value'] = $value;
-    $value_array['status_code'] = NULL;
+    if (is_array($value)) {
+      $value_array = $value;
+    }
+    else {
+      $value_array = array();
+      $value_array['value'] = $value;
+      $value_array['status_code'] = NULL;
+    }
+
     $name_lower = strtolower($name);
     if (!isset($headers[$name_lower])) {
       $headers[$name_lower] = $value_array;
@@ -1229,7 +1235,12 @@ function drupal_send_headers($default_headers = array(), $only_default = FALSE) 
     }
   }
   foreach ($headers as $name_lower => $value_array) {
+    if (!is_array($value_array) || !array_key_exists('value', $value_array)) continue;
+
     $value = $value_array['value'];
+
+    if (!is_string($value)) continue;
+
     if ($name_lower == 'status') {
       header($_SERVER['SERVER_PROTOCOL'] . ' ' . $value, $value_array['status_code']);
     }
