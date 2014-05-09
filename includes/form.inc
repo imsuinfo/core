@@ -903,51 +903,57 @@ function drupal_process_form($form_id, &$form, &$form_state) {
       // Execute form submit handlers.
       form_execute_handlers('submit', $form, $form_state);
 
-      // We'll clear out the cached copies of the form and its stored data
-      // here, as we've finished with them. The in-memory copies are still
-      // here, though.
-      if (!variable_get('cache', 0) && !empty($form_state['values']['form_build_id'])) {
-        cache_clear_all('form_' . $form_state['values']['form_build_id'], 'cache_form');
-        cache_clear_all('form_state_' . $form_state['values']['form_build_id'], 'cache_form');
-      }
+      // It is possible that errors happened during submit.
+      // Allow returning to the form if any of the submit handlers unset
+      // submitted and set rebuild to TRUE.
+      if ($form_state['submitted'] && !form_get_errors() && !$form_state['rebuild']) {
 
-      // If batches were set in the submit handlers, we process them now,
-      // possibly ending execution. We make sure we do not react to the batch
-      // that is already being processed (if a batch operation performs a
-      // drupal_form_submit).
-      if ($batch =& batch_get() && !isset($batch['current_set'])) {
-        // Store $form_state information in the batch definition.
-        // We need the full $form_state when either:
-        // - Some submit handlers were saved to be called during batch
-        //   processing. See form_execute_handlers().
-        // - The form is multistep.
-        // In other cases, we only need the information expected by
-        // drupal_redirect_form().
-        if ($batch['has_form_submits'] || !empty($form_state['rebuild'])) {
-          $batch['form_state'] = $form_state;
-        }
-        else {
-          $batch['form_state'] = array_intersect_key($form_state, array_flip(array('programmed', 'rebuild', 'storage', 'no_redirect', 'redirect')));
+        // We'll clear out the cached copies of the form and its stored data
+        // here, as we've finished with them. The in-memory copies are still
+        // here, though.
+        if (!variable_get('cache', 0) && !empty($form_state['values']['form_build_id'])) {
+          cache_clear_all('form_' . $form_state['values']['form_build_id'], 'cache_form');
+          cache_clear_all('form_state_' . $form_state['values']['form_build_id'], 'cache_form');
         }
 
-        $batch['progressive'] = !$form_state['programmed'];
-
-        if (function_exists('background_batch_menu_alter')) {
-          $foreground = variable_get('batch_foreground', array());
-          $background = variable_get('batch_background', array());
-
-          if (in_array($form_id, $foreground)) {
-            batch_process(NULL, 'batch_foreground');
+        // If batches were set in the submit handlers, we process them now,
+        // possibly ending execution. We make sure we do not react to the batch
+        // that is already being processed (if a batch operation performs a
+        // drupal_form_submit).
+        if ($batch =& batch_get() && !isset($batch['current_set'])) {
+          // Store $form_state information in the batch definition.
+          // We need the full $form_state when either:
+          // - Some submit handlers were saved to be called during batch
+          //   processing. See form_execute_handlers().
+          // - The form is multistep.
+          // In other cases, we only need the information expected by
+          // drupal_redirect_form().
+          if ($batch['has_form_submits'] || !empty($form_state['rebuild'])) {
+            $batch['form_state'] = $form_state;
           }
-          elseif (in_array($form_id, $background)) {
-            batch_process(NULL, 'batch_background');
+          else {
+            $batch['form_state'] = array_intersect_key($form_state, array_flip(array('programmed', 'rebuild', 'storage', 'no_redirect', 'redirect')));
+          }
+
+          $batch['progressive'] = !$form_state['programmed'];
+
+          if (function_exists('background_batch_menu_alter')) {
+            $foreground = variable_get('batch_foreground', array());
+            $background = variable_get('batch_background', array());
+
+            if (in_array($form_id, $foreground)) {
+              batch_process(NULL, 'batch_foreground');
+            }
+            elseif (in_array($form_id, $background)) {
+              batch_process(NULL, 'batch_background');
+            }
+            else {
+              batch_process();
+            }
           }
           else {
             batch_process();
           }
-        }
-        else {
-          batch_process();
         }
 
         // Execution continues only for programmatic forms.
