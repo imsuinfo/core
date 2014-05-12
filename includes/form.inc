@@ -3266,6 +3266,7 @@ function form_process_checkboxes($element) {
     if (!isset($element['#default_value']) || $element['#default_value'] == 0) {
       $element['#default_value'] = array();
     }
+    $default_values = $element['#default_value'];
     $weight = 0;
     foreach ($element['#options'] as $key => $choice) {
       // Integer 0 is not a valid #return_value, so use '0' instead.
@@ -3280,17 +3281,32 @@ function form_process_checkboxes($element) {
       // sub-elements.
       $weight += 0.001;
 
+      $value = NULL;
+      $default_value = NULL;
+      if (isset($value[$key])) {
+        $value = $key;
+      }
+
+      if (isset($default_values[$key]) && $default_values[$key] != 0) {
+        $default_value = $key;
+      }
+
       $element += array($key => array());
       $element[$key] += array(
         '#type' => 'checkbox',
         '#title' => $choice,
         '#return_value' => $key,
-        '#default_value' => isset($value[$key]) ? $key : NULL,
+        '#default_value' => $default_value,
         '#attributes' => $element['#attributes'],
         '#ajax' => isset($element['#ajax']) ? $element['#ajax'] : NULL,
         '#weight' => $weight,
         '#fieldset' => FALSE,
       );
+
+      if (!is_null($value)) {
+        $element[$key]['#value'] = $value;
+        $element[$key]['#default_value'] = $value;
+      }
     }
   }
   return $element;
