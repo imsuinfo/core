@@ -936,7 +936,7 @@ function field_ui_display_overview_form($form, &$form_state, $entity_type, $bund
   $field_label_options = array(
     'above' => t('Above'),
     'inline' => t('Inline'),
-    'hidden' => t('<Hidden>'),
+    'hidden' => '<' . t('Hidden') . '>',
   );
   $extra_visibility_options = array(
     'visible' => t('Visible'),
@@ -992,7 +992,7 @@ function field_ui_display_overview_form($form, &$form_state, $entity_type, $bund
     );
 
     $formatter_options = field_ui_formatter_options($field['type']);
-    $formatter_options['hidden'] = t('<Hidden>');
+    $formatter_options['hidden'] = '<' . t('Hidden') . '>';
     $table[$name]['format'] = array(
       'type' => array(
         '#type' => 'select',
@@ -1859,28 +1859,6 @@ function field_ui_field_edit_form($form, &$form_state, $instance) {
     '#required' => TRUE,
     '#weight' => -20,
   );
-
-  $form['instance']['alternate_label_fieldset'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Alternate Label Settings'),
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-    '#tree' => TRUE,
-    '#weight' => -19,
-  );
-
-  $form['instance']['alternate_label_fieldset']['alternate_label'] = array(
-    '#type' => 'text_format',
-    '#title' => t('Alternate Label'),
-    '#description' => t("Provide an alternative label. This is usually used for longer labels or labels that contain HTML markup."),
-    '#default_value' => empty($instance['alternate_label']['value']) ? NULL : $instance['alternate_label']['value'],
-    '#format' => empty($instance['alternate_label']['format']) ? NULL : $instance['alternate_label']['format'],
-    '#rows' => 15,
-    '#resizable' => TRUE,
-    '#wysiwyg' => TRUE,
-    '#parents' => array('instance', 'alternate_label'),
-  );
-
   $form['instance']['required'] = array(
     '#type' => 'checkbox',
     '#title' => t('Required field'),
@@ -1893,7 +1871,7 @@ function field_ui_field_edit_form($form, &$form_state, $instance) {
     '#title' => t('Help text'),
     '#default_value' => !empty($instance['description']) ? $instance['description'] : '',
     '#rows' => 5,
-    '#description' => t('Instructions to present to the user below this field on the editing form.<br>Allowed HTML tags: @tags', array('@tags' => _field_filter_xss_display_allowed_tags())),
+    '#description' => t('Instructions to present to the user below this field on the editing form.<br />Allowed HTML tags: @tags', array('@tags' => _field_filter_xss_display_allowed_tags())),
     '#weight' => -5,
   );
 
@@ -1948,7 +1926,7 @@ function field_ui_field_edit_form($form, &$form_state, $instance) {
   // Build the configurable field values.
   $description = t('Maximum number of values users can enter for this field.');
   if (field_behaviors_widget('multiple values', $instance) == FIELD_BEHAVIOR_DEFAULT) {
-    $description .= '<br>' . t("'Unlimited' will provide an 'Add more' button so the users can add as many values as they like.");
+    $description .= '<br/>' . t("'Unlimited' will provide an 'Add more' button so the users can add as many values as they like.");
   }
   $form['field']['cardinality'] = array(
     '#type' => 'select',

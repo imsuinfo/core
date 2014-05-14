@@ -56,7 +56,7 @@ function tracker_page($account = NULL, $set_title = FALSE) {
         $comments = $node->comment_count;
 
         if ($new = comment_num_new($node->nid)) {
-          $comments .= '<br>';
+          $comments .= '<br />';
           $comments .= l(format_plural($new, '1 new', '@count new'), 'node/' . $node->nid, array('fragment' => 'new'));
         }
       }
@@ -120,7 +120,6 @@ function tracker_page($account = NULL, $set_title = FALSE) {
   );
   $page['pager'] = array(
     '#theme' => 'pager',
-    '#quantity' => 25,
     '#weight' => 10,
   );
   $page['#sorted'] = TRUE;
