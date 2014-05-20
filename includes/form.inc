@@ -1102,6 +1102,20 @@ function drupal_prepare_form($form_id, &$form, &$form_state) {
   $form += element_info('form');
   $form += array('#tree' => FALSE, '#parents' => array());
 
+  if (!isset($form['#pre_validate'])) {
+    // Ensure that modules can rely on #validate being set.
+    $form['#pre_validate'] = array();
+    // Check for a handler specific to $form_id.
+    if (function_exists($form_id . '_pre_validate')) {
+      $form['#pre_validate'][] = $form_id . '_pre_validate';
+    }
+    // Otherwise check whether this is a shared form and whether there is a
+    // handler for the shared $form_id.
+    elseif (isset($form_state['build_info']['base_form_id']) && function_exists($form_state['build_info']['base_form_id'] . '_pre_validate')) {
+      $form['#pre_validate'][] = $form_state['build_info']['base_form_id'] . '_pre_validate';
+    }
+  }
+
   if (!isset($form['#validate'])) {
     // Ensure that modules can rely on #validate being set.
     $form['#validate'] = array();
@@ -1201,6 +1215,12 @@ function drupal_validate_form($form_id, &$form, &$form_state) {
       $validated_forms[$form_id] = TRUE;
       return;
     }
+  }
+
+  // provide a way to preprocess the validation code once results are in.
+  // this allows for conditionally required fields.
+  if (isset($form_id)) {
+    form_execute_handlers('pre_validate', $form, $form_state);
   }
 
   _form_validate($form, $form_state, $form_id);
