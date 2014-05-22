@@ -3299,10 +3299,10 @@ function form_process_checkboxes($element) {
       // sub-elements.
       $weight += 0.001;
 
-      $value = NULL;
+      $v = NULL;
       $default_value = NULL;
       if (isset($value[$key])) {
-        $value = $key;
+        $v = $key;
       }
 
       if (isset($default_values[$key]) && $default_values[$key] != 0) {
@@ -3321,9 +3321,9 @@ function form_process_checkboxes($element) {
         '#fieldset' => FALSE,
       );
 
-      if (!is_null($value)) {
-        $element[$key]['#value'] = $value;
-        $element[$key]['#default_value'] = $value;
+      if (!is_null($v)) {
+        $element[$key]['#value'] = $v;
+        $element[$key]['#default_value'] = $v;
       }
     }
   }
