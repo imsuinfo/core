@@ -3305,7 +3305,7 @@ function form_process_checkboxes($element) {
         $v = $key;
       }
 
-      if (isset($default_values[$key]) && $default_values[$key] != 0) {
+      if (in_array($key, $default_values)) {
         $default_value = $key;
       }
 
