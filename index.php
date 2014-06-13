@@ -40,10 +40,20 @@ function _drupal_root_get_uri() {
   return substr($parsed['path'], strlen($base_path));
 }
 
+// prevent 'q' hijacking.
+function _drupal_root_secure_q($uri) {
+  if (isset($_GET['q']) && $uri != $_GET['q']) {
+    if ($uri != $_GET['q'] . '/') {
+      $_GET['q'] = $uri;
+    }
+  }
+}
+
 drupal_bootstrap(DRUPAL_BOOTSTRAP_CONFIGURATION);
 
 $uri = _drupal_root_get_uri();
 $arguments = (array) explode('/', $uri);
+_drupal_root_secure_q($uri);
 
 if (isset($arguments[0]) && $arguments[0] == 'f') {
   try {
