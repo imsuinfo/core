@@ -670,13 +670,6 @@ function drupal_environment_initialize() {
     $_SERVER['HTTP_HOST'] = '';
   }
 
-  // When clean URLs are enabled, emulate ?q=foo/bar using REQUEST_URI. It is
-  // not possible to append the query string using mod_rewrite without the B
-  // flag (this was added in Apache 2.2.8), because mod_rewrite unescapes the
-  // path before passing it on to PHP. This is a problem when the path contains
-  // e.g. "&" or "%" that have special meanings in URLs and must be encoded.
-  $_GET['q'] = request_path();
-
   // Enforce E_ALL, but allow users to set levels not part of E_ALL.
   error_reporting(E_ALL | error_reporting());
 
@@ -2372,6 +2365,13 @@ function _drupal_bootstrap_configuration() {
   timer_start('page');
   // Initialize the configuration, including variables from settings.php.
   drupal_settings_initialize();
+
+  // When clean URLs are enabled, emulate ?q=foo/bar using REQUEST_URI. It is
+  // not possible to append the query string using mod_rewrite without the B
+  // flag (this was added in Apache 2.2.8), because mod_rewrite unescapes the
+  // path before passing it on to PHP. This is a problem when the path contains
+  // e.g. "&" or "%" that have special meanings in URLs and must be encoded.
+  $_GET['q'] = request_path();
 }
 
 /**
@@ -2829,7 +2829,8 @@ function request_path() {
     return $path;
   }
 
-  if (isset($_GET['q']) && is_string($_GET['q'])) {
+  $clean_url = variable_get('clean_url', FALSE);
+  if (!$clean_url && isset($_GET['q']) && is_string($_GET['q'])) {
     // This is a request with a ?q=foo/bar query string. $_GET['q'] is
     // overwritten in drupal_path_initialize(), but request_path() is called
     // very early in the bootstrap process, so the original value is saved in
