@@ -3807,7 +3807,7 @@ function drupal_delete_file_if_stale($uri) {
  * @return
  *   The cleaned identifier.
  */
-function drupal_clean_css_identifier($identifier, $filter = array(' ' => '-', '_' => '-', '/' => '-', '[' => '-', ']' => '')) {
+function drupal_clean_css_identifier($identifier, $filter = array(' ' => '-', '/' => '-', '[' => '-', ']' => '')) {
   // By default, we filter using Drupal's coding standards.
   $identifier = strtr($identifier, $filter);
 
