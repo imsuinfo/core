@@ -4192,6 +4192,11 @@ function theme_form_element($variables) {
     $attributes['class'][] = 'form-disabled';
   }
 
+  // provide an #element_attributes key to allow altering the attributes of the topmost part of the element.
+  if (isset($element['#element_attributes']) && is_array($element['#element_attributes'])) {
+    $attributes = array_merge($attributes,  $element['#element_attributes']);
+  }
+
   $wrap_with_fieldset = FALSE;
   if (!empty($element['#type'])) {
     if ($element['#type'] == 'checkbox') {
