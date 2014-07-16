@@ -4218,17 +4218,20 @@ function theme_form_element($variables) {
   }
 
   // If #title is not set, we don't display any label or required marker.
-  if (isset($element['#title'])) {
-    $legend = $element['#title'];
+  if (isset($element['#fieldset_legend'])) {
+    $legend = '<legend><span class="fieldset-legend">' . $element['#fieldset_legend'] . '</span></legend>';
+  }
+  elseif (isset($element['#title'])) {
+    $legend = '<legend class="element-invisible"><span class="fieldset-legend">' . $element['#title'] . '</span></legend>';
   }
   else {
     $element['#title_display'] = 'none';
-    $legend = '';
+    $legend = '<legend class="element-invisible"><span class="fieldset-legend"></span></legend>';
   }
 
   if ($wrap_with_fieldset) {
     $element['#fieldset'] = FALSE;
-    $output = '<fieldset' . drupal_attributes($attributes) . '>' . "\n" . '<legend class="element-invisible"><span class="fieldset-legend">' . $legend . '</span></legend>'. "\n";
+    $output = '<fieldset' . drupal_attributes($attributes) . '>' . "\n" . $legend . "\n";
   }
   else {
     $output = '<div' . drupal_attributes($attributes) . '>' . "\n";
