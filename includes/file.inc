@@ -390,7 +390,7 @@ function file_create_url($uri) {
     else {
       // If this is not a properly formatted stream, then it is a shipped file.
       // Therefore, return the urlencoded URI with the base URL prepended.
-      return $GLOBALS['base_path'] . drupal_encode_path($uri);
+      return $GLOBALS['base_url'] . '/' . drupal_encode_path($uri);
     }
   }
   elseif ($scheme == 'http' || $scheme == 'https') {
@@ -495,7 +495,7 @@ function file_create_htaccess($directory, $private = TRUE, $force_overwrite = FA
     drupal_chmod($htaccess_path, 0444);
   }
   else {
-    $variables = array('%directory' => $directory, '!htaccess' => '<br>' . nl2br(check_plain($htaccess_lines)));
+    $variables = array('%directory' => $directory, '!htaccess' => '<br />' . nl2br(check_plain($htaccess_lines)));
     watchdog('security', "Security warning: Couldn't write .htaccess file. Please create a .htaccess file in your %directory directory which contains the following lines: <code>!htaccess</code>", $variables, WATCHDOG_ERROR);
   }
 }
@@ -907,28 +907,20 @@ function file_unmanaged_copy($source, $destination = NULL, $replace = FILE_EXIST
     $destination = file_build_uri(drupal_basename($source));
   }
 
-  $scheme = file_uri_scheme($destination);
 
-  $wrapper = FALSE;
-  if (!empty($scheme)) {
-    $wrapper = file_stream_wrapper_get_class($scheme);
+  // Prepare the destination directory.
+  if (file_prepare_directory($destination)) {
+    // The destination is already a directory, so append the source basename.
+    $destination = file_stream_wrapper_uri_normalize($destination . '/' . drupal_basename($source));
   }
-
-  if (!$wrapper || !property_exists($wrapper, 'directoryless')) {
-    // Prepare the destination directory.
-    if (file_prepare_directory($destination)) {
-      // The destination is already a directory, so append the source basename.
-      $destination = file_stream_wrapper_uri_normalize($destination . '/' . drupal_basename($source));
-    }
-    else {
-      // Perhaps $destination is a dir/file?
-      $dirname = drupal_dirname($destination);
-      if (!file_prepare_directory($dirname)) {
-        // The destination is not valid.
-        watchdog('file', 'File %file could not be copied, because the destination directory %destination is not configured correctly.', array('%file' => $original_source, '%destination' => $dirname));
-        drupal_set_message(t('The specified file %file could not be copied, because the destination directory is not properly configured. This may be caused by a problem with file or directory permissions. More information is available in the system log.', array('%file' => $original_source)), 'error');
-        return FALSE;
-      }
+  else {
+    // Perhaps $destination is a dir/file?
+    $dirname = drupal_dirname($destination);
+    if (!file_prepare_directory($dirname)) {
+      // The destination is not valid.
+      watchdog('file', 'File %file could not be copied, because the destination directory %destination is not configured correctly.', array('%file' => $original_source, '%destination' => $dirname));
+      drupal_set_message(t('The specified file %file could not be copied, because the destination directory is not properly configured. This may be caused by a problem with file or directory permissions. More information is available in the system log.', array('%file' => $original_source)), 'error');
+      return FALSE;
     }
   }
 
@@ -991,16 +983,6 @@ function file_build_uri($path) {
  *   and FILE_EXISTS_ERROR is specified.
  */
 function file_destination($destination, $replace) {
-  $scheme = file_uri_scheme($destination);
-
-  if ($scheme) {
-    $wrappers = (array) file_get_stream_wrappers(STREAM_WRAPPERS_REMOTE);
-
-    if (array_key_exists($scheme, $wrappers)) {
-      return $destination;
-    }
-  }
-
   if (file_exists($destination)) {
     switch ($replace) {
       case FILE_EXISTS_REPLACE:
@@ -1983,10 +1965,10 @@ function file_transfer($uri, $headers) {
   foreach ($headers as $name => $value) {
     drupal_add_http_header($name, $value);
   }
+  drupal_send_headers();
   $scheme = file_uri_scheme($uri);
   // Transfer file in 1024 byte chunks to save memory usage.
   if ($scheme && file_stream_wrapper_valid_scheme($scheme) && $fd = fopen($uri, 'rb')) {
-    drupal_send_headers();
     while (!feof($fd)) {
       print fread($fd, 1024);
     }
@@ -2017,23 +1999,7 @@ function file_download() {
   $target = implode('/', $args);
   $uri = $scheme . '://' . $target;
   if (file_stream_wrapper_valid_scheme($scheme) && file_exists($uri)) {
-    // Let other modules provide headers and controls access to the file.
-    // module_invoke_all() uses array_merge_recursive() which merges header
-    // values into a new array. To avoid that and allow modules to override
-    // headers instead, use array_merge() to merge the returned arrays.
-    $headers = array();
-    foreach (module_implements('file_download') as $module) {
-      $function = $module . '_file_download';
-      $result = $function($uri);
-      if ($result == -1) {
-        // Throw away the headers received so far.
-        $headers = array();
-        break;
-      }
-      if (isset($result) && is_array($result)) {
-        $headers = array_merge($headers, $result);
-      }
-    }
+    $headers = file_download_headers($uri);
     if (count($headers)) {
       file_transfer($uri, $headers);
     }
@@ -2045,6 +2011,69 @@ function file_download() {
   drupal_exit();
 }
 
+/**
+ * Retrieves headers for a private file download.
+ *
+ * Calls all module implementations of hook_file_download() to retrieve headers
+ * for files by the module that originally provided the file. The presence of
+ * returned headers indicates the current user has access to the file.
+ *
+ * @param $uri
+ *   The URI for the file whose headers should be retrieved.
+ *
+ * @return
+ *   If access is allowed, headers for the file, suitable for passing to
+ *   file_transfer(). If access is not allowed, an empty array will be returned.
+ *
+ * @see file_transfer()
+ * @see file_download_access()
+ * @see hook_file_downlaod()
+ */
+function file_download_headers($uri) {
+  // Let other modules provide headers and control access to the file.
+  // module_invoke_all() uses array_merge_recursive() which merges header
+  // values into a new array. To avoid that and allow modules to override
+  // headers instead, use array_merge() to merge the returned arrays.
+  $headers = array();
+  foreach (module_implements('file_download') as $module) {
+    $function = $module . '_file_download';
+    $result = $function($uri);
+    if ($result == -1) {
+      // Throw away the headers received so far.
+      $headers = array();
+      break;
+    }
+    if (isset($result) && is_array($result)) {
+      $headers = array_merge($headers, $result);
+    }
+  }
+  return $headers;
+}
+
+/**
+ * Checks that the current user has access to a particular file.
+ *
+ * The return value of this function hinges on the return value from
+ * file_download_headers(), which is the function responsible for collecting
+ * access information through hook_file_download().
+ *
+ * If immediately transferring the file to the browser and the headers will
+ * need to be retrieved, the return value of file_download_headers() should be
+ * used to determine access directly, so that access checks will not be run
+ * twice.
+ *
+ * @param $uri
+ *   The URI for the file whose access should be retrieved.
+ *
+ * @return
+ *   Boolean TRUE if access is allowed. FALSE if access is not allowed.
+ *
+ * @see file_download_headers()
+ * @see hook_file_download()
+ */
+function file_download_access($uri) {
+  return count(file_download_headers($uri)) > 0;
+}
 
 /**
  * Finds all files that match a given mask in a given directory.
