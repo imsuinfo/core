@@ -1960,7 +1960,7 @@ class DatabaseCondition implements QueryConditionInterface, Countable {
       $this->changed = FALSE;
 
       if ($this->not) {
-        $this->stringVersion = 'NOT ' . implode($conjunction, $condition_fragments);
+        $this->stringVersion = 'NOT (' . implode($conjunction, $condition_fragments) . ')';
       }
       else {
         $this->stringVersion = implode($conjunction, $condition_fragments);
