@@ -60,6 +60,18 @@ interface QueryConditionInterface {
   public function where($snippet, $args = array());
 
   /**
+   * Wraps the conditions in a NOT clause.
+   *
+   * @param bool $not
+   *   (optional) If TRUE, the conditions are wrapped in a NOT clause.
+   *   If FALSE, the conditions are not wrapped in a NOT clause.
+   *
+   * @return QueryConditionInterface
+   *   The called object.
+   */
+  public function not($not = TRUE);
+
+  /**
    * Sets a condition that the specified field be NULL.
    *
    * @param $field
@@ -749,6 +761,16 @@ class DeleteQuery extends Query implements QueryConditionInterface {
   protected $condition;
 
   /**
+   * Whether the conditions should be wrapped in a NOT clause.
+   *
+   * TRUE if the condition is to be wrapped in a NOT.
+   * FALSE if the condition is not to be wrapped in a NOT.
+   *
+   * @var bool
+   */
+  protected $not = FALSE;
+
+  /**
    * Constructs a DeleteQuery object.
    *
    * @param DatabaseConnection $connection
@@ -771,6 +793,17 @@ class DeleteQuery extends Query implements QueryConditionInterface {
    */
   public function condition($field, $value = NULL, $operator = NULL) {
     $this->condition->condition($field, $value, $operator);
+    return $this;
+  }
+
+  /**
+   * Implements QueryConditionInterface::not().
+   */
+  public function not($not = TRUE) {
+    if (is_bool($not)) {
+      $this->not = $not;
+    }
+
     return $this;
   }
 
@@ -1008,6 +1041,16 @@ class UpdateQuery extends Query implements QueryConditionInterface {
   protected $expressionFields = array();
 
   /**
+   * Whether the conditions should be wrapped in a NOT clause.
+   *
+   * TRUE if the condition is to be wrapped in a NOT.
+   * FALSE if the condition is not to be wrapped in a NOT.
+   *
+   * @var bool
+   */
+  protected $not = FALSE;
+
+  /**
    * Constructs an UpdateQuery object.
    *
    * @param DatabaseConnection $connection
@@ -1030,6 +1073,17 @@ class UpdateQuery extends Query implements QueryConditionInterface {
    */
   public function condition($field, $value = NULL, $operator = NULL) {
     $this->condition->condition($field, $value, $operator);
+    return $this;
+  }
+
+  /**
+   * Implements QueryConditionInterface::not().
+   */
+  public function not($not = TRUE) {
+    if (is_bool($not)) {
+      $this->not = $not;
+    }
+
     return $this;
   }
 
@@ -1327,6 +1381,16 @@ class MergeQuery extends Query implements QueryConditionInterface {
   protected $needsUpdate = FALSE;
 
   /**
+   * Whether the conditions should be wrapped in a NOT clause.
+   *
+   * TRUE if the condition is to be wrapped in a NOT.
+   * FALSE if the condition is not to be wrapped in a NOT.
+   *
+   * @var bool
+   */
+  protected $not = FALSE;
+
+  /**
   * Constructs a MergeQuery object.
   *
   * @param DatabaseConnection $connection
@@ -1526,6 +1590,17 @@ class MergeQuery extends Query implements QueryConditionInterface {
   }
 
   /**
+   * Implements QueryConditionInterface::not().
+   */
+  public function not($not = TRUE) {
+    if (is_bool($not)) {
+      $this->not = $not;
+    }
+
+    return $this;
+  }
+
+  /**
    * Implements QueryConditionInterface::isNull().
    */
   public function isNull($field) {
@@ -1681,6 +1756,16 @@ class DatabaseCondition implements QueryConditionInterface, Countable {
   protected $queryPlaceholderIdentifier;
 
   /**
+   * Whether the conditions should be wrapped in a NOT clause.
+   *
+   * TRUE if the condition is to be wrapped in a NOT.
+   * FALSE if the condition is not to be wrapped in a NOT.
+   *
+   * @var bool
+   */
+  protected $not = FALSE;
+
+  /**
    * Constructs a DataBaseCondition object.
    *
    * @param string $conjunction
@@ -1737,6 +1822,17 @@ class DatabaseCondition implements QueryConditionInterface, Countable {
       'operator' => NULL,
     );
     $this->changed = TRUE;
+
+    return $this;
+  }
+
+  /**
+   * Implements QueryConditionInterface::not().
+   */
+  public function not($not = TRUE) {
+    if (is_bool($not)) {
+      $this->not = $not;
+    }
 
     return $this;
   }
@@ -1862,7 +1958,13 @@ class DatabaseCondition implements QueryConditionInterface, Countable {
       }
 
       $this->changed = FALSE;
-      $this->stringVersion = implode($conjunction, $condition_fragments);
+
+      if ($this->not) {
+        $this->stringVersion = 'NOT ' . implode($conjunction, $condition_fragments);
+      }
+      else {
+        $this->stringVersion = implode($conjunction, $condition_fragments);
+      }
       $this->arguments = $arguments;
     }
   }
