@@ -950,7 +950,11 @@ function system_sort_modules_by_info_name($a, $b) {
 }
 
 /**
- * Array sorting callback; sorts modules or themes by their name.
+ * Sorts themes by their names, with the default theme listed first.
+ *
+ * Callback for uasort() within system_themes_page().
+ *
+ * @see system_sort_modules_by_info_name().
  */
 function system_sort_themes($a, $b) {
   if ($a->is_default) {
@@ -1667,18 +1671,7 @@ function system_logging_settings() {
       ERROR_REPORTING_DISPLAY_SOME => t('Errors and warnings'),
       ERROR_REPORTING_DISPLAY_ALL => t('All messages'),
     ),
-  );
-
-  $form['error_level_anonymous'] = array(
-    '#type' => 'radios',
-    '#title' => t('Error messages to display (for anonymous users)'),
-    '#default_value' => variable_get('error_level_anonymous', ERROR_REPORTING_DISPLAY_ALL),
-    '#options' => array(
-      ERROR_REPORTING_HIDE => t('None'),
-      ERROR_REPORTING_DISPLAY_SOME => t('Errors and warnings'),
-      ERROR_REPORTING_DISPLAY_ALL => t('All messages'),
-    ),
-    '#description' => t('It is recommended that sites running on production environments do not display any errors for anonymous users.'),
+    '#description' => t('It is recommended that sites running on production environments do not display any errors.'),
   );
 
   return system_settings_form($form);

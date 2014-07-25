@@ -11,7 +11,7 @@
 function user_autocomplete($string = '') {
   $matches = array();
   if ($string) {
-    $result = db_select('users')->fields('users', array('name'))->condition('name', db_like($string) . '%', 'ILIKE')->range(0, 10)->execute();
+    $result = db_select('users')->fields('users', array('name'))->condition('name', db_like($string) . '%', 'LIKE')->range(0, 10)->execute();
     foreach ($result as $user) {
       $matches[$user->name] = check_plain($user->name);
     }
@@ -183,8 +183,11 @@ function user_logout() {
 /**
  * Process variables for user-profile.tpl.php.
  *
- * The $variables array contains the following arguments:
- * - $account
+ * @param array $variables
+ *   An associative array containing:
+ *   - elements: An associative array containing the user information and any
+ *     fields attached to the user. Properties used:
+ *     - #account: The user account of the profile being viewed.
  *
  * @see user-profile.tpl.php
  */
