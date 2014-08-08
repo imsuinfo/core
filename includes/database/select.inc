@@ -559,6 +559,16 @@ class SelectQueryExtender implements SelectQueryInterface {
    */
   protected $placeholder = 0;
 
+  /**
+   * Whether the conditions should be wrapped in a NOT clause.
+   *
+   * TRUE if the condition is to be wrapped in a NOT.
+   * FALSE if the condition is not to be wrapped in a NOT.
+   *
+   * @var bool
+   */
+  protected $not = FALSE;
+
   public function __construct(SelectQueryInterface $query, DatabaseConnection $connection) {
     $this->uniqueIdentifier = uniqid('', TRUE);
     $this->query = $query;
@@ -796,6 +806,17 @@ class SelectQueryExtender implements SelectQueryInterface {
     return $this->query->countQuery();
   }
 
+  /**
+   * Implements QueryConditionInterface::not().
+   */
+  public function not($not = TRUE) {
+    if (is_bool($not)) {
+      $this->not = $not;
+    }
+
+    return $this;
+  }
+
   function isNull($field) {
     $this->query->isNull($field);
     return $this;
@@ -964,6 +985,16 @@ class SelectQuery extends Query implements SelectQueryInterface {
    */
   protected $forUpdate = FALSE;
 
+  /**
+   * Whether the conditions should be wrapped in a NOT clause.
+   *
+   * TRUE if the condition is to be wrapped in a NOT.
+   * FALSE if the condition is not to be wrapped in a NOT.
+   *
+   * @var bool
+   */
+  protected $not = FALSE;
+
   public function __construct($table, $alias = NULL, DatabaseConnection $connection, $options = array()) {
     $options['return'] = Database::RETURN_STATEMENT;
     parent::__construct($connection, $options);
@@ -1047,6 +1078,17 @@ class SelectQuery extends Query implements SelectQueryInterface {
 
   public function where($snippet, $args = array()) {
     $this->where->where($snippet, $args);
+    return $this;
+  }
+
+  /**
+   * Implements QueryConditionInterface::not().
+   */
+  public function not($not = TRUE) {
+    if (is_bool($not)) {
+      $this->not = $not;
+    }
+
     return $this;
   }
 
