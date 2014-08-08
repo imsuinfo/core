@@ -1837,7 +1837,7 @@ function system_update_7003() {
     ));
     $or = db_condition('or');
     foreach ($result as $allowed) {
-      $or->condition('ip', $allowed->mask, 'LIKE');
+      $or->condition('ip', $allowed->mask, 'ILIKE');
     }
     if (count($or)) {
       db_delete('blocked_ips')
@@ -2055,7 +2055,7 @@ function system_update_7016() {
                         FROM pg_catalog.pg_attribute a
                         LEFT JOIN pg_class c ON (c.oid =  a.attrelid)
                         WHERE pg_catalog.pg_table_is_visible(c.oid) AND c.relkind = 'r'
-                        AND pg_catalog.format_type(a.atttypid, a.atttypmod) LIKE '%unsigned%'");
+                        AND pg_catalog.format_type(a.atttypid, a.atttypmod) ILIKE '%unsigned%'");
     foreach ($result as $row) {
       switch ($row->type) {
         case 'smallint_unsigned':

@@ -323,7 +323,7 @@ function simpletest_test_get_all() {
     }
     else {
       // Select all clases in files ending with .test.
-      $classes = db_query("SELECT name FROM {registry} WHERE type = :type AND filename LIKE :name", array(':type' => 'class', ':name' => '%.test'))->fetchCol();
+      $classes = db_query("SELECT name FROM {registry} WHERE type = :type AND filename ILIKE :name", array(':type' => 'class', ':name' => '%.test'))->fetchCol();
 
       // Also discover PSR-0 test classes, if the PHP version allows it.
       if (version_compare(PHP_VERSION, '5.3') > 0) {
