@@ -1884,7 +1884,7 @@ function theme_image($variables) {
     }
   }
 
-  return '<img' . drupal_attributes($attributes) . ' />';
+  return '<img' . drupal_attributes($attributes) . '>';
 }
 
 /**
@@ -2032,12 +2032,12 @@ function theme_table($variables) {
         $output .= ' <colgroup' . drupal_attributes($attributes) . '>';
         $i = 0;
         foreach ($cols as $col) {
-          $output .= ' <col' . drupal_attributes($col) . ' />';
+          $output .= ' <col' . drupal_attributes($col) . '>';
         }
         $output .= " </colgroup>\n";
       }
       else {
-        $output .= ' <colgroup' . drupal_attributes($attributes) . " />\n";
+        $output .= ' <colgroup' . drupal_attributes($attributes) . ">\n";
       }
     }
   }
@@ -2278,7 +2278,7 @@ function theme_html_tag($variables) {
   $element = $variables['element'];
   $attributes = isset($element['#attributes']) ? drupal_attributes($element['#attributes']) : '';
   if (!isset($element['#value'])) {
-    return '<' . $element['#tag'] . $attributes . " />\n";
+    return '<' . $element['#tag'] . $attributes . ">\n";
   }
   else {
     $output = '<' . $element['#tag'] . $attributes . '>';
