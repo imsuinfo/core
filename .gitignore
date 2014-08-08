@@ -13,6 +13,7 @@ sites/all/*/*/.gitignore
 
 # Custom ignores
 sites/default/deprecated
+sites/default/gnupg
 *.swp
 
 # Ignore Mac Files
