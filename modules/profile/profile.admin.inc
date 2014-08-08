@@ -435,7 +435,7 @@ function profile_admin_settings_autocomplete($string) {
   $matches = array();
   $result = db_select('profile_field')
     ->fields('profile_field', array('category'))
-    ->condition('category', db_like($string) . '%', 'LIKE')
+    ->condition('category', db_like($string) . '%', 'ILIKE')
     ->range(0, 10)
     ->execute();
 
