@@ -902,19 +902,19 @@ function drupal_process_form($form_id, &$form, &$form_state) {
       // Execute form submit handlers.
       form_execute_handlers('submit', $form, $form_state);
 
-      // We'll clear out the cached copies of the form and its stored data
-      // here, as we've finished with them. The in-memory copies are still
-      // here, though.
-      if (!variable_get('cache', 0) && !empty($form_state['values']['form_build_id'])) {
-        cache_clear_all('form_' . $form_state['values']['form_build_id'], 'cache_form');
-        cache_clear_all('form_state_' . $form_state['values']['form_build_id'], 'cache_form');
-      }
-
       // If batches were set in the submit handlers, we process them now,
       // possibly ending execution. We make sure we do not react to the batch
       // that is already being processed (if a batch operation performs a
       // drupal_form_submit).
       if ($batch =& batch_get() && !isset($batch['current_set'])) {
+        // We'll clear out the cached copies of the form and its stored data
+        // here, as we've finished with them. The in-memory copies are still
+        // here, though.
+        if (!variable_get('cache', 0) && !empty($form_state['values']['form_build_id'])) {
+          cache_clear_all('form_' . $form_state['values']['form_build_id'], 'cache_form');
+          cache_clear_all('form_state_' . $form_state['values']['form_build_id'], 'cache_form');
+        }
+
         // Store $form_state information in the batch definition.
         // We need the full $form_state when either:
         // - Some submit handlers were saved to be called during batch
@@ -936,6 +936,20 @@ function drupal_process_form($form_id, &$form, &$form_state) {
         // For 'regular' forms, we get redirected to the batch processing
         // page. Form redirection will be handled in _batch_finished(),
         // after the batch is processed.
+      }
+      else {
+        // for non-batch forms, allow returning to the form if an error occurs
+        // during the submit process if the submit handler unset submitted and
+        // set rebuild to TRUE.
+        if ($form_state['submitted'] && !form_get_errors() && !$form_state['rebuild']) {
+          // We'll clear out the cached copies of the form and its stored data
+          // here, as we've finished with them. The in-memory copies are still
+          // here, though.
+          if (!variable_get('cache', 0) && !empty($form_state['values']['form_build_id'])) {
+            cache_clear_all('form_' . $form_state['values']['form_build_id'], 'cache_form');
+            cache_clear_all('form_state_' . $form_state['values']['form_build_id'], 'cache_form');
+          }
+        }
       }
 
       // Set a flag to indicate the the form has been processed and executed.
