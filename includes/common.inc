@@ -5161,10 +5161,10 @@ function _drupal_bootstrap_full() {
     return;
   }
   $called = TRUE;
-  require_once DRUPAL_ROOT . '/' . variable_get('path_inc', 'includes/path.inc');
+  require_once DRUPAL_ROOT . '/includes/path.inc';
   require_once DRUPAL_ROOT . '/includes/theme.inc';
   require_once DRUPAL_ROOT . '/includes/pager.inc';
-  require_once DRUPAL_ROOT . '/' . variable_get('menu_inc', 'includes/menu.inc');
+  require_once DRUPAL_ROOT . '/includes/menu.inc';
   require_once DRUPAL_ROOT . '/includes/tablesort.inc';
   require_once DRUPAL_ROOT . '/includes/file.inc';
   require_once DRUPAL_ROOT . '/includes/unicode.inc';
