@@ -22,14 +22,12 @@ div.admin {
   padding-top: 15px;
 }
 div.admin .left {
-  display: inline-block;
-  vertical-align: top;
+  float: left; /* LTR */
   width: 47%;
   margin-left: 1em; /* LTR */
 }
 div.admin .right {
-  display: inline-block;
-  vertical-align: top;
+  float: right; /* LTR */
   width: 47%;
   margin-right: 1em; /* LTR */
 }
@@ -182,18 +180,13 @@ table.screenshot {
 .theme-default .screenshot {
   border: 1px solid #aaa;
 }
-.system-themes-list-enabled > .theme-selector > .screenshot,
-.system-themes-list-enabled > .theme-selector > .no-screenshot {
-  display: inline-block;
-  vertical-align: top;
+.system-themes-list-enabled .theme-selector .screenshot,
+.system-themes-list-enabled .theme-selector .no-screenshot {
+  float: left; /* LTR */
   margin: 0 20px 0 0; /* LTR */
 }
-.system-themes-list-enabled > .theme-selector > .theme-info {
-  display: inline-block;
-  vertical-align: top;
-}
-.system-themes-list-disabled > .theme-selector > .screenshot,
-.system-themes-list-disabled > .theme-selector > .no-screenshot {
+.system-themes-list-disabled .theme-selector .screenshot,
+.system-themes-list-disabled .theme-selector .no-screenshot {
   width: 194px;
   height: 144px;
   line-height: 144px;
