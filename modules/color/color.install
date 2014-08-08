@@ -50,7 +50,7 @@ function color_requirements($phase) {
  * Warn site administrator if unsafe CSS color codes are found in the database.
  */
 function color_update_7001() {
-  $theme_palettes = db_query("SELECT name FROM {variable} WHERE name LIKE 'color_%_palette'")->fetchCol();
+  $theme_palettes = db_query("SELECT name FROM {variable} WHERE name ILIKE 'color_%_palette'")->fetchCol();
   foreach ($theme_palettes as $name) {
     $palette = variable_get($name, array());
     foreach ($palette as $key => $color) {

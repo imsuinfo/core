@@ -819,7 +819,7 @@ function _update_get_cache_multiple($cid_prefix) {
   $data = array();
   $result = db_select('cache_update')
     ->fields('cache_update', array('cid', 'data', 'created', 'expire', 'serialized'))
-    ->condition('cache_update.cid', $cid_prefix . '::%', 'LIKE')
+    ->condition('cache_update.cid', $cid_prefix . '::%', 'ILIKE')
     ->execute();
   foreach ($result as $cache) {
     if ($cache) {
@@ -848,13 +848,13 @@ function _update_cache_clear($cid = NULL, $wildcard = FALSE) {
     db_delete('cache_update')
       // Clear everything except fetch task information because these are used
       // to ensure that the fetch task queue items are not added multiple times.
-      ->condition('cid', 'fetch_task::%', 'NOT LIKE')
+      ->condition('cid', 'fetch_task::%', 'NOT ILIKE')
       ->execute();
   }
   else {
     $query = db_delete('cache_update');
     if ($wildcard) {
-      $query->condition('cid', $cid . '%', 'LIKE');
+      $query->condition('cid', $cid . '%', 'ILIKE');
     }
     else {
       $query->condition('cid', $cid);
