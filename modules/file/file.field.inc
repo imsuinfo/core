@@ -973,7 +973,7 @@ function theme_file_upload_help($variables) {
     }
   }
 
-  return implode('<br />', $descriptions);
+  return implode('<br>', $descriptions);
 }
 
 /**
