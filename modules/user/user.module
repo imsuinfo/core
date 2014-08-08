@@ -857,7 +857,7 @@ function user_access($string, $account = NULL) {
 function user_is_blocked($name) {
   return db_select('users')
     ->fields('users', array('name'))
-    ->condition('name', db_like($name), 'LIKE')
+    ->condition('name', db_like($name), 'ILIKE')
     ->condition('status', 0)
     ->execute()->fetchObject();
 }
@@ -983,13 +983,13 @@ function user_search_execute($keys = NULL, $conditions = NULL) {
     // and they don't need to be restricted to only active users.
     $query->fields('users', array('mail'));
     $query->condition(db_or()->
-      condition('name', '%' . $keys . '%', 'LIKE')->
-      condition('mail', '%' . $keys . '%', 'LIKE'));
+      condition('name', '%' . $keys . '%', 'ILIKE')->
+      condition('mail', '%' . $keys . '%', 'ILIKE'));
   }
   else {
     // Regular users can only search via usernames, and we do not show them
     // blocked accounts.
-    $query->condition('name', '%' . $keys . '%', 'LIKE')
+    $query->condition('name', '%' . $keys . '%', 'ILIKE')
       ->condition('status', 1);
   }
   $uids = $query
@@ -1270,7 +1270,7 @@ function user_account_form_validate($form, &$form_state) {
       if ($error = user_validate_name($form_state['values']['name'])) {
         form_set_error('name', $error);
       }
-      elseif ((bool) db_select('users')->fields('users', array('uid'))->condition('uid', $account->uid, '<>')->condition('name', db_like($form_state['values']['name']), 'LIKE')->range(0, 1)->execute()->fetchField()) {
+      elseif ((bool) db_select('users')->fields('users', array('uid'))->condition('uid', $account->uid, '<>')->condition('name', db_like($form_state['values']['name']), 'ILIKE')->range(0, 1)->execute()->fetchField()) {
         form_set_error('name', t('The name %name is already taken.', array('%name' => $form_state['values']['name'])));
       }
     }
