@@ -3907,7 +3907,16 @@ function theme_button($variables) {
     $element['#attributes']['class'][] = 'form-button-disabled';
   }
 
-  $element['#attributes']['class'][] = strtolower($element['#button_type'] . '-' . $element['#value']);
+  $value = '';
+  if (!empty($element['#default_value'])) {
+    $value = '-' . $element['#default_value'];
+  }
+
+  if (!empty($element['#value'])) {
+    $value = '-' . $element['#value'];
+  }
+
+  $element['#attributes']['class'][] = strtolower($element['#button_type'] . $value);
 
   return '<input' . drupal_attributes($element['#attributes']) . '>';
 }
