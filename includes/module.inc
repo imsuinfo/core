@@ -423,13 +423,18 @@ function module_enable($module_list, $enable_dependencies = TRUE) {
 
   $modules_installed = array();
   $modules_enabled = array();
-  foreach ($module_list as $module) {
-    // Only process modules that are not already enabled.
-    $existing = db_query("SELECT status FROM {system} WHERE type = :type AND name = :name", array(
-      ':type' => 'module',
-      ':name' => $module))
-      ->fetchObject();
-    if ($existing->status == 0) {
+
+  $transaction = db_transaction();
+  try {
+    foreach ($module_list as $module) {
+      // Only process modules that are not already enabled.
+      $existing = db_query("SELECT status FROM {system} WHERE type = :type AND name = :name", array(
+        ':type' => 'module',
+        ':name' => $module))
+        ->fetchObject();
+      if ($existing->status != 0) {
+        continue;
+      }
       // Load the module's code.
       drupal_load('module', $module);
       module_load_install($module);
@@ -487,16 +492,24 @@ function module_enable($module_list, $enable_dependencies = TRUE) {
       $modules_enabled[] = $module;
       watchdog('system', '%module module enabled.', array('%module' => $module), WATCHDOG_INFO);
     }
-  }
 
-  // If any modules were newly installed, invoke hook_modules_installed().
-  if (!empty($modules_installed)) {
-    module_invoke_all('modules_installed', $modules_installed);
-  }
+    // If any modules were newly installed, invoke hook_modules_installed().
+    if (!empty($modules_installed)) {
+      module_invoke_all('modules_installed', $modules_installed);
+    }
 
-  // If any modules were newly enabled, invoke hook_modules_enabled().
-  if (!empty($modules_enabled)) {
-    module_invoke_all('modules_enabled', $modules_enabled);
+    // If any modules were newly enabled, invoke hook_modules_enabled().
+    if (!empty($modules_enabled)) {
+      module_invoke_all('modules_enabled', $modules_enabled);
+    }
+
+    unset($transaction);
+  }
+  catch (Exception $ex) {
+    $transaction->rollback();
+    drupal_set_message(t('The selected modules have failed to install.'), 'error');
+    watchdog_exception('system', $ex, "Failed to install and enable the modules: %modules, reason: %ex.", array('%modules' => print_r($module_list, TRUE), '%ex' => $ex->getMessage()), WATCHDOG_ERROR);
+    return FALSE;
   }
 
   return TRUE;
