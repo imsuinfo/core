@@ -51,9 +51,9 @@ class DatabaseConnection_oracle extends DatabaseConnection
   }
 
   // shortcut function to execute statements directly on the database without checks
-  public function oracleQuery($query, $args=NULL)
+  public function oracleQuery($query, $args=NULL, $options=array())
   {
-      $stmt= parent::prepare($query);
+      $stmt= parent::prepare($query, $options);
 
       try
       {
