@@ -326,8 +326,8 @@ function _update_authorize_clear_update_status() {
   $query = db_delete('cache_update');
   $query->condition(
     db_or()
-    ->condition('cid', 'update_project_%', 'ILIKE')
-    ->condition('cid', 'available_releases::%', 'ILIKE')
+    ->condition('cid', 'update_project_%', 'LIKE')
+    ->condition('cid', 'available_releases::%', 'LIKE')
   );
   $query->execute();
 }

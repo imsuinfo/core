@@ -71,7 +71,7 @@ function authorize_filetransfer_form($form, &$form_state) {
    * leads to the actual operation).
    */
   $form['submit_connection'] = array(
-    '#prefix' => "<br style='clear:both'>",
+    '#prefix' => "<br style='clear:both'/>",
     '#name' => 'enter_connection_settings',
     '#type' => 'submit',
     '#value' => t('Enter connection settings'),

@@ -174,10 +174,10 @@ function update_results_page() {
     $log_message = ' All errors have been logged.';
   }
 
-  if (isset($_SESSION['update_success']) && $_SESSION['update_success']) {
+  if ($_SESSION['update_success']) {
     $output = '<p>Updates were attempted. If you see no failures below, you may proceed happily back to your <a href="' . base_path() . '">site</a>. Otherwise, you may need to update your database manually.' . $log_message . '</p>';
   }
-  elseif (!empty($_SESSION['updates_remaining'])) {
+  else {
     $updates_remaining = reset($_SESSION['updates_remaining']);
     list($module, $version) = array_pop($updates_remaining);
     $output = '<p class="error">The update process was aborted prematurely while running <strong>update #' . $version . ' in ' . $module . '.module</strong>.' . $log_message;
