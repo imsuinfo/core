@@ -330,17 +330,6 @@ function _drupal_default_html_head() {
     // Security: This always has to be output first.
     '#weight' => -1000,
   );
-  // Show Drupal and the major version number in the META GENERATOR tag.
-  // Get the major version.
-  list($version, ) = explode('.', VERSION);
-  $elements['system_meta_generator'] = array(
-    '#type' => 'html_tag',
-    '#tag' => 'meta',
-    '#attributes' => array(
-      'name' => 'Generator',
-      'content' => 'Drupal ' . $version . ' (http://drupal.org)',
-    ),
-  );
   return $elements;
 }
 
