@@ -3151,6 +3151,26 @@ function weight_value(&$form) {
  */
 function form_process_radios($element) {
   if (count($element['#options']) > 0) {
+    $multicolumn = FALSE;
+    $multicolumn_count = 0;
+    $multicolumn_width = 0;
+    if (!empty($element['#multicolumn_count']) && is_numeric($element['#multicolumn_count'])) {
+      $multicolumn_count = intval($element['#multicolumn_count']);
+    }
+    if (!empty($element['#multicolumn_width']) && is_numeric($element['#multicolumn_width'])) {
+      $multicolumn_width = intval($element['#multicolumn_width']);
+    }
+    if ($multicolumn_count > 0 && $multicolumn_width > 0) {
+      $multicolumn = TRUE;
+      $multicolumn_current = 0;
+      $multicolumn_column = 0;
+      $multicolumn_wrapper = NULL;
+      $multicolumn_items = count($element['#options']);
+      $multicolumn_items_per_column = floor($multicolumn_items / $multicolumn_count);
+      $multicolumn_items_remaining = $multicolumn_items % $multicolumn_count;
+      $multicolumn_items_remaining_unprocessed = TRUE;
+    }
+
     $weight = 0;
     foreach ($element['#options'] as $key => $choice) {
       // Maintain order of options as defined in #options, in case the element
@@ -3158,26 +3178,82 @@ function form_process_radios($element) {
       // sub-elements.
       $weight += 0.001;
 
-      $element += array($key => array());
-      // Generate the parents as the autogenerator does, so we will have a
-      // unique id for each radio button.
-      $parents_for_id = array_merge($element['#parents'], array($key));
-      $element[$key] += array(
-        '#type' => 'radio',
-        '#title' => $choice,
-        // The key is sanitized in drupal_attributes() during output from the
-        // theme function.
-        '#return_value' => $key,
-        // Use default or FALSE. A value of FALSE means that the radio button is
-        // not 'checked'.
-        '#default_value' => isset($element['#default_value']) ? $element['#default_value'] : FALSE,
-        '#attributes' => $element['#attributes'],
-        '#parents' => $element['#parents'],
-        '#id' => drupal_html_id('edit-' . implode('-', $parents_for_id)),
-        '#ajax' => isset($element['#ajax']) ? $element['#ajax'] : NULL,
-        '#weight' => $weight,
-        '#fieldset' => FALSE,
-      );
+      if ($multicolumn) {
+        $parents_for_id = array_merge($element['#parents'], array($key));
+        if (!isset($element['multicolumn-' . $multicolumn_column])) {
+          $element['multicolumn-' . $multicolumn_column] = array(
+            '#type' => 'container',
+            '#attributes' => array(
+              'class' => array(
+                'multicolumn',
+                'multicolumn-row-' . $multicolumn_current,
+                'multicolumn-column-' . $multicolumn_column,
+                'inline-block',
+                'vertical-align-top',
+              ),
+              'style' => array(
+                'width: ' . $multicolumn_width . 'px;',
+                'min-width: ' . $multicolumn_width . 'px;',
+                'max-width: ' . $multicolumn_width . 'px;',
+              ),
+            ),
+            '#weight' => $weight,
+          );
+        }
+
+        $element['multicolumn-' . $multicolumn_column][$key] = array(
+          '#type' => 'radio',
+          '#title' => $choice,
+          // The key is sanitized in drupal_attributes() during output from the
+          // theme function.
+          '#return_value' => $key,
+          // Use default or FALSE. A value of FALSE means that the radio button is
+          // not 'checked'.
+          '#default_value' => isset($element['#default_value']) ? $element['#default_value'] : FALSE,
+          '#attributes' => $element['#attributes'],
+          '#parents' => $element['#parents'],
+          '#id' => drupal_html_id('edit-' . implode('-', $parents_for_id)),
+          '#ajax' => isset($element['#ajax']) ? $element['#ajax'] : NULL,
+          '#weight' => $weight,
+          '#fieldset' => FALSE,
+        );
+
+        $multicolumn_current++;
+        if ($multicolumn_current >= $multicolumn_items_per_column) {
+          if ($multicolumn_items_remaining > 0 && $multicolumn_items_remaining_unprocessed) {
+            $multicolumn_current++;
+            $multicolumn_items_remaining--;
+            $multicolumn_items_remaining_unprocessed = FALSE;
+          }
+          else {
+            $multicolumn_current = 0;
+            $multicolumn_column++;
+            $multicolumn_items_remaining_unprocessed = TRUE;
+          }
+        }
+      }
+      else {
+        $element += array($key => array());
+        // Generate the parents as the autogenerator does, so we will have a
+        // unique id for each radio button.
+        $parents_for_id = array_merge($element['#parents'], array($key));
+        $element[$key] += array(
+          '#type' => 'radio',
+          '#title' => $choice,
+          // The key is sanitized in drupal_attributes() during output from the
+          // theme function.
+          '#return_value' => $key,
+          // Use default or FALSE. A value of FALSE means that the radio button is
+          // not 'checked'.
+          '#default_value' => isset($element['#default_value']) ? $element['#default_value'] : FALSE,
+          '#attributes' => $element['#attributes'],
+          '#parents' => $element['#parents'],
+          '#id' => drupal_html_id('edit-' . implode('-', $parents_for_id)),
+          '#ajax' => isset($element['#ajax']) ? $element['#ajax'] : NULL,
+          '#weight' => $weight,
+          '#fieldset' => FALSE,
+        );
+      }
     }
   }
   return $element;
@@ -3294,6 +3370,27 @@ function form_process_checkboxes($element) {
     }
     $default_values = $element['#default_value'];
     $weight = 0;
+
+    $multicolumn = FALSE;
+    $multicolumn_count = 0;
+    $multicolumn_width = 0;
+    if (!empty($element['#multicolumn_count']) && is_numeric($element['#multicolumn_count'])) {
+      $multicolumn_count = intval($element['#multicolumn_count']);
+    }
+    if (!empty($element['#multicolumn_width']) && is_numeric($element['#multicolumn_width'])) {
+      $multicolumn_width = intval($element['#multicolumn_width']);
+    }
+    if ($multicolumn_count > 0 && $multicolumn_width > 0) {
+      $multicolumn = TRUE;
+      $multicolumn_current = 0;
+      $multicolumn_column = 0;
+      $multicolumn_wrapper = NULL;
+      $multicolumn_items = count($element['#options']);
+      $multicolumn_items_per_column = floor($multicolumn_items / $multicolumn_count);
+      $multicolumn_items_remaining = $multicolumn_items % $multicolumn_count;
+      $multicolumn_items_remaining_unprocessed = TRUE;
+    }
+
     foreach ($element['#options'] as $key => $choice) {
       // Integer 0 is not a valid #return_value, so use '0' instead.
       // @see form_type_checkbox_value().
@@ -3317,21 +3414,74 @@ function form_process_checkboxes($element) {
         $default_value = $key;
       }
 
-      $element += array($key => array());
-      $element[$key] += array(
-        '#type' => 'checkbox',
-        '#title' => $choice,
-        '#return_value' => $key,
-        '#default_value' => $default_value,
-        '#attributes' => $element['#attributes'],
-        '#ajax' => isset($element['#ajax']) ? $element['#ajax'] : NULL,
-        '#weight' => $weight,
-        '#fieldset' => FALSE,
-      );
+      if ($multicolumn) {
+        if (!isset($element['multicolumn-' . $multicolumn_column])) {
+          $element['multicolumn-' . $multicolumn_column] = array(
+            '#type' => 'container',
+            '#attributes' => array(
+              'class' => array(
+                'multicolumn',
+                'multicolumn-row-' . $multicolumn_current,
+                'multicolumn-column-' . $multicolumn_column,
+                'inline-block',
+                'vertical-align-top',
+              ),
+              'style' => array(
+                'width: ' . $multicolumn_width . 'px;',
+                'min-width: ' . $multicolumn_width . 'px;',
+                'max-width: ' . $multicolumn_width . 'px;',
+              ),
+            ),
+            '#weight' => $weight,
+          );
+        }
 
-      if (!is_null($v)) {
-        $element[$key]['#value'] = $v;
-        $element[$key]['#default_value'] = $v;
+        $element['multicolumn-' . $multicolumn_column][$key] = array(
+          '#type' => 'checkbox',
+          '#title' => $choice,
+          '#return_value' => $key,
+          '#default_value' => $default_value,
+          '#attributes' => $element['#attributes'],
+          '#ajax' => isset($element['#ajax']) ? $element['#ajax'] : NULL,
+          '#fieldset' => FALSE,
+        );
+
+        if (!is_null($v)) {
+          $element['multicolumn-' . $multicolumn_column][$key]['#value'] = $v;
+          $element['multicolumn-' . $multicolumn_column][$key]['#default_value'] = $v;
+        }
+
+        $multicolumn_current++;
+        if ($multicolumn_current >= $multicolumn_items_per_column) {
+          if ($multicolumn_items_remaining > 0 && $multicolumn_items_remaining_unprocessed) {
+            $multicolumn_current++;
+            $multicolumn_items_remaining--;
+            $multicolumn_items_remaining_unprocessed = FALSE;
+          }
+          else {
+            $multicolumn_current = 0;
+            $multicolumn_column++;
+            $multicolumn_items_remaining_unprocessed = TRUE;
+          }
+        }
+      }
+      else {
+        $element += array($key => array());
+        $element[$key] += array(
+          '#type' => 'checkbox',
+          '#title' => $choice,
+          '#return_value' => $key,
+          '#default_value' => $default_value,
+          '#attributes' => $element['#attributes'],
+          '#ajax' => isset($element['#ajax']) ? $element['#ajax'] : NULL,
+          '#weight' => $weight,
+          '#fieldset' => FALSE,
+        );
+
+        if (!is_null($v)) {
+          $element[$key]['#value'] = $v;
+          $element[$key]['#default_value'] = $v;
+        }
       }
     }
   }
