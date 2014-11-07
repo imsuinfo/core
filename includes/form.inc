@@ -3412,6 +3412,7 @@ function form_process_checkboxes($element) {
     if (!isset($element['#default_value']) || $element['#default_value'] == 0) {
       $element['#default_value'] = array();
     }
+    $default_values = $element['#default_value'];
     $weight = 0;
 
     $multicolumn = FALSE;
@@ -3447,6 +3448,16 @@ function form_process_checkboxes($element) {
       // sub-elements.
       $weight += 0.001;
 
+      $v = NULL;
+      $default_value = NULL;
+      if (isset($value[$key])) {
+        $v = $key;
+      }
+
+      if (in_array($key, $default_values)) {
+        $default_value = $key;
+      }
+
       if ($multicolumn) {
         if (!isset($element['multicolumn-' . $multicolumn_column])) {
           $element['multicolumn-' . $multicolumn_column] = array(
@@ -3473,11 +3484,16 @@ function form_process_checkboxes($element) {
           '#type' => 'checkbox',
           '#title' => $choice,
           '#return_value' => $key,
-          '#default_value' => isset($value[$key]) ? $key : NULL,
+          '#default_value' => $default_value,
           '#attributes' => $element['#attributes'],
           '#ajax' => isset($element['#ajax']) ? $element['#ajax'] : NULL,
           '#fieldset' => FALSE,
         );
+
+        if (!is_null($v)) {
+          $element['multicolumn-' . $multicolumn_column][$key]['#value'] = $v;
+          $element['multicolumn-' . $multicolumn_column][$key]['#default_value'] = $v;
+        }
 
         $multicolumn_current++;
         if ($multicolumn_current >= $multicolumn_items_per_column) {
@@ -3499,12 +3515,17 @@ function form_process_checkboxes($element) {
           '#type' => 'checkbox',
           '#title' => $choice,
           '#return_value' => $key,
-          '#default_value' => isset($value[$key]) ? $key : NULL,
+          '#default_value' => $default_value,
           '#attributes' => $element['#attributes'],
           '#ajax' => isset($element['#ajax']) ? $element['#ajax'] : NULL,
           '#weight' => $weight,
           '#fieldset' => FALSE,
         );
+      }
+
+      if (!is_null($v)) {
+        $element[$key]['#value'] = $v;
+        $element[$key]['#default_value'] = $v;
       }
     }
   }
