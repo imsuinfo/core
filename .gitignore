@@ -15,6 +15,7 @@ sites/all/*/*/.gitignore
 sites/default/deprecated
 sites/default/gnupg
 *.swp
+favicon.ico
 
 # Ignore Mac Files
 ._*
