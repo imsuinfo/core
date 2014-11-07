@@ -3397,16 +3397,6 @@ function form_process_checkboxes($element) {
     $default_values = $element['#default_value'];
     $weight = 0;
 
-    $v = NULL;
-    $default_value = NULL;
-    if (isset($value[$key])) {
-      $v = $key;
-    }
-
-    if (in_array($key, $default_values)) {
-      $default_value = $key;
-    }
-
     $multicolumn = FALSE;
     $multicolumn_count = 0;
     $multicolumn_width = 0;
@@ -3439,6 +3429,16 @@ function form_process_checkboxes($element) {
       // defines custom option sub-elements, but does not define all option
       // sub-elements.
       $weight += 0.001;
+
+      $v = NULL;
+      $default_value = NULL;
+      if (isset($value[$key])) {
+        $v = $key;
+      }
+
+      if (in_array($key, $default_values)) {
+        $default_value = $key;
+      }
 
       if ($multicolumn) {
         if (!isset($element['multicolumn-' . $multicolumn_column])) {
