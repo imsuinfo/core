@@ -132,8 +132,6 @@ Drupal.verticalTab.prototype = {
    * Shows a vertical tab pane.
    */
   tabShow: function () {
-    // Display the list of tabs
-    this.item.parents('.vertical-tabs').show();
     // Display the tab.
     this.item.show();
     // Update .first marker for items. We need recurse from parent to retain the
@@ -165,17 +163,6 @@ Drupal.verticalTab.prototype = {
     var $firstTab = this.fieldset.siblings('.vertical-tabs-pane:not(.vertical-tab-hidden):first');
     if ($firstTab.length) {
       $firstTab.data('verticalTab').focus();
-    }
-    // If no items are visible, hide the table
-    var visibleItems = false;
-    this.item.siblings().each(function() {
-      if ($(this).is(':visible')) {
-        visibleItems = true;
-        return;
-      }
-    });
-    if (!visibleItems) {
-      this.item.parents('.vertical-tabs').hide();
     }
     return this;
   }

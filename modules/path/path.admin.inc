@@ -29,7 +29,7 @@ function path_admin_overview($keys = NULL) {
   $query = db_select('url_alias')->extend('PagerDefault')->extend('TableSort');
   if ($keys) {
     // Replace wildcards with PDO wildcards.
-    $query->condition('alias', '%' . preg_replace('!\*+!', '%', $keys) . '%', 'ILIKE');
+    $query->condition('alias', '%' . preg_replace('!\*+!', '%', $keys) . '%', 'LIKE');
   }
   $result = $query
     ->fields('url_alias')

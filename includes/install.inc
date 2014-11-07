@@ -420,7 +420,7 @@ abstract class DatabaseTasks {
       }
     }
     if (!empty($message)) {
-      $message = '<p>In order for Drupal to work, and to continue with the installation process, you must resolve all issues reported below. For more help with configuring your database server, see the <a href="http://drupal.org/getting-started/install">installation handbook</a>. If you are unsure what any of this means you should probably contact your hosting provider.</p>' . $message;
+      $message = 'Resolve all issues below to continue the installation. For help configuring your database server, see the <a href="http://drupal.org/getting-started/install">installation handbook</a>, or contact your hosting provider.' . $message;
       throw new DatabaseTaskException($message);
     }
   }
@@ -795,29 +795,19 @@ function drupal_uninstall_modules($module_list = array(), $uninstall_dependents 
     $module_list = array_keys($module_list);
   }
 
-  $transaction = db_transaction();
-  try {
-    foreach ($module_list as $module) {
-      // Uninstall the module.
-      module_load_install($module);
-      module_invoke($module, 'uninstall');
-      drupal_uninstall_schema($module);
+  foreach ($module_list as $module) {
+    // Uninstall the module.
+    module_load_install($module);
+    module_invoke($module, 'uninstall');
+    drupal_uninstall_schema($module);
 
-      watchdog('system', '%module module uninstalled.', array('%module' => $module), WATCHDOG_INFO);
-      drupal_set_installed_schema_version($module, SCHEMA_UNINSTALLED);
-    }
-
-    if (!empty($module_list)) {
-      // Let other modules react.
-      module_invoke_all('modules_uninstalled', $module_list);
-    }
-
-    unset($transaction);
+    watchdog('system', '%module module uninstalled.', array('%module' => $module), WATCHDOG_INFO);
+    drupal_set_installed_schema_version($module, SCHEMA_UNINSTALLED);
   }
-  catch (Exception $ex) {
-    $transaction->rollback();
-    watchdog_exception('system', $ex, "Failed to uninstall the modules: %modules, reason: %ex.", array('%modules' => print_r($module_list, TRUE), '%ex' => $ex->getMessage()), WATCHDOG_ERROR);
-    return FALSE;
+
+  if (!empty($module_list)) {
+    // Let other modules react.
+    module_invoke_all('modules_uninstalled', $module_list);
   }
 
   return TRUE;

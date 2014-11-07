@@ -2399,6 +2399,10 @@ function _system_rebuild_module_data() {
       continue;
     }
 
+    // Add the info file modification time, so it becomes available for
+    // contributed modules to use for ordering module lists.
+    $module->info['mtime'] = filemtime(dirname($module->uri) . '/' . $module->name . '.info');
+
     // Merge in defaults and save.
     $modules[$key]->info = $module->info + $defaults;
 
@@ -2536,6 +2540,10 @@ function _system_rebuild_theme_data() {
   foreach ($themes as $key => $theme) {
     $themes[$key]->filename = $theme->uri;
     $themes[$key]->info = drupal_parse_info_file($theme->uri) + $defaults;
+
+    // Add the info file modification time, so it becomes available for
+    // contributed modules to use for ordering theme lists.
+    $themes[$key]->info['mtime'] = filemtime($theme->uri);
 
     // Invoke hook_system_info_alter() to give installed modules a chance to
     // modify the data in the .info files if necessary.
@@ -2939,7 +2947,7 @@ function system_get_module_admin_tasks($module, $info) {
       ->fields('ml')
       // Weight should be taken from {menu_links}, not {menu_router}.
       ->fields('m', array_diff(drupal_schema_fields_sql('menu_router'), array('weight')))
-      ->condition('ml.link_path', 'admin/%', 'ILIKE')
+      ->condition('ml.link_path', 'admin/%', 'LIKE')
       ->condition('ml.hidden', 0, '>=')
       ->condition('ml.module', 'system')
       ->condition('m.number_parts', 1, '>')
@@ -3047,7 +3055,7 @@ function system_cron() {
     ->execute();
   db_delete('queue')
     ->condition('created', REQUEST_TIME - 864000, '<')
-    ->condition('name', 'drupal_batch:%', 'ILIKE')
+    ->condition('name', 'drupal_batch:%', 'LIKE')
     ->execute();
 
   // Reset expired items in the default queue implementation table. If that's
@@ -3386,7 +3394,7 @@ function system_timezone($abbreviation = '', $offset = -1, $is_daylight_saving_t
  * @ingroup themeable
  */
 function theme_system_powered_by() {
-  return '<span>' . t('Powered by <a href="@poweredby">Drupal</a>', array('@poweredby' => 'http://drupal.org')) . '</span>';
+  return '<span>' . t('Powered by <a href="@poweredby">Drupal</a>', array('@poweredby' => 'https://www.drupal.org')) . '</span>';
 }
 
 /**

@@ -390,7 +390,7 @@ function file_create_url($uri) {
     else {
       // If this is not a properly formatted stream, then it is a shipped file.
       // Therefore, return the urlencoded URI with the base URL prepended.
-      return $GLOBALS['base_path'] . drupal_encode_path($uri);
+      return $GLOBALS['base_url'] . '/' . drupal_encode_path($uri);
     }
   }
   elseif ($scheme == 'http' || $scheme == 'https') {
@@ -495,7 +495,7 @@ function file_create_htaccess($directory, $private = TRUE, $force_overwrite = FA
     drupal_chmod($htaccess_path, 0444);
   }
   else {
-    $variables = array('%directory' => $directory, '!htaccess' => '<br>' . nl2br(check_plain($htaccess_lines)));
+    $variables = array('%directory' => $directory, '!htaccess' => '<br />' . nl2br(check_plain($htaccess_lines)));
     watchdog('security', "Security warning: Couldn't write .htaccess file. Please create a .htaccess file in your %directory directory which contains the following lines: <code>!htaccess</code>", $variables, WATCHDOG_ERROR);
   }
 }
@@ -598,11 +598,7 @@ function file_load($fid) {
  */
 function file_save(stdClass $file) {
   $file->timestamp = REQUEST_TIME;
-  $file->filesize = 0;
-
-  if (file_exists($file->uri)) {
-    $file->filesize = filesize($file->uri);
-  }
+  $file->filesize = filesize($file->uri);
 
   // Load the stored entity, if any.
   if (!empty($file->fid) && !isset($file->original)) {
@@ -911,28 +907,20 @@ function file_unmanaged_copy($source, $destination = NULL, $replace = FILE_EXIST
     $destination = file_build_uri(drupal_basename($source));
   }
 
-  $scheme = file_uri_scheme($destination);
 
-  $wrapper = FALSE;
-  if (!empty($scheme)) {
-    $wrapper = file_stream_wrapper_get_class($scheme);
+  // Prepare the destination directory.
+  if (file_prepare_directory($destination)) {
+    // The destination is already a directory, so append the source basename.
+    $destination = file_stream_wrapper_uri_normalize($destination . '/' . drupal_basename($source));
   }
-
-  if (!$wrapper || !property_exists($wrapper, 'directoryless')) {
-    // Prepare the destination directory.
-    if (file_prepare_directory($destination)) {
-      // The destination is already a directory, so append the source basename.
-      $destination = file_stream_wrapper_uri_normalize($destination . '/' . drupal_basename($source));
-    }
-    else {
-      // Perhaps $destination is a dir/file?
-      $dirname = drupal_dirname($destination);
-      if (!file_prepare_directory($dirname)) {
-        // The destination is not valid.
-        watchdog('file', 'File %file could not be copied, because the destination directory %destination is not configured correctly.', array('%file' => $original_source, '%destination' => $dirname));
-        drupal_set_message(t('The specified file %file could not be copied, because the destination directory is not properly configured. This may be caused by a problem with file or directory permissions. More information is available in the system log.', array('%file' => $original_source)), 'error');
-        return FALSE;
-      }
+  else {
+    // Perhaps $destination is a dir/file?
+    $dirname = drupal_dirname($destination);
+    if (!file_prepare_directory($dirname)) {
+      // The destination is not valid.
+      watchdog('file', 'File %file could not be copied, because the destination directory %destination is not configured correctly.', array('%file' => $original_source, '%destination' => $dirname));
+      drupal_set_message(t('The specified file %file could not be copied, because the destination directory is not properly configured. This may be caused by a problem with file or directory permissions. More information is available in the system log.', array('%file' => $original_source)), 'error');
+      return FALSE;
     }
   }
 
@@ -995,16 +983,6 @@ function file_build_uri($path) {
  *   and FILE_EXISTS_ERROR is specified.
  */
 function file_destination($destination, $replace) {
-  $scheme = file_uri_scheme($destination);
-
-  if ($scheme) {
-    $wrappers = (array) file_get_stream_wrappers(STREAM_WRAPPERS_REMOTE);
-
-    if (array_key_exists($scheme, $wrappers)) {
-      return $destination;
-    }
-  }
-
   if (file_exists($destination)) {
     switch ($replace) {
       case FILE_EXISTS_REPLACE:
@@ -1174,7 +1152,7 @@ function file_munge_filename($filename, $extensions, $alerts = TRUE) {
     // Remove any null bytes. See http://php.net/manual/security.filesystem.nullbytes.php
     $filename = str_replace(chr(0), '', $filename);
 
-    $whitelist = array_unique(explode(' ', trim($extensions)));
+    $whitelist = array_unique(explode(' ', strtolower(trim($extensions))));
 
     // Split the filename up by periods. The first part becomes the basename
     // the last part the final extension.
@@ -1187,7 +1165,7 @@ function file_munge_filename($filename, $extensions, $alerts = TRUE) {
     // of allowed extensions.
     foreach ($filename_parts as $filename_part) {
       $new_filename .= '.' . $filename_part;
-      if (!in_array($filename_part, $whitelist) && preg_match("/^[a-zA-Z]{2,5}\d?$/", $filename_part)) {
+      if (!in_array(strtolower($filename_part), $whitelist) && preg_match("/^[a-zA-Z]{2,5}\d?$/", $filename_part)) {
         $new_filename .= '_';
       }
     }
@@ -1751,8 +1729,6 @@ function file_validate_extensions(stdClass $file, $extensions) {
 /**
  * Checks that the file's size is below certain limits.
  *
- * This check is not enforced for the user #1.
- *
  * @param $file
  *   A Drupal file object.
  * @param $file_limit
@@ -1770,20 +1746,17 @@ function file_validate_extensions(stdClass $file, $extensions) {
  */
 function file_validate_size(stdClass $file, $file_limit = 0, $user_limit = 0) {
   global $user;
-
   $errors = array();
 
-  // Bypass validation for uid  = 1.
-  if ($user->uid != 1) {
-    if ($file_limit && $file->filesize > $file_limit) {
-      $errors[] = t('The file is %filesize exceeding the maximum file size of %maxsize.', array('%filesize' => format_size($file->filesize), '%maxsize' => format_size($file_limit)));
-    }
-
-    // Save a query by only calling file_space_used() when a limit is provided.
-    if ($user_limit && (file_space_used($user->uid) + $file->filesize) > $user_limit) {
-      $errors[] = t('The file is %filesize which would exceed your disk quota of %quota.', array('%filesize' => format_size($file->filesize), '%quota' => format_size($user_limit)));
-    }
+  if ($file_limit && $file->filesize > $file_limit) {
+    $errors[] = t('The file is %filesize exceeding the maximum file size of %maxsize.', array('%filesize' => format_size($file->filesize), '%maxsize' => format_size($file_limit)));
   }
+
+  // Save a query by only calling file_space_used() when a limit is provided.
+  if ($user_limit && (file_space_used($user->uid) + $file->filesize) > $user_limit) {
+    $errors[] = t('The file is %filesize which would exceed your disk quota of %quota.', array('%filesize' => format_size($file->filesize), '%quota' => format_size($user_limit)));
+  }
+
   return $errors;
 }
 
@@ -1987,10 +1960,10 @@ function file_transfer($uri, $headers) {
   foreach ($headers as $name => $value) {
     drupal_add_http_header($name, $value);
   }
+  drupal_send_headers();
   $scheme = file_uri_scheme($uri);
   // Transfer file in 1024 byte chunks to save memory usage.
   if ($scheme && file_stream_wrapper_valid_scheme($scheme) && $fd = fopen($uri, 'rb')) {
-    drupal_send_headers();
     while (!feof($fd)) {
       print fread($fd, 1024);
     }

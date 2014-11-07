@@ -640,13 +640,13 @@ function system_theme_settings_validate($form, &$form_state) {
 
   // If the user provided a path for a logo or favicon file, make sure a file
   // exists at that path.
-  if ($form_state['values']['logo_path']) {
+  if (!empty($form_state['values']['logo_path'])) {
     $path = _system_theme_settings_validate_path($form_state['values']['logo_path']);
     if (!$path) {
       form_set_error('logo_path', t('The custom logo path is invalid.'));
     }
   }
-  if ($form_state['values']['favicon_path']) {
+  if (!empty($form_state['values']['favicon_path'])) {
     $path = _system_theme_settings_validate_path($form_state['values']['favicon_path']);
     if (!$path) {
       form_set_error('favicon_path', t('The custom favicon path is invalid.'));
@@ -703,14 +703,16 @@ function system_theme_settings_submit($form, &$form_state) {
 
   // If the user uploaded a new logo or favicon, save it to a permanent location
   // and use it in place of the default theme-provided file.
-  if ($file = $values['logo_upload']) {
+  if (!empty($values['logo_upload'])) {
+    $file = $values['logo_upload'];
     unset($values['logo_upload']);
     $filename = file_unmanaged_copy($file->uri);
     $values['default_logo'] = 0;
     $values['logo_path'] = $filename;
     $values['toggle_logo'] = 1;
   }
-  if ($file = $values['favicon_upload']) {
+  if (!empty($values['favicon_upload'])) {
+    $file = $values['favicon_upload'];
     unset($values['favicon_upload']);
     $filename = file_unmanaged_copy($file->uri);
     $values['default_favicon'] = 0;
@@ -1371,14 +1373,8 @@ function system_modules_uninstall_submit($form, &$form_state) {
   if (!empty($form['#confirmed'])) {
     // Call the uninstall routine for each selected module.
     $modules = array_keys($form_state['values']['uninstall']);
-    $result = drupal_uninstall_modules($modules);
-
-    if ($result === TRUE) {
-      drupal_set_message(t('The selected modules have been uninstalled.'));
-    }
-    else {
-      drupal_set_message(t('The selected modules have failed to uninstall.'), 'error');
-    }
+    drupal_uninstall_modules($modules);
+    drupal_set_message(t('The selected modules have been uninstalled.'));
 
     $form_state['redirect'] = 'admin/modules/uninstall';
   }
@@ -1677,18 +1673,7 @@ function system_logging_settings() {
       ERROR_REPORTING_DISPLAY_SOME => t('Errors and warnings'),
       ERROR_REPORTING_DISPLAY_ALL => t('All messages'),
     ),
-  );
-
-  $form['error_level_anonymous'] = array(
-    '#type' => 'radios',
-    '#title' => t('Error messages to display (for anonymous users)'),
-    '#default_value' => variable_get('error_level_anonymous', ERROR_REPORTING_DISPLAY_ALL),
-    '#options' => array(
-      ERROR_REPORTING_HIDE => t('None'),
-      ERROR_REPORTING_DISPLAY_SOME => t('Errors and warnings'),
-      ERROR_REPORTING_DISPLAY_ALL => t('All messages'),
-    ),
-    '#description' => t('It is recommended that sites running on production environments do not display any errors for anonymous users.'),
+    '#description' => t('It is recommended that sites running on production environments do not display any errors.'),
   );
 
   return system_settings_form($form);

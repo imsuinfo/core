@@ -137,7 +137,8 @@ function statistics_top_visitors() {
     ->groupBy('u.name')
     ->groupBy('bl.iid')
     ->limit(30)
-    ->orderByHeader($header);
+    ->orderByHeader($header)
+    ->orderBy('a.hostname');
 
   $uniques_query = db_select('accesslog')->distinct();
   $uniques_query->fields('accesslog', array('uid', 'hostname'));
@@ -188,7 +189,7 @@ function statistics_top_referrers() {
   $query->addExpression('MAX(timestamp)', 'last');
   $query
     ->fields('a', array('url'))
-    ->condition('url', '%' . $_SERVER['HTTP_HOST'] . '%', 'NOT ILIKE')
+    ->condition('url', '%' . $_SERVER['HTTP_HOST'] . '%', 'NOT LIKE')
     ->condition('url', '', '<>')
     ->groupBy('url')
     ->limit(30)
@@ -197,7 +198,7 @@ function statistics_top_referrers() {
   $count_query = db_select('accesslog', 'a', array('target' => 'slave'));
   $count_query->addExpression('COUNT(DISTINCT url)');
   $count_query
-    ->condition('url', '%' . $_SERVER['HTTP_HOST'] . '%', 'NOT ILIKE')
+    ->condition('url', '%' . $_SERVER['HTTP_HOST'] . '%', 'NOT LIKE')
     ->condition('url', '', '<>');
   $query->setCountQuery($count_query);
 

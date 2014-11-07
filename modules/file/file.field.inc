@@ -92,6 +92,7 @@ function file_field_instance_settings_form($field, $instance) {
     '#description' => t('Separate extensions with a space or comma and do not include the leading dot.'),
     '#element_validate' => array('_file_generic_settings_extensions'),
     '#weight' => 1,
+    '#maxlength' => 256,
     // By making this field required, we prevent a potential security issue
     // that would allow files of any type to be uploaded.
     '#required' => TRUE,
@@ -524,17 +525,6 @@ function file_field_widget_form(&$form, &$form_state, $field, $instance, $langco
     // a hook_form_alter().
     $elements['#file_upload_title'] = t('Add a new file');
     $elements['#file_upload_description'] = theme('file_upload_help', array('description' => '', 'upload_validators' => $elements[0]['#upload_validators']));
-  }
-
-  if (!empty($instance['alternate_label']['value'])) {
-    if (empty($instance['alternate_label']['format'])) {
-      $element['#title'] = check_plain($instance['alternate_label']['value']);
-      $element['value']['#title'] = $element['#title'];
-    }
-    else {
-      $element['#title'] = check_markup($instance['alternate_label']['value'], $instance['alternate_label']['format']);
-      $element['value']['#title'] = $element['#title'];
-    }
   }
 
   return $elements;
@@ -973,7 +963,7 @@ function theme_file_upload_help($variables) {
     }
   }
 
-  return implode('<br>', $descriptions);
+  return implode('<br />', $descriptions);
 }
 
 /**

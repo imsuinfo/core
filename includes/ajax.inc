@@ -276,7 +276,7 @@ function ajax_render($commands = array()) {
 
   $extra_commands = array();
   if (!empty($styles)) {
-    $extra_commands[] = ajax_command_prepend('head', $styles);
+    $extra_commands[] = ajax_command_add_css($styles);
   }
   if (!empty($scripts_header)) {
     $extra_commands[] = ajax_command_prepend('head', $scripts_header);
@@ -292,7 +292,7 @@ function ajax_render($commands = array()) {
   $scripts = drupal_add_js();
   if (!empty($scripts['settings'])) {
     $settings = $scripts['settings'];
-    array_unshift($commands, ajax_command_settings(call_user_func_array('array_merge_recursive', $settings['data']), TRUE));
+    array_unshift($commands, ajax_command_settings(drupal_array_merge_deep_array($settings['data']), TRUE));
   }
 
   // Allow modules to alter any Ajax response.
@@ -479,13 +479,11 @@ function ajax_deliver($page_callback_result) {
       // non-browser user agents.
       // @see http://www.ietf.org/rfc/rfc4627.txt?number=4627
       drupal_add_http_header('Content-Type', 'application/json; charset=utf-8');
-      drupal_send_headers();
     }
     else {
       // Browser IFRAMEs expect HTML. With most other content types, Internet
       // Explorer presents the user with a download prompt.
       drupal_add_http_header('Content-Type', 'text/html; charset=utf-8');
-      drupal_send_headers();
     }
   }
 
@@ -1257,5 +1255,28 @@ function ajax_command_update_build_id($form) {
     'command' => 'updateBuildId',
     'old' => $form['#build_id_old'],
     'new' => $form['#build_id'],
+  );
+}
+
+/**
+ * Creates a Drupal Ajax 'add_css' command.
+ *
+ * This method will add css via ajax in a cross-browser compatible way.
+ *
+ * This command is implemented by Drupal.ajax.prototype.commands.add_css()
+ * defined in misc/ajax.js.
+ *
+ * @param $styles
+ *   A string that contains the styles to be added.
+ *
+ * @return
+ *   An array suitable for use with the ajax_render() function.
+ *
+ * @see misc/ajax.js
+ */
+function ajax_command_add_css($styles) {
+  return array(
+    'command' => 'add_css',
+    'data' => $styles,
   );
 }
