@@ -15,19 +15,19 @@
  * Root directory of Drupal installation.
  */
 define('DRUPAL_ROOT', getcwd());
-require_once DRUPAL_ROOT . '/includes/bootstrap.inc';
+require_once 'includes/bootstrap.inc';
 
 function _drupal_root_db_prepare_() {
   drupal_bootstrap(DRUPAL_BOOTSTRAP_CONFIGURATION);
 
-  require_once DRUPAL_ROOT . '/includes/database/database.inc';
-  require_once DRUPAL_ROOT . '/includes/stream_wrappers.inc';
+  require_once 'includes/database/database.inc';
+  require_once 'includes/stream_wrappers.inc';
 
-  if (file_exists(DRUPAL_ROOT . '/sites/all/modules/mcneese/mcneese_file_db/mcneese_file_db.module')) {
-    require_once DRUPAL_ROOT . '/sites/all/modules/mcneese/mcneese_file_db/mcneese_file_db.module';
-    require_once DRUPAL_ROOT . '/sites/all/modules/mcneese/mcneese_file_db/classes/mcneese_file_db_stream_wrapper.inc';
-    require_once DRUPAL_ROOT . '/sites/all/modules/mcneese/mcneese_file_db/classes/mcneese_file_db_unrestricted_stream_wrapper.inc';
-    require_once DRUPAL_ROOT . '/sites/all/modules/mcneese/mcneese_file_db/classes/mcneese_file_db_restricted_stream_wrapper.inc';
+  if (file_exists('sites/all/modules/mcneese/mcneese_file_db/mcneese_file_db.module')) {
+    require_once 'sites/all/modules/mcneese/mcneese_file_db/mcneese_file_db.module';
+    require_once 'sites/all/modules/mcneese/mcneese_file_db/classes/mcneese_file_db_stream_wrapper.inc';
+    require_once 'sites/all/modules/mcneese/mcneese_file_db/classes/mcneese_file_db_unrestricted_stream_wrapper.inc';
+    require_once 'sites/all/modules/mcneese/mcneese_file_db/classes/mcneese_file_db_restricted_stream_wrapper.inc';
   }
 }
 
