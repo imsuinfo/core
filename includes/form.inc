@@ -902,19 +902,19 @@ function drupal_process_form($form_id, &$form, &$form_state) {
       // Execute form submit handlers.
       form_execute_handlers('submit', $form, $form_state);
 
+      // We'll clear out the cached copies of the form and its stored data
+      // here, as we've finished with them. The in-memory copies are still
+      // here, though.
+      if (!variable_get('cache', 0) && !empty($form_state['values']['form_build_id'])) {
+        cache_clear_all('form_' . $form_state['values']['form_build_id'], 'cache_form');
+        cache_clear_all('form_state_' . $form_state['values']['form_build_id'], 'cache_form');
+      }
+
       // If batches were set in the submit handlers, we process them now,
       // possibly ending execution. We make sure we do not react to the batch
       // that is already being processed (if a batch operation performs a
       // drupal_form_submit).
       if ($batch =& batch_get() && !isset($batch['current_set'])) {
-        // We'll clear out the cached copies of the form and its stored data
-        // here, as we've finished with them. The in-memory copies are still
-        // here, though.
-        if (!variable_get('cache', 0) && !empty($form_state['values']['form_build_id'])) {
-          cache_clear_all('form_' . $form_state['values']['form_build_id'], 'cache_form');
-          cache_clear_all('form_state_' . $form_state['values']['form_build_id'], 'cache_form');
-        }
-
         // Store $form_state information in the batch definition.
         // We need the full $form_state when either:
         // - Some submit handlers were saved to be called during batch
@@ -930,43 +930,12 @@ function drupal_process_form($form_id, &$form, &$form_state) {
         }
 
         $batch['progressive'] = !$form_state['programmed'];
-
-        if (function_exists('background_batch_menu_alter')) {
-          $foreground = variable_get('batch_foreground', array());
-          $background = variable_get('batch_background', array());
-
-          if (in_array($form_id, $foreground)) {
-            batch_process(NULL, 'batch_foreground');
-          }
-          elseif (in_array($form_id, $background)) {
-            batch_process(NULL, 'batch_background');
-          }
-          else {
-            batch_process();
-          }
-        }
-        else {
-          batch_process();
-        }
+        batch_process();
 
         // Execution continues only for programmatic forms.
         // For 'regular' forms, we get redirected to the batch processing
         // page. Form redirection will be handled in _batch_finished(),
         // after the batch is processed.
-      }
-      else {
-        // for non-batch forms, allow returning to the form if an error occurs
-        // during the submit process if the submit handler unset submitted and
-        // set rebuild to TRUE.
-        if ($form_state['submitted'] && !form_get_errors() && !$form_state['rebuild']) {
-          // We'll clear out the cached copies of the form and its stored data
-          // here, as we've finished with them. The in-memory copies are still
-          // here, though.
-          if (!variable_get('cache', 0) && !empty($form_state['values']['form_build_id'])) {
-            cache_clear_all('form_' . $form_state['values']['form_build_id'], 'cache_form');
-            cache_clear_all('form_state_' . $form_state['values']['form_build_id'], 'cache_form');
-          }
-        }
       }
 
       // Set a flag to indicate the the form has been processed and executed.
@@ -1110,20 +1079,6 @@ function drupal_prepare_form($form_id, &$form, &$form_state) {
   $form += element_info('form');
   $form += array('#tree' => FALSE, '#parents' => array());
 
-  if (!isset($form['#pre_validate'])) {
-    // Ensure that modules can rely on #validate being set.
-    $form['#pre_validate'] = array();
-    // Check for a handler specific to $form_id.
-    if (function_exists($form_id . '_pre_validate')) {
-      $form['#pre_validate'][] = $form_id . '_pre_validate';
-    }
-    // Otherwise check whether this is a shared form and whether there is a
-    // handler for the shared $form_id.
-    elseif (isset($form_state['build_info']['base_form_id']) && function_exists($form_state['build_info']['base_form_id'] . '_pre_validate')) {
-      $form['#pre_validate'][] = $form_state['build_info']['base_form_id'] . '_pre_validate';
-    }
-  }
-
   if (!isset($form['#validate'])) {
     // Ensure that modules can rely on #validate being set.
     $form['#validate'] = array();
@@ -1223,12 +1178,6 @@ function drupal_validate_form($form_id, &$form, &$form_state) {
       $validated_forms[$form_id] = TRUE;
       return;
     }
-  }
-
-  // provide a way to preprocess the validation code once results are in.
-  // this allows for conditionally required fields.
-  if (isset($form_id)) {
-    form_execute_handlers('pre_validate', $form, $form_state);
   }
 
   _form_validate($form, $form_state, $form_id);
@@ -2883,53 +2832,24 @@ function form_get_options($element, $key) {
  */
 function theme_fieldset($variables) {
   $element = $variables['element'];
-
-  if (empty($element['#children'])) return '';
-
-  $as_div = FALSE;
-  if (isset($element['#as_div']) && $element['#as_div']) {
-    $as_div = TRUE;
-  }
-
   element_set_attributes($element, array('id'));
   _form_set_class($element, array('form-wrapper'));
 
-  $legend_attributes = array('class' => array());
-  if (isset($element['#legend_attributes']) && is_array($element['#legend_attributes'])) {
-    $legend_attributes = $element['#legend_attributes'];
+  $output = '<fieldset' . drupal_attributes($element['#attributes']) . '>';
+  if (!empty($element['#title'])) {
+    // Always wrap fieldset legends in a SPAN for CSS positioning.
+    $output .= '<legend><span class="fieldset-legend">' . $element['#title'] . '</span></legend>';
   }
-
-  if ($as_div) {
-    $output = '<div' . drupal_attributes($element['#attributes']) . '>';
-    $output .= '<div class="fieldset-wrapper">';
-    if (!empty($element['#description'])) {
-      $output .= '<div class="fieldset-description">' . $element['#description'] . '</div>';
-    }
-    $output .= $element['#children'];
-    if (isset($element['#value'])) {
-      $output .= $element['#value'];
-    }
-    $output .= '</div>';
-    $output .= "</div>\n";
+  $output .= '<div class="fieldset-wrapper">';
+  if (!empty($element['#description'])) {
+    $output .= '<div class="fieldset-description">' . $element['#description'] . '</div>';
   }
-  else {
-    $output = '<fieldset' . drupal_attributes($element['#attributes']) . '>';
-    if (!empty($element['#title'])) {
-      // Always wrap fieldset legends in a SPAN for CSS positioning.
-      $output .= '<legend' . drupal_attributes($legend_attributes) . '><span class="fieldset-legend">' . $element['#title'] . '</span></legend>';
-    }
-    $output .= '<div class="fieldset-wrapper">';
-    if (!empty($element['#description'])) {
-      $output .= '<div class="fieldset-description">' . $element['#description'] . '</div>';
-    }
-    $output .= $element['#children'];
-    if (isset($element['#value'])) {
-      $output .= $element['#value'];
-    }
-    $output .= '</div>';
-    $output .= "</fieldset>\n";
+  $output .= $element['#children'];
+  if (isset($element['#value'])) {
+    $output .= $element['#value'];
   }
-
+  $output .= '</div>';
+  $output .= "</fieldset>\n";
   return $output;
 }
 
@@ -2957,7 +2877,7 @@ function theme_radio($variables) {
   }
   _form_set_class($element, array('form-radio'));
 
-  return '<input' . drupal_attributes($element['#attributes']) . '>';
+  return '<input' . drupal_attributes($element['#attributes']) . ' />';
 }
 
 /**
@@ -3113,18 +3033,10 @@ function form_process_date($element) {
       '#type' => 'select',
       '#title' => $title,
       '#title_display' => 'invisible',
-      '#value' => isset($element['#value'][$type]) ? $element['#value'][$type] : NULL,
+      '#value' => $element['#value'][$type],
       '#attributes' => $element['#attributes'],
       '#options' => $options,
     );
-
-    if (isset($element['#empty_value'][$type])) {
-      $element[$type]['#empty_value'] = $element['#empty_value'][$type];
-    }
-
-    if (isset($element['#empty_option'][$type])) {
-      $element[$type]['#empty_option'] = $element['#empty_option'][$type];
-    }
   }
 
   return $element;
@@ -3177,26 +3089,6 @@ function weight_value(&$form) {
  */
 function form_process_radios($element) {
   if (count($element['#options']) > 0) {
-    $multicolumn = FALSE;
-    $multicolumn_count = 0;
-    $multicolumn_width = 0;
-    if (!empty($element['#multicolumn_count']) && is_numeric($element['#multicolumn_count'])) {
-      $multicolumn_count = intval($element['#multicolumn_count']);
-    }
-    if (!empty($element['#multicolumn_width']) && is_numeric($element['#multicolumn_width'])) {
-      $multicolumn_width = intval($element['#multicolumn_width']);
-    }
-    if ($multicolumn_count > 0 && $multicolumn_width > 0) {
-      $multicolumn = TRUE;
-      $multicolumn_current = 0;
-      $multicolumn_column = 0;
-      $multicolumn_wrapper = NULL;
-      $multicolumn_items = count($element['#options']);
-      $multicolumn_items_per_column = floor($multicolumn_items / $multicolumn_count);
-      $multicolumn_items_remaining = $multicolumn_items % $multicolumn_count;
-      $multicolumn_items_remaining_unprocessed = TRUE;
-    }
-
     $weight = 0;
     foreach ($element['#options'] as $key => $choice) {
       // Maintain order of options as defined in #options, in case the element
@@ -3204,82 +3096,25 @@ function form_process_radios($element) {
       // sub-elements.
       $weight += 0.001;
 
-      if ($multicolumn) {
-        $parents_for_id = array_merge($element['#parents'], array($key));
-        if (!isset($element['multicolumn-' . $multicolumn_column])) {
-          $element['multicolumn-' . $multicolumn_column] = array(
-            '#type' => 'container',
-            '#attributes' => array(
-              'class' => array(
-                'multicolumn',
-                'multicolumn-row-' . $multicolumn_current,
-                'multicolumn-column-' . $multicolumn_column,
-                'inline-block',
-                'vertical-align-top',
-              ),
-              'style' => array(
-                'width: ' . $multicolumn_width . 'px;',
-                'min-width: ' . $multicolumn_width . 'px;',
-                'max-width: ' . $multicolumn_width . 'px;',
-              ),
-            ),
-            '#weight' => $weight,
-          );
-        }
-
-        $element['multicolumn-' . $multicolumn_column][$key] = array(
-          '#type' => 'radio',
-          '#title' => $choice,
-          // The key is sanitized in drupal_attributes() during output from the
-          // theme function.
-          '#return_value' => $key,
-          // Use default or FALSE. A value of FALSE means that the radio button is
-          // not 'checked'.
-          '#default_value' => isset($element['#default_value']) ? $element['#default_value'] : FALSE,
-          '#attributes' => $element['#attributes'],
-          '#parents' => $element['#parents'],
-          '#id' => drupal_html_id('edit-' . implode('-', $parents_for_id)),
-          '#ajax' => isset($element['#ajax']) ? $element['#ajax'] : NULL,
-          '#weight' => $weight,
-          '#fieldset' => FALSE,
-        );
-
-        $multicolumn_current++;
-        if ($multicolumn_current >= $multicolumn_items_per_column) {
-          if ($multicolumn_items_remaining > 0 && $multicolumn_items_remaining_unprocessed) {
-            $multicolumn_current++;
-            $multicolumn_items_remaining--;
-            $multicolumn_items_remaining_unprocessed = FALSE;
-          }
-          else {
-            $multicolumn_current = 0;
-            $multicolumn_column++;
-            $multicolumn_items_remaining_unprocessed = TRUE;
-          }
-        }
-      }
-      else {
-        $element += array($key => array());
-        // Generate the parents as the autogenerator does, so we will have a
-        // unique id for each radio button.
-        $parents_for_id = array_merge($element['#parents'], array($key));
-        $element[$key] += array(
-          '#type' => 'radio',
-          '#title' => $choice,
-          // The key is sanitized in drupal_attributes() during output from the
-          // theme function.
-          '#return_value' => $key,
-          // Use default or FALSE. A value of FALSE means that the radio button is
-          // not 'checked'.
-          '#default_value' => isset($element['#default_value']) ? $element['#default_value'] : FALSE,
-          '#attributes' => $element['#attributes'],
-          '#parents' => $element['#parents'],
-          '#id' => drupal_html_id('edit-' . implode('-', $parents_for_id)),
-          '#ajax' => isset($element['#ajax']) ? $element['#ajax'] : NULL,
-          '#weight' => $weight,
-          '#fieldset' => FALSE,
-        );
-      }
+      $element += array($key => array());
+      // Generate the parents as the autogenerator does, so we will have a
+      // unique id for each radio button.
+      $parents_for_id = array_merge($element['#parents'], array($key));
+      $element[$key] += array(
+        '#type' => 'radio',
+        '#title' => $choice,
+        // The key is sanitized in drupal_attributes() during output from the
+        // theme function.
+        '#return_value' => $key,
+        // Use default or FALSE. A value of FALSE means that the radio button is
+        // not 'checked'.
+        '#default_value' => isset($element['#default_value']) ? $element['#default_value'] : FALSE,
+        '#attributes' => $element['#attributes'],
+        '#parents' => $element['#parents'],
+        '#id' => drupal_html_id('edit-' . implode('-', $parents_for_id)),
+        '#ajax' => isset($element['#ajax']) ? $element['#ajax'] : NULL,
+        '#weight' => $weight,
+      );
     }
   }
   return $element;
@@ -3306,7 +3141,7 @@ function theme_checkbox($variables) {
   }
   _form_set_class($element, array('form-checkbox'));
 
-  return '<input' . drupal_attributes($element['#attributes']) . '>';
+  return '<input' . drupal_attributes($element['#attributes']) . ' />';
 }
 
 /**
@@ -3394,29 +3229,7 @@ function form_process_checkboxes($element) {
     if (!isset($element['#default_value']) || $element['#default_value'] == 0) {
       $element['#default_value'] = array();
     }
-    $default_values = $element['#default_value'];
     $weight = 0;
-
-    $multicolumn = FALSE;
-    $multicolumn_count = 0;
-    $multicolumn_width = 0;
-    if (!empty($element['#multicolumn_count']) && is_numeric($element['#multicolumn_count'])) {
-      $multicolumn_count = intval($element['#multicolumn_count']);
-    }
-    if (!empty($element['#multicolumn_width']) && is_numeric($element['#multicolumn_width'])) {
-      $multicolumn_width = intval($element['#multicolumn_width']);
-    }
-    if ($multicolumn_count > 0 && $multicolumn_width > 0) {
-      $multicolumn = TRUE;
-      $multicolumn_current = 0;
-      $multicolumn_column = 0;
-      $multicolumn_wrapper = NULL;
-      $multicolumn_items = count($element['#options']);
-      $multicolumn_items_per_column = floor($multicolumn_items / $multicolumn_count);
-      $multicolumn_items_remaining = $multicolumn_items % $multicolumn_count;
-      $multicolumn_items_remaining_unprocessed = TRUE;
-    }
-
     foreach ($element['#options'] as $key => $choice) {
       // Integer 0 is not a valid #return_value, so use '0' instead.
       // @see form_type_checkbox_value().
@@ -3430,85 +3243,16 @@ function form_process_checkboxes($element) {
       // sub-elements.
       $weight += 0.001;
 
-      $v = NULL;
-      $default_value = NULL;
-      if (isset($value[$key])) {
-        $v = $key;
-      }
-
-      if (in_array($key, $default_values)) {
-        $default_value = $key;
-      }
-
-      if ($multicolumn) {
-        if (!isset($element['multicolumn-' . $multicolumn_column])) {
-          $element['multicolumn-' . $multicolumn_column] = array(
-            '#type' => 'container',
-            '#attributes' => array(
-              'class' => array(
-                'multicolumn',
-                'multicolumn-row-' . $multicolumn_current,
-                'multicolumn-column-' . $multicolumn_column,
-                'inline-block',
-                'vertical-align-top',
-              ),
-              'style' => array(
-                'width: ' . $multicolumn_width . 'px;',
-                'min-width: ' . $multicolumn_width . 'px;',
-                'max-width: ' . $multicolumn_width . 'px;',
-              ),
-            ),
-            '#weight' => $weight,
-          );
-        }
-
-        $element['multicolumn-' . $multicolumn_column][$key] = array(
-          '#type' => 'checkbox',
-          '#title' => $choice,
-          '#return_value' => $key,
-          '#default_value' => $default_value,
-          '#attributes' => $element['#attributes'],
-          '#ajax' => isset($element['#ajax']) ? $element['#ajax'] : NULL,
-          '#fieldset' => FALSE,
-        );
-
-        if (!is_null($v)) {
-          $element['multicolumn-' . $multicolumn_column][$key]['#value'] = $v;
-          $element['multicolumn-' . $multicolumn_column][$key]['#default_value'] = $v;
-        }
-
-        $multicolumn_current++;
-        if ($multicolumn_current >= $multicolumn_items_per_column) {
-          if ($multicolumn_items_remaining > 0 && $multicolumn_items_remaining_unprocessed) {
-            $multicolumn_current++;
-            $multicolumn_items_remaining--;
-            $multicolumn_items_remaining_unprocessed = FALSE;
-          }
-          else {
-            $multicolumn_current = 0;
-            $multicolumn_column++;
-            $multicolumn_items_remaining_unprocessed = TRUE;
-          }
-        }
-      }
-      else {
-        $element += array($key => array());
-        $element[$key] += array(
-          '#type' => 'checkbox',
-          '#title' => $choice,
-          '#return_value' => $key,
-          '#default_value' => $default_value,
-          '#attributes' => $element['#attributes'],
-          '#ajax' => isset($element['#ajax']) ? $element['#ajax'] : NULL,
-          '#weight' => $weight,
-          '#fieldset' => FALSE,
-        );
-      }
-
-      if (!is_null($v)) {
-        $element[$key]['#value'] = $v;
-        $element[$key]['#default_value'] = $v;
-      }
+      $element += array($key => array());
+      $element[$key] += array(
+        '#type' => 'checkbox',
+        '#title' => $choice,
+        '#return_value' => $key,
+        '#default_value' => isset($value[$key]) ? $key : NULL,
+        '#attributes' => $element['#attributes'],
+        '#ajax' => isset($element['#ajax']) ? $element['#ajax'] : NULL,
+        '#weight' => $weight,
+      );
     }
   }
   return $element;
@@ -4040,9 +3784,6 @@ function form_process_vertical_tabs($element, &$form_state) {
  */
 function theme_vertical_tabs($variables) {
   $element = $variables['element'];
-
-  if (empty($element['#children'])) return '';
-
   // Add required JavaScript and Stylesheet.
   drupal_add_library('system', 'drupal.vertical-tabs');
 
@@ -4085,18 +3826,7 @@ function theme_button($variables) {
     $element['#attributes']['class'][] = 'form-button-disabled';
   }
 
-  $value = '';
-  if (!empty($element['#default_value'])) {
-    $value = '-' . $element['#default_value'];
-  }
-
-  if (!empty($element['#value'])) {
-    $value = '-' . $element['#value'];
-  }
-
-  $element['#attributes']['class'][] = strtolower($element['#button_type'] . $value);
-
-  return '<input' . drupal_attributes($element['#attributes']) . '>';
+  return '<input' . drupal_attributes($element['#attributes']) . ' />';
 }
 
 /**
@@ -4125,9 +3855,7 @@ function theme_image_button($variables) {
     $element['#attributes']['class'][] = 'form-button-disabled';
   }
 
-  $element['#attributes']['class'][] = strtolower($element['#button_type'] . '-' . $element['#value']);
-
-  return '<input' . drupal_attributes($element['#attributes']) . '>';
+  return '<input' . drupal_attributes($element['#attributes']) . ' />';
 }
 
 /**
@@ -4144,7 +3872,7 @@ function theme_hidden($variables) {
   $element = $variables['element'];
   $element['#attributes']['type'] = 'hidden';
   element_set_attributes($element, array('name', 'value'));
-  return '<input' . drupal_attributes($element['#attributes']) . ">\n";
+  return '<input' . drupal_attributes($element['#attributes']) . " />\n";
 }
 
 /**
@@ -4175,10 +3903,10 @@ function theme_textfield($variables) {
     $attributes['value'] = url($element['#autocomplete_path'], array('absolute' => TRUE));
     $attributes['disabled'] = 'disabled';
     $attributes['class'][] = 'autocomplete';
-    $extra = '<input' . drupal_attributes($attributes) . '>';
+    $extra = '<input' . drupal_attributes($attributes) . ' />';
   }
 
-  $output = '<input' . drupal_attributes($element['#attributes']) . '>';
+  $output = '<input' . drupal_attributes($element['#attributes']) . ' />';
 
   return $output . $extra;
 }
@@ -4255,7 +3983,7 @@ function theme_password($variables) {
   element_set_attributes($element, array('id', 'name', 'size', 'maxlength'));
   _form_set_class($element, array('form-text'));
 
-  return '<input' . drupal_attributes($element['#attributes']) . '>';
+  return '<input' . drupal_attributes($element['#attributes']) . ' />';
 }
 
 /**
@@ -4306,7 +4034,7 @@ function theme_file($variables) {
   element_set_attributes($element, array('id', 'name', 'size'));
   _form_set_class($element, array('form-file'));
 
-  return '<input' . drupal_attributes($element['#attributes']) . '>';
+  return '<input' . drupal_attributes($element['#attributes']) . ' />';
 }
 
 /**
@@ -4370,68 +4098,22 @@ function theme_form_element($variables) {
   }
   // Add element's #type and #name as class to aid with JS/CSS selectors.
   $attributes['class'] = array('form-item');
-  if (!empty($element['#required'])) {
-    $attributes['class'][] = 'required';
-  }
-  if (isset($element['#parents']) && form_get_error($element)) {
-    $attributes['class'][] = 'error';
-  }
   if (!empty($element['#type'])) {
-    $attributes['class'][] = 'form-type-' . $element['#type'];
+    $attributes['class'][] = 'form-type-' . strtr($element['#type'], '_', '-');
   }
   if (!empty($element['#name'])) {
-    $attributes['class'][] = 'form-item-' . strtr($element['#name'], array(' ' => '-', '[' => '-', ']' => ''));
+    $attributes['class'][] = 'form-item-' . strtr($element['#name'], array(' ' => '-', '_' => '-', '[' => '-', ']' => ''));
   }
   // Add a class for disabled elements to facilitate cross-browser styling.
   if (!empty($element['#attributes']['disabled'])) {
     $attributes['class'][] = 'form-disabled';
   }
-
-  // provide an #element_attributes key to allow altering the attributes of the topmost part of the element.
-  if (isset($element['#element_attributes']) && is_array($element['#element_attributes'])) {
-    $attributes = array_merge($attributes,  $element['#element_attributes']);
-  }
-
-  $wrap_with_fieldset = FALSE;
-  if (!empty($element['#type'])) {
-    if ($element['#type'] == 'checkbox') {
-      $wrap_with_fieldset = TRUE;
-    }
-    elseif ($element['#type'] == 'checkboxes') {
-      $wrap_with_fieldset = TRUE;
-    }
-    elseif ($element['#type'] == 'radio') {
-      $wrap_with_fieldset = TRUE;
-    }
-    elseif ($element['#type'] == 'radios') {
-      $wrap_with_fieldset = TRUE;
-    }
-  }
-
-  if ($wrap_with_fieldset && isset($element['#fieldset']) && !$element['#fieldset']) {
-    $wrap_with_fieldset = FALSE;
-  }
+  $output = '<div' . drupal_attributes($attributes) . '>' . "\n";
 
   // If #title is not set, we don't display any label or required marker.
-  if (isset($element['#fieldset_legend'])) {
-    $legend = '<legend><span class="fieldset-legend">' . $element['#fieldset_legend'] . '</span></legend>';
-  }
-  elseif (isset($element['#title'])) {
-    $legend = '<legend class="element-invisible"><span class="fieldset-legend">' . $element['#title'] . '</span></legend>';
-  }
-  else {
+  if (!isset($element['#title'])) {
     $element['#title_display'] = 'none';
-    $legend = '<legend class="element-invisible"><span class="fieldset-legend"></span></legend>';
   }
-
-  if ($wrap_with_fieldset) {
-    $element['#fieldset'] = FALSE;
-    $output = '<fieldset' . drupal_attributes($attributes) . '>' . "\n" . $legend . "\n";
-  }
-  else {
-    $output = '<div' . drupal_attributes($attributes) . '>' . "\n";
-  }
-
   $prefix = isset($element['#field_prefix']) ? '<span class="field-prefix">' . $element['#field_prefix'] . '</span> ' : '';
   $suffix = isset($element['#field_suffix']) ? ' <span class="field-suffix">' . $element['#field_suffix'] . '</span>' : '';
 
@@ -4458,12 +4140,7 @@ function theme_form_element($variables) {
     $output .= '<div class="description">' . $element['#description'] . "</div>\n";
   }
 
-  if ($wrap_with_fieldset) {
-    $output .= "</fieldset>\n";
-  }
-  else {
-    $output .= "</div>\n";
-  }
+  $output .= "</div>\n";
 
   return $output;
 }
@@ -4526,30 +4203,17 @@ function theme_form_element_label($variables) {
   $title = filter_xss_admin($element['#title']);
 
   $attributes = array();
-  if (isset($element['#title_display'])) {
-    $attributes['class'][] = 'title_display-' . $element['#title_display'];
-
-    // Show label only to screen readers to avoid disruption in visual flows.
-    if ($element['#title_display'] == 'invisible') {
-      $attributes['class'][] = 'element-invisible';
-    }
+  // Style the label as class option to display inline with the element.
+  if ($element['#title_display'] == 'after') {
+    $attributes['class'] = 'option';
   }
-
-  if (isset($element['#type'])) {
-    if ($element['#type'] == 'checkbox') {
-      $attributes['class'][] = 'option';
-    }
-    elseif ($element['#type'] == 'radio') {
-      $attributes['class'][] = 'option';
-    }
+  // Show label only to screen readers to avoid disruption in visual flows.
+  elseif ($element['#title_display'] == 'invisible') {
+    $attributes['class'] = 'element-invisible';
   }
 
   if (!empty($element['#id'])) {
     $attributes['for'] = $element['#id'];
-  }
-
-  if (array_key_exists('#label_attributes', $element) && is_array($element['#label_attributes'])) {
-    $attributes = array_merge($attributes, $element['#label_attributes']);
   }
 
   // The leading whitespace helps visually separate fields from inline labels.
@@ -4811,7 +4475,7 @@ function batch_set($batch_definition) {
 
     // Tweak init_message to avoid the bottom of the page flickering down after
     // init phase.
-    $batch_set['init_message'] .= '<br>&nbsp;';
+    $batch_set['init_message'] .= '<br/>&nbsp;';
 
     // The non-concurrent workflow of batch execution allows us to save
     // numberOfItems() queries by handling our own counter.
