@@ -258,6 +258,13 @@ function user_check_password($password, $account) {
     default:
       return FALSE;
   }
+
+  // use more secure hash_equal() that was introduced in php 5.6 and greater.
+  // see: http://php.net/manual/en/function.hash-equals.php.
+  if (PHP_MAJOR_VERSION > 4 && PHP_MINOR_VERSION > 5) {
+    return ($hash && hash_equals($stored_hash, $hash));
+  }
+
   return ($hash && $stored_hash == $hash);
 }
 
