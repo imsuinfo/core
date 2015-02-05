@@ -4439,16 +4439,31 @@ function theme_form_element($variables) {
     case 'before':
     case 'invisible':
       $output .= ' ' . theme('form_element_label', $variables);
+
+      if (!empty($element['#description_before'])) {
+        $output .= '<div class="description">' . $element['#description_before'] . "</div>\n";
+      }
+
       $output .= ' ' . $prefix . $element['#children'] . $suffix . "\n";
       break;
 
     case 'after':
+
+      if (!empty($element['#description_before'])) {
+        $output .= '<div class="description">' . $element['#description_before'] . "</div>\n";
+      }
+
       $output .= ' ' . $prefix . $element['#children'] . $suffix;
       $output .= ' ' . theme('form_element_label', $variables) . "\n";
       break;
 
     case 'none':
     case 'attribute':
+
+      if (!empty($element['#description_before'])) {
+        $output .= '<div class="description">' . $element['#description_before'] . "</div>\n";
+      }
+
       // Output no label and no required marker, only the children.
       $output .= ' ' . $prefix . $element['#children'] . $suffix . "\n";
       break;
