@@ -1585,6 +1585,10 @@ function format_string($string, array $args = array()) {
  * @ingroup sanitization
  */
 function check_plain($text) {
+  if (!is_string($text)) {
+    return '';
+  }
+
   return htmlspecialchars($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 }
 
