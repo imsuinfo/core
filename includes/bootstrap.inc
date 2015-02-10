@@ -1585,7 +1585,7 @@ function format_string($string, array $args = array()) {
  * @ingroup sanitization
  */
 function check_plain($text) {
-  if (!is_string($text)) {
+  if (!is_string($text) && !is_int($text)) {
     return '';
   }
 
