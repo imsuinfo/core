@@ -1554,7 +1554,7 @@ class SelectQuery extends Query implements SelectQueryInterface {
 
     // SELECT
     $query = $comments . 'SELECT ';
-    if ($this->distinct) {
+    if ($this->distinct === TRUE) {
       $query .= 'DISTINCT ';
     }
 
@@ -1573,6 +1573,20 @@ class SelectQuery extends Query implements SelectQueryInterface {
     foreach ($this->expressions as $alias => $expression) {
       $fields[] = $expression['expression'] . ' AS ' . $this->connection->escapeAlias($expression['alias']);
     }
+
+    // Distinct on specific fields
+    if (!empty($this->distinct) && is_array($this->distinct) && array_key_exists('field', $this->distinct) && array_key_exists('alias', $this->distinct)) {
+      $distinct_alias = $this->connection->escapeAlias($this->distinct['alias']);
+      $query .= 'DISTINCT ON (' . $distinct_alias . ') ' . $this->connection->escapeField($this->distinct['field']) . ' AS ' . $distinct_alias;
+      if (empty($fields)) {
+        $query .= ' ';
+      }
+      else {
+        $query .= ', ';
+      }
+      unset($distinct_alias);
+    }
+
     $query .= implode(', ', $fields);
 
 
