@@ -96,8 +96,6 @@ class SelectQuery_pgsql extends SelectQuery {
       return $return;
     }
 
-    // This is a case that can be handled automatically, add the field.
-    $this->addField(NULL, $field);
     return $return;
   }
 }
