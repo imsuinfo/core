@@ -1560,13 +1560,16 @@ class SelectQuery extends Query implements SelectQueryInterface {
     }
 
     // Distinct on specific fields
-    if (!empty($this->distinct) && is_string($this->distinct)) {
+    if (!empty($this->distinct) && is_array($this->distinct) && array_key_exists('field', $this->distinct) && array_key_exists('alias', $this->distinct)) {
+      $distinct_alias = $this->connection->escapeAlias($this->distinct['alias']);
+      $query .= 'DISTINCT ON (' . $distinct_alias . ') ' . $this->connection->escapeField($this->distinct['field']) . ' AS ' . $distinct_alias;
       if (empty($fields)) {
-        $query .= 'DISTINCT(' . $this->connection->escapeField($this->distinct) . ') ';
+        $query .= ' ';
       }
       else {
-        $query .= 'DISTINCT(' . $this->connection->escapeField($this->distinct) . '), ';
+        $query .= ', ';
       }
+      unset($distinct_alias);
     }
 
     $query .= implode(', ', $fields);
