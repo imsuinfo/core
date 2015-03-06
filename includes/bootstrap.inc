@@ -3140,6 +3140,28 @@ function drupal_autoload_class($class) {
  *   NULL if either of the REGISTRY_* constants is passed in as $type.
  */
 function _registry_check_code($type, $name = NULL) {
+  global $conf;
+
+  if (array_key_exists('static_registry', $conf) && is_array($conf['static_registry'])) {
+    if ($type == REGISTRY_RESET_LOOKUP_CACHE || $type == REGISTRY_WRITE_LOOKUP_CACHE || is_null($name)) {
+      // not applicable to static registry.
+      return;
+    }
+
+    $file = FALSE;
+    if (isset($conf['static_registry']['by_type'][$type][$name]['filename'])) {
+      $file = $conf['static_registry']['by_type'][$type][$name]['filename'];
+    }
+
+    if ($file) {
+      require_once DRUPAL_ROOT . '/' . $file;
+      return TRUE;
+    }
+    else {
+      return FALSE;
+    }
+  }
+
   static $lookup_cache, $cache_update_needed;
 
   if ($type == 'class' && class_exists($name) || $type == 'interface' && interface_exists($name)) {
