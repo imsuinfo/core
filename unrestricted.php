@@ -94,7 +94,7 @@ function unrestricted_not_found() {
 }
 
 /**
- * Exits with 505.
+ * Exits with 503.
  *
  * @param string $message
  *   (optional) Additional information to display..
@@ -103,7 +103,7 @@ function unrestricted_service_unavailable($message = NULL) {
   $instance = unrestricted_get_instance();
 
   $headers = array();
-  $headers['status'] = array('value' => '505 Service Unavailable', 'status_code' => 505);
+  $headers['status'] = array('value' => '503 Service Unavailable', 'status_code' => 503);
   $headers['Content-Type'] = array('value' => 'text/html');
   $headers['Date'] = array('value' => date('r', $instance));
 
@@ -115,7 +115,7 @@ function unrestricted_service_unavailable($message = NULL) {
     print(file_get_contents($file));
   }
   else {
-    print("<h1>Service Unavailable (505)</h1>\n");
+    print("<h1>Service Unavailable (503)</h1>\n");
 
     if (is_string($message)) {
       print($message . "<br>\n");
@@ -593,11 +593,29 @@ function unrestricted_get_file_data($information, $settings) {
     $headers['status'] = array('value' => '200 OK', 'status_code' => 200);
   }
 
+  $filename = NULL;
+  if (!empty($information['file']['filename'])) {
+    $filename = trim($information['file']['filename']);
+  }
+  else {
+    if (!empty($information['file']['shortsum'])) {
+      $filename = $information['file']['shortsum'];
+    }
+    else {
+      $filename = 'download';
+    }
+  }
+
+  $extension = NULL;
+  if (!empty($information['file']['extension'])) {
+    $extension = '.' . trim($information['file']['extension']);
+  }
+
   $headers['Accept-Ranges'] = array('value' => 'File Transfer');
   $headers['Content-Description'] = array('value' => 'File Transfer');
-  $headers['Content-Disposition'] = array('value' => 'inline; filename="' . $information['file']['filename'] . '"');
+  $headers['Content-Disposition'] = array('value' => 'inline; filename="' . $filename . $extension . '"');
   $headers['Content-Length'] = array('value' => $information['file']['size']);
-  $headers['Content-Location'] = array('value' => $settings['base_path'] . MCNEESE_FILE_DB_FILE_PATH . '/' . MCNEESE_FILE_DB_PATH_BY_HASH . '/' . $information['file']['shortsum'] . '/' . $information['file']['filename'] . '.' . $information['file']['extension']);
+  $headers['Content-Location'] = array('value' => $settings['base_path'] . MCNEESE_FILE_DB_FILE_PATH . '/' . MCNEESE_FILE_DB_PATH_BY_HASH . '/' . $information['file']['shortsum'] . '/' . $filename . $extension);
   $headers['Content-Type'] = array('value' => $information['file']['mimetype']);
   $headers['Date'] = array('value' => date('r', $instance));
   $headers['Etag'] = array('value' => '"' . MCNEESE_FILE_DB_PATH_BY_HASH_ALGORITHM . '://' . $information['file']['checksum'] . '"');
