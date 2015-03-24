@@ -204,9 +204,6 @@ function drupal_install_profile_distribution_name() {
   else {
     $profile = drupal_get_profile();
     $info = system_get_info('module', $profile);
-    if (!isset($info['distribution_name'])) {
-      return 'Drupal';
-    }
     return $info['distribution_name'];
   }
 }
@@ -798,29 +795,19 @@ function drupal_uninstall_modules($module_list = array(), $uninstall_dependents 
     $module_list = array_keys($module_list);
   }
 
-  $transaction = db_transaction();
-  try {
-    foreach ($module_list as $module) {
-      // Uninstall the module.
-      module_load_install($module);
-      module_invoke($module, 'uninstall');
-      drupal_uninstall_schema($module);
+  foreach ($module_list as $module) {
+    // Uninstall the module.
+    module_load_install($module);
+    module_invoke($module, 'uninstall');
+    drupal_uninstall_schema($module);
 
-      watchdog('system', '%module module uninstalled.', array('%module' => $module), WATCHDOG_INFO);
-      drupal_set_installed_schema_version($module, SCHEMA_UNINSTALLED);
-    }
-
-    if (!empty($module_list)) {
-      // Let other modules react.
-      module_invoke_all('modules_uninstalled', $module_list);
-    }
-
-    unset($transaction);
+    watchdog('system', '%module module uninstalled.', array('%module' => $module), WATCHDOG_INFO);
+    drupal_set_installed_schema_version($module, SCHEMA_UNINSTALLED);
   }
-  catch (Exception $ex) {
-    $transaction->rollback();
-    watchdog_exception('system', $ex, "Failed to uninstall the modules: %modules, reason: %ex.", array('%modules' => print_r($module_list, TRUE), '%ex' => $ex->getMessage()), WATCHDOG_ERROR);
-    return FALSE;
+
+  if (!empty($module_list)) {
+    // Let other modules react.
+    module_invoke_all('modules_uninstalled', $module_list);
   }
 
   return TRUE;
