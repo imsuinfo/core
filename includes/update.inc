@@ -778,8 +778,6 @@ function update_fix_d7_requirements() {
 
     variable_set('update_d7_requirements', TRUE);
   }
-
-  update_fix_d7_install_profile();
 }
 
 /**
