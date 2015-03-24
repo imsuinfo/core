@@ -380,28 +380,6 @@ function update_manager_download_batch_finished($success, $results) {
  * @ingroup forms
  */
 function update_manager_update_ready_form($form, &$form_state) {
-  if (!_update_manager_check_backends($form, 'update')) {
-    return $form;
-  }
-
-  $form['backup'] = array(
-    '#prefix' => '<strong>',
-    '#markup' => t('Back up your database and site before you continue. <a href="@backup_url">Learn how</a>.', array('@backup_url' => url('http://drupal.org/node/22281'))),
-    '#suffix' => '</strong>',
-  );
-
-  $form['maintenance_mode'] = array(
-    '#title' => t('Perform updates with site in maintenance mode (strongly recommended)'),
-    '#type' => 'checkbox',
-    '#default_value' => TRUE,
-  );
-
-  $form['actions'] = array('#type' => 'actions');
-  $form['actions']['submit'] = array(
-    '#type' => 'submit',
-    '#value' => t('Continue'),
-  );
-
   return $form;
 }
 
@@ -419,51 +397,6 @@ function update_manager_update_ready_form($form, &$form_state) {
  * @see system_authorized_get_url()
  */
 function update_manager_update_ready_form_submit($form, &$form_state) {
-  // Store maintenance_mode setting so we can restore it when done.
-  $_SESSION['maintenance_mode'] = variable_get('maintenance_mode', FALSE);
-  if ($form_state['values']['maintenance_mode'] == TRUE) {
-    variable_set('maintenance_mode', TRUE);
-  }
-
-  if (!empty($_SESSION['update_manager_update_projects'])) {
-    // Make sure the Updater registry is loaded.
-    drupal_get_updaters();
-
-    $updates = array();
-    $directory = _update_manager_extract_directory();
-
-    $projects = $_SESSION['update_manager_update_projects'];
-    unset($_SESSION['update_manager_update_projects']);
-
-    foreach ($projects as $project => $url) {
-      $project_location = $directory . '/' . $project;
-      $updater = Updater::factory($project_location);
-      $project_real_location = drupal_realpath($project_location);
-      $updates[] = array(
-        'project' => $project,
-        'updater_name' => get_class($updater),
-        'local_url' => $project_real_location,
-      );
-    }
-
-    // If the owner of the last directory we extracted is the same as the
-    // owner of our configuration directory (e.g. sites/default) where we're
-    // trying to install the code, there's no need to prompt for FTP/SSH
-    // credentials. Instead, we instantiate a FileTransferLocal and invoke
-    // update_authorize_run_update() directly.
-    if (fileowner($project_real_location) == fileowner(conf_path())) {
-      module_load_include('inc', 'update', 'update.authorize');
-      $filetransfer = new FileTransferLocal(DRUPAL_ROOT);
-      update_authorize_run_update($filetransfer, $updates);
-    }
-    // Otherwise, go through the regular workflow to prompt for FTP/SSH
-    // credentials and invoke update_authorize_run_update() indirectly with
-    // whatever FileTransfer object authorize.php creates for us.
-    else {
-      system_authorized_init('update_authorize_run_update', drupal_get_path('module', 'update') . '/update.authorize.inc', array($updates), t('Update manager'));
-      $form_state['redirect'] = system_authorized_get_url();
-    }
-  }
 }
 
 /**
@@ -609,15 +542,7 @@ function _update_manager_check_backends(&$form, $operation) {
  * @see update_manager_install_form_submit()
  */
 function update_manager_install_form_validate($form, &$form_state) {
-  if (!($form_state['values']['project_url'] XOR !empty($_FILES['files']['name']['project_upload']))) {
-    form_set_error('project_url', t('You must either provide a URL or upload an archive file to install.'));
-  }
-
-  if ($form_state['values']['project_url']) {
-    if (!valid_url($form_state['values']['project_url'], TRUE)) {
-      form_set_error('project_url', t('The provided URL is invalid.'));
-    }
-  }
+   form_set_error('', t('This functionality is disabled on this system.'));
 }
 
 /**
@@ -637,111 +562,6 @@ function update_manager_install_form_validate($form, &$form_state) {
  * @see system_authorized_get_url()
  */
 function update_manager_install_form_submit($form, &$form_state) {
-  if ($form_state['values']['project_url']) {
-    $field = 'project_url';
-    $local_cache = update_manager_file_get($form_state['values']['project_url']);
-    if (!$local_cache) {
-      form_set_error($field, t('Unable to retrieve Drupal project from %url.', array('%url' => $form_state['values']['project_url'])));
-      return;
-    }
-  }
-  elseif ($_FILES['files']['name']['project_upload']) {
-    $validators = array('file_validate_extensions' => array(archiver_get_extensions()));
-    $field = 'project_upload';
-    if (!($finfo = file_save_upload($field, $validators, NULL, FILE_EXISTS_REPLACE))) {
-      // Failed to upload the file. file_save_upload() calls form_set_error() on
-      // failure.
-      return;
-    }
-    $local_cache = $finfo->uri;
-  }
-
-  $directory = _update_manager_extract_directory();
-  try {
-    $archive = update_manager_archive_extract($local_cache, $directory);
-  }
-  catch (Exception $e) {
-    form_set_error($field, $e->getMessage());
-    return;
-  }
-
-  $files = $archive->listContents();
-  if (!$files) {
-    form_set_error($field, t('Provided archive contains no files.'));
-    return;
-  }
-
-  // Unfortunately, we can only use the directory name to determine the project
-  // name. Some archivers list the first file as the directory (i.e., MODULE/)
-  // and others list an actual file (i.e., MODULE/README.TXT).
-  $project = strtok($files[0], '/\\');
-
-  $archive_errors = update_manager_archive_verify($project, $local_cache, $directory);
-  if (!empty($archive_errors)) {
-    form_set_error($field, array_shift($archive_errors));
-    // @todo: Fix me in D8: We need a way to set multiple errors on the same
-    // form element and have all of them appear!
-    if (!empty($archive_errors)) {
-      foreach ($archive_errors as $error) {
-        drupal_set_message($error, 'error');
-      }
-    }
-    return;
-  }
-
-  // Make sure the Updater registry is loaded.
-  drupal_get_updaters();
-
-  $project_location = $directory . '/' . $project;
-  try {
-    $updater = Updater::factory($project_location);
-  }
-  catch (Exception $e) {
-    form_set_error($field, $e->getMessage());
-    return;
-  }
-
-  try {
-    $project_title = Updater::getProjectTitle($project_location);
-  }
-  catch (Exception $e) {
-    form_set_error($field, $e->getMessage());
-    return;
-  }
-
-  if (!$project_title) {
-    form_set_error($field, t('Unable to determine %project name.', array('%project' => $project)));
-  }
-
-  if ($updater->isInstalled()) {
-    form_set_error($field, t('%project is already installed.', array('%project' => $project_title)));
-    return;
-  }
-
-  $project_real_location = drupal_realpath($project_location);
-  $arguments = array(
-    'project' => $project,
-    'updater_name' => get_class($updater),
-    'local_url' => $project_real_location,
-  );
-
-  // If the owner of the directory we extracted is the same as the
-  // owner of our configuration directory (e.g. sites/default) where we're
-  // trying to install the code, there's no need to prompt for FTP/SSH
-  // credentials. Instead, we instantiate a FileTransferLocal and invoke
-  // update_authorize_run_install() directly.
-  if (fileowner($project_real_location) == fileowner(conf_path())) {
-    module_load_include('inc', 'update', 'update.authorize');
-    $filetransfer = new FileTransferLocal(DRUPAL_ROOT);
-    call_user_func_array('update_authorize_run_install', array_merge(array($filetransfer), $arguments));
-  }
-  // Otherwise, go through the regular workflow to prompt for FTP/SSH
-  // credentials and invoke update_authorize_run_install() indirectly with
-  // whatever FileTransfer object authorize.php creates for us.
-  else {
-    system_authorized_init('update_authorize_run_install', drupal_get_path('module', 'update') . '/update.authorize.inc', $arguments, t('Update manager'));
-    $form_state['redirect'] = system_authorized_get_url();
-  }
 }
 
 /**
