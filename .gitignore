@@ -17,6 +17,7 @@ sites/all/*/*/.gitignore
 # Custom ignores
 sites/default/deprecated
 sites/default/gnupg
+sites/default/registry-*.php
 *.swp
 favicon.ico
 
