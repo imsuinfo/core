@@ -465,7 +465,7 @@ function image_field_widget_process($element, &$form_state, $form) {
 function theme_image_widget($variables) {
   $element = $variables['element'];
   $output = '';
-  $output .= '<div class="image-widget form-managed-file clearfix">';
+  $output .= '<div class="image-widget form-managed-file">';
 
   if (isset($element['preview'])) {
     $output .= '<div class="image-preview">';

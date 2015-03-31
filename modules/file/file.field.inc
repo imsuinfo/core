@@ -813,7 +813,7 @@ function theme_file_widget($variables) {
   $output = '';
 
   // The "form-managed-file" class is required for proper Ajax functionality.
-  $output .= '<div class="file-widget form-managed-file clearfix">';
+  $output .= '<div class="file-widget form-managed-file">';
   if ($element['fid']['#value'] != 0) {
     // Add the file size after the file name.
     $element['filename']['#markup'] .= ' <span class="file-size">(' . format_size($element['#file']->filesize) . ')</span> ';
