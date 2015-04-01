@@ -419,7 +419,10 @@ function unrestricted_get_file_information($uri, $settings) {
       pg_close($drupal_connection);
       unrestricted_service_unavailable($error_message);
     }
-    elseif (empty($results)) {
+
+    // check to see if the file exists at all, and if so, switch to a normal drupal load.
+    $row = pg_fetch_array($results, NULL, PGSQL_ASSOC);
+    if (!is_array($row)) {
       pg_free_result($results);
       pg_close($drupal_connection);
 
