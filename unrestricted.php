@@ -30,8 +30,12 @@ function unrestricted_main() {
   }
   else {
     unrestricted_get_file_data($information, $settings);
+  }
 
+  // make sure connection is closed when finished.
+  if ($information['connection'] !== FALSE) {
     pg_close($information['connection']);
+    $information['connection'] = FALSE;
   }
 }
 
@@ -126,6 +130,24 @@ function unrestricted_service_unavailable($message = NULL) {
 }
 
 /**
+ * Exits with 406.
+ */
+function unrestricted_not_acceptable() {
+  $instance = unrestricted_get_instance();
+
+  $headers = array();
+  $headers['status'] = array('value' => '406 Not Acceptable', 'status_code' => 406);
+  $headers['Content-Type'] = array('value' => 'text/html');
+  $headers['Date'] = array('value' => date('r', $instance));
+
+  unrestricted_send_headers($headers);
+
+  print("<h1>Not Acceptable (406)</h1>\n");
+
+  exit();
+}
+
+/**
  * Exits with 412.
  */
 function unrestricted_precondition_failed() {
@@ -212,7 +234,7 @@ function unrestricted_get_settings() {
     'connect_type' => NULL, # PGSQL_CONNECT_FORCE_NEW, PGSQL_CONNECT_ASYNC
     'connect_timeout' => 6,
     'options' => NULL,
-    'sslmode' => NULL, # what are valid modes?
+    'sslmode' => 'disable', # disable, allow, prefer, require
     'service' => NULL,
   );
   $settings['database_drupal'] = array(
@@ -224,7 +246,7 @@ function unrestricted_get_settings() {
     'connect_type' => NULL, # PGSQL_CONNECT_FORCE_NEW, PGSQL_CONNECT_ASYNC
     'connect_timeout' => 6,
     'options' => NULL,
-    'sslmode' => NULL, # what are valid modes?
+    'sslmode' => NULL, # disable, allow, prefer, require
     'service' => NULL,
   );
   $settings['base_path'] = '/';
@@ -288,21 +310,23 @@ function unrestricted_get_settings() {
 
   // load additional HTTP request optimizations.
   if (isset($_SERVER['HTTP_IF_NONE_MATCH'])) {
-    $settings['if_none_match'] = substr($_SERVER['HTTP_IF_NONE_MATCH'], 1);
-    $settings['if_none_match'] = substr($settings['if_none_match'], 0, -1);
+    $settings['http']['if_none_match'] = preg_replace('/^"/i', '', $_SERVER['HTTP_IF_NONE_MATCH']);
+    $settings['http']['if_none_match'] = preg_replace('/"$/i', '', $settings['http']['if_none_match']);
   }
 
   if (isset($_SERVER['HTTP_IF_MATCH'])) {
-    $settings['if_match'] = substr($_SERVER['HTTP_IF_MATCH'], 1);
-    $settings['if_match'] = substr($settings['if_match'], 0, -1);
+    $settings['http']['if_match'] = preg_replace('/^"/i', '', $_SERVER['HTTP_IF_MATCH']);
+    $settings['http']['if_match'] = preg_replace('/"$/i', '', $settings['http']['if_match']);
   }
 
   if (!empty($_SERVER['HTTP_IF_MODIFIED_SINCE'])) {
-    $settings['if_modified_since'] = $_SERVER['HTTP_IF_MODIFIED_SINCE'];
+    $settings['http']['if_modified_since'] = preg_replace('/^"/i', '', $_SERVER['HTTP_IF_MODIFIED_SINCE']);
+    $settings['http']['if_modified_since'] = preg_replace('/"$/i', '', $settings['http']['if_modified_since']);
   }
 
   if (!empty($_SERVER['HTTP_IF_UNMODIFIED_SINCE'])) {
-    $settings['if_unmodified_since'] = $_SERVER['HTTP_IF_UNMODIFIED_SINCE'];
+    $settings['http']['if_unmodified_since'] = preg_replace('/^"/i', '', $_SERVER['HTTP_IF_UNMODIFIED_SINCE']);
+    $settings['http']['if_unmodified_since'] = preg_replace('/"$/i', '', $settings['http']['if_unmodified_since']);
   }
 
   if (!empty($_SERVER['HTTP_RANGE'])) {
@@ -423,8 +447,8 @@ function unrestricted_get_file_information($uri, $settings) {
     // check to see if the file exists at all, and if so, switch to a normal drupal load.
     $row = pg_fetch_array($results, NULL, PGSQL_ASSOC);
     pg_free_result($results);
-    pg_close($drupal_connection);
     if (!is_array($row)) {
+      pg_close($drupal_connection);
 
       if ($settings['http']['if_match']) {
         unrestricted_precondition_failed();
@@ -448,7 +472,6 @@ function unrestricted_get_file_information($uri, $settings) {
   else {
     unrestricted_not_found();
   }
-
 
   // establish the connection and execute the query.
   $connect_string = "host=" . $settings['database']['host'];
@@ -485,45 +508,74 @@ function unrestricted_get_file_information($uri, $settings) {
     pg_close($information['connection']);
     unrestricted_service_unavailable($error_message);
   }
-  elseif (empty($results)) {
+
+  $results_status = pg_result_status($results);
+  if ($results_status != PGSQL_COMMAND_OK && $results_status != PGSQL_TUPLES_OK) {
     pg_free_result($results);
     pg_close($information['connection']);
-
-    if ($settings['http']['if_match']) {
-      unrestricted_precondition_failed();
-    }
-
     unrestricted_not_found();
   }
 
-  $information['file'] = pg_fetch_array($results, NULL, PGSQL_ASSOC);
+  $row = pg_fetch_array($results, NULL, PGSQL_ASSOC);
   pg_free_result($results);
-
-  if (!empty($information['file']['checksum'])) {
-    $information['file']['shortsum'] = substr($information['file']['checksum'], 0, MCNEESE_FILE_DB_SHORT_SUM_SIZE);
+  if (!is_array($row)) {
+    $error_message = pg_last_error($information['connection']);
+    pg_close($information['connection']);
+    unrestricted_not_found($error_message);
   }
 
-  if (isset($settings['http']['if_none_match']) && $settings['http']['if_none_match'] !== FALSE && is_string($settings['http']['if_none_match'])) {
+  $information['file'] = $row;
+  unset($row);
+
+  if (isset($information['file']['checksum']) && is_string($information['file']['checksum']) && strlen($information['file']['checksum']) > 0) {
+    $information['file']['shortsum'] = substr($information['file']['checksum'], 0, MCNEESE_FILE_DB_SHORT_SUM_SIZE);
+  }
+  else {
+    pg_close($information['connection']);
+    unrestricted_not_found();
+  }
+
+  if (isset($settings['http']['if_none_match']) && is_string($settings['http']['if_none_match']) && strlen($settings['http']['if_none_match']) > 0) {
     $string_to_match = MCNEESE_FILE_DB_PATH_BY_HASH_ALGORITHM . '://' . $information['file']['checksum'];
-    if ($settings['http']['if_none_match'] == $string_to_match) {
+    if ($uri[0] == MCNEESE_FILE_DB_PATH_BY_HASH_SUM) {
+      $string_to_match .= '.' . MCNEESE_FILE_DB_PATH_BY_HASH_SUM_EXTENSION;
+    }
+
+    if (strcmp($settings['http']['if_none_match'], $string_to_match) == 0) {
       $information['not_modified'] = TRUE;
+    }
+    else {
+      // the requested match is invalid, so report as invalid
+      pg_close($information['connection']);
+      unrestricted_not_acceptable();
     }
   }
 
   // timestamp is currently not stored as a unix timestamp, so convert it to one.
   $information['file']['timestamp'] = strtotime($information['file']['timestamp']);
 
-  if ($settings['http']['if_unmodified_since']) {
+  if (isset($settings['http']['if_unmodified_since']) && is_string($settings['http']['if_unmodified_since']) && strlen($settings['http']['if_unmodified_since']) > 0) {
     $since = strtotime($settings['http']['if_unmodified_since']);
 
-    if ($since !== FALSE && $information['file']['timestamp'] > $since) {
+    if ($since === FALSE) {
+      // the requested match is invalid, so report as invalid
+      pg_close($information['connection']);
+      unrestricted_not_acceptable();
+    }
+    elseif ($information['file']['timestamp'] <= $since) {
+      pg_close($information['connection']);
       unrestricted_precondition_failed();
     }
   }
-  elseif ($settings['http']['if_modified_since']) {
+  elseif (isset($settings['http']['if_modified_since']) && is_string($settings['http']['if_modified_since']) && strlen($settings['http']['if_modified_since']) > 0) {
     $since = strtotime($settings['http']['if_modified_since']);
 
-    if ($since !== FALSE && $information['file']['timestamp'] < $since) {
+    if ($since === FALSE) {
+      // the requested match is invalid, so report as invalid
+      pg_close($information['connection']);
+      unrestricted_not_acceptable();
+    }
+    elseif ($information['file']['timestamp'] > $since) {
       $information['not_modified'] = TRUE;
     }
   }
@@ -543,7 +595,7 @@ function unrestricted_get_file_information($uri, $settings) {
  *
  * @see: unrestricted_get_file_information()
  */
-function unrestricted_get_file_data($information, $settings) {
+function unrestricted_get_file_data(&$information, $settings) {
   if ($information['connection'] === FALSE) {
     unrestricted_service_unavailable();
   }
@@ -557,7 +609,7 @@ function unrestricted_get_file_data($information, $settings) {
   // Only process the query when there are no changes because there is no reason to transmit the file (this is a client-side caching optimization).
   if (!$information['not_modified']) {
     $query = "select data from mcneese_file_db_file_data";
-    $query .= " where file_id = " . pg_escape_literal($information['file']['id']);
+    $query .= " where file_id = " . pg_escape_literal($information['connection'], $information['file']['id']);
     $query .= " order by block asc";
     $results = pg_query($information['connection'], $query);
 
@@ -566,16 +618,21 @@ function unrestricted_get_file_data($information, $settings) {
       pg_close($information['connection']);
       unrestricted_service_unavailable($error_message);
     }
-    elseif (empty($results)) {
-      $error_message = pg_last_error($information['connection']);
+
+    $results_status = pg_result_status($results);
+    if ($results_status != PGSQL_COMMAND_OK && $results_status != PGSQL_TUPLES_OK) {
       pg_free_result($results);
       pg_close($information['connection']);
-      unrestricted_not_found($error_message);
+
+      if ($settings['http']['if_match']) {
+        unrestricted_precondition_failed();
+      }
+      unrestricted_not_found();
     }
   }
 
   // to prevent caching the entire file in memory, build the headers, send the headers, and then send the file data as it arrives from the database.
-  // this essentially puts the memory usage to around 
+  // this essentially puts the memory usage to around
   // make sure to perform output buffer (if possible) to reduce chances of "headers already sent" issues.
   $ob_level = ob_get_level();
   for ($i = 0; $i < $ob_level; $i++) {
@@ -625,6 +682,9 @@ function unrestricted_get_file_data($information, $settings) {
   // when there are no changes, there is no reason to transmit the file (this is a client-side caching optimization).
   if ($information['not_modified']) {
     ob_end_flush();
+    pg_free_result($results);
+    pg_close($information['connection']);
+    $information['connection'] = FALSE;
     return;
   }
 
@@ -634,6 +694,8 @@ function unrestricted_get_file_data($information, $settings) {
 
   ob_end_flush();
   pg_free_result($results);
+  pg_close($information['connection']);
+  $information['connection'] = FALSE;
 }
 
 /**
@@ -646,10 +708,11 @@ function unrestricted_get_file_data($information, $settings) {
  *
  * @see: unrestricted_get_file_information()
  */
-function unrestricted_get_file_hash($information, $settings) {
+function unrestricted_get_file_hash(&$information, $settings) {
   // connection is no longer needed by this function.
   if ($information['connection'] !== FALSE) {
     pg_close($information['connection']);
+    $information['connection'] = FALSE;
   }
 
   if (empty($information['file']['id']) || !is_numeric($information['file']['id'])) {
@@ -673,7 +736,7 @@ function unrestricted_get_file_hash($information, $settings) {
   $headers['Content-Description'] = array('value' => 'File Transfer');
   $headers['Content-Disposition'] = array('value' => 'inline; filename="' . $information['file']['filename'] . '.' . MCNEESE_FILE_DB_PATH_BY_HASH_SUM_EXTENSION . '"');
   $headers['Content-Length'] = array('value' => strlen($data));
-  $headers['Content-Location'] = array('value' => $settings['base_path'] . MCNEESE_FILE_DB_FILE_PATH . '/' . MCNEESE_FILE_DB_PATH_BY_HASH_SUM . '/' . $information['file']['shortsum'] . '/' . $information['file']['filename'] . '.' . $information['file']['extension']);
+  $headers['Content-Location'] = array('value' => $settings['base_path'] . MCNEESE_FILE_DB_FILE_PATH . '/' . MCNEESE_FILE_DB_PATH_BY_HASH_SUM . '/' . $information['file']['shortsum'] . '/' . $information['file']['filename'] . '.' . $information['file']['extension'] . '.' . MCNEESE_FILE_DB_PATH_BY_HASH_SUM_EXTENSION);
   $headers['Content-Type'] = array('value' => 'text/plain');
   $headers['Date'] = array('value' => date('r', $instance));
   $headers['Etag'] = array('value' => '"' . MCNEESE_FILE_DB_PATH_BY_HASH_ALGORITHM . '://' . $information['file']['checksum'] . '.' . MCNEESE_FILE_DB_PATH_BY_HASH_SUM_EXTENSION . '"');
