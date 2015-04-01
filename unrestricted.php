@@ -422,9 +422,9 @@ function unrestricted_get_file_information($uri, $settings) {
 
     // check to see if the file exists at all, and if so, switch to a normal drupal load.
     $row = pg_fetch_array($results, NULL, PGSQL_ASSOC);
+    pg_free_result($results);
+    pg_close($drupal_connection);
     if (!is_array($row)) {
-      pg_free_result($results);
-      pg_close($drupal_connection);
 
       if ($settings['http']['if_match']) {
         unrestricted_precondition_failed();
@@ -432,10 +432,6 @@ function unrestricted_get_file_information($uri, $settings) {
 
       unrestricted_not_found();
     }
-
-    $row = pg_fetch_array($results, NULL, PGSQL_ASSOC);
-    pg_free_result($results);
-    pg_close($drupal_connection);
 
     $uri_parts = explode('://c/', $row['uri'], 2);
     $uri_parts = explode('/', $uri_parts[1]);
