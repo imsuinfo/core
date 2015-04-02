@@ -682,18 +682,20 @@ function unrestricted_get_file_data(&$information, $settings) {
   // when there are no changes, there is no reason to transmit the file (this is a client-side caching optimization).
   if ($information['not_modified']) {
     ob_end_flush();
-    pg_free_result($results);
     pg_close($information['connection']);
     $information['connection'] = FALSE;
     return;
   }
 
-  while ($row = pg_fetch_row($results)) {
-    print(pg_unescape_bytea($row[0]));
+  if (isset($results)) {
+    while ($row = pg_fetch_row($results)) {
+      print(pg_unescape_bytea($row[0]));
+    }
+
+    pg_free_result($results);
   }
 
   ob_end_flush();
-  pg_free_result($results);
   pg_close($information['connection']);
   $information['connection'] = FALSE;
 }
