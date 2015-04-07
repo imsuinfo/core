@@ -59,7 +59,7 @@ function statistics_recent_hits() {
  * statistics settings form, but is dependent on cron running.
  *
  * @return
- *   A render array containing information about the the top pages.
+ *   A render array containing information about the top pages.
  */
 function statistics_top_pages() {
   $header = array(
@@ -189,7 +189,7 @@ function statistics_top_referrers() {
   $query->addExpression('MAX(timestamp)', 'last');
   $query
     ->fields('a', array('url'))
-    ->condition('url', '%' . $_SERVER['HTTP_HOST'] . '%', 'NOT ILIKE')
+    ->condition('url', '%' . $_SERVER['HTTP_HOST'] . '%', 'NOT LIKE')
     ->condition('url', '', '<>')
     ->groupBy('url')
     ->limit(30)
@@ -198,7 +198,7 @@ function statistics_top_referrers() {
   $count_query = db_select('accesslog', 'a', array('target' => 'slave'));
   $count_query->addExpression('COUNT(DISTINCT url)');
   $count_query
-    ->condition('url', '%' . $_SERVER['HTTP_HOST'] . '%', 'NOT ILIKE')
+    ->condition('url', '%' . $_SERVER['HTTP_HOST'] . '%', 'NOT LIKE')
     ->condition('url', '', '<>');
   $query->setCountQuery($count_query);
 

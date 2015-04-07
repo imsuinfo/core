@@ -26,7 +26,7 @@ Drupal.behaviors.verticalTabs = {
 
       // Create the tab column.
       var tab_list = $('<ul class="vertical-tabs-list"></ul>');
-      $(this).wrap('<div class="vertical-tabs"></div>').before(tab_list);
+      $(this).wrap('<div class="vertical-tabs clearfix"></div>').before(tab_list);
 
       // Transform each fieldset into a tab.
       $fieldsets.each(function () {
@@ -132,10 +132,10 @@ Drupal.verticalTab.prototype = {
    * Shows a vertical tab pane.
    */
   tabShow: function () {
-    // Display the list of tabs
-    this.item.parents('.vertical-tabs').show();
     // Display the tab.
     this.item.show();
+    // Show the vertical tabs.
+    this.item.closest('.vertical-tabs').show();
     // Update .first marker for items. We need recurse from parent to retain the
     // actual DOM element order as jQuery implements sortOrder, but not as public
     // method.
@@ -166,16 +166,9 @@ Drupal.verticalTab.prototype = {
     if ($firstTab.length) {
       $firstTab.data('verticalTab').focus();
     }
-    // If no items are visible, hide the table
-    var visibleItems = false;
-    this.item.siblings().each(function() {
-      if ($(this).is(':visible')) {
-        visibleItems = true;
-        return;
-      }
-    });
-    if (!visibleItems) {
-      this.item.parents('.vertical-tabs').hide();
+    // Hide the vertical tabs (if no tabs remain).
+    else {
+      this.item.closest('.vertical-tabs').hide();
     }
     return this;
   }

@@ -1531,7 +1531,7 @@ function comment_save($comment) {
         // Strip the "/" from the end of the parent thread.
         $parent->thread = (string) rtrim((string) $parent->thread, '/');
         // Get the max value in *this* thread.
-        $max = db_query("SELECT MAX(thread) FROM {comment} WHERE thread ILIKE :thread AND nid = :nid", array(
+        $max = db_query("SELECT MAX(thread) FROM {comment} WHERE thread LIKE :thread AND nid = :nid", array(
           ':thread' => $parent->thread . '.%',
           ':nid' => $comment->nid,
         ))->fetchField();
@@ -2146,7 +2146,7 @@ function comment_form_validate($form, &$form_state) {
       $query = db_select('users', 'u');
       $query->addField('u', 'uid', 'uid');
       $taken = $query
-        ->condition('name', db_like($form_state['values']['name']), 'ILIKE')
+        ->condition('name', db_like($form_state['values']['name']), 'LIKE')
         ->countQuery()
         ->execute()
         ->fetchField();
@@ -2607,7 +2607,7 @@ function comment_unpublish_action($comment, $context = array()) {
 /**
  * Unpublishes a comment if it contains certain keywords.
  *
- * @param $comment
+ * @param object $comment
  *   Comment object to modify.
  * @param array $context
  *   Array with components:
@@ -2619,10 +2619,13 @@ function comment_unpublish_action($comment, $context = array()) {
  * @see comment_unpublish_by_keyword_action_submit()
  */
 function comment_unpublish_by_keyword_action($comment, $context) {
+  $node = node_load($comment->nid);
+  $build = comment_view($comment, $node);
+  $text = drupal_render($build);
   foreach ($context['keywords'] as $keyword) {
-    $text = drupal_render($comment);
     if (strpos($text, $keyword) !== FALSE) {
       $comment->status = COMMENT_NOT_PUBLISHED;
+      comment_save($comment);
       watchdog('action', 'Unpublished comment %subject.', array('%subject' => $comment->subject));
       break;
     }

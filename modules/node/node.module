@@ -506,7 +506,8 @@ function node_type_load($name) {
  *   - custom: TRUE or FALSE indicating whether this type is defined by a module
  *     (FALSE) or by a user (TRUE) via Add Content Type.
  *   - modified: TRUE or FALSE indicating whether this type has been modified by
- *     an administrator. Currently not used in any way.
+ *     an administrator. When modifying an existing node type, set to TRUE, or
+ *     the change will be ignored on node_types_rebuild().
  *   - locked: TRUE or FALSE indicating whether the administrator can change the
  *     machine name of this type.
  *   - disabled: TRUE or FALSE indicating whether this type has been disabled.
@@ -739,11 +740,9 @@ function _node_types_build($rebuild = FALSE) {
     $type_db = $type_object->type;
     // Original disabled value.
     $disabled = $type_object->disabled;
-    // Check for node types from disabled modules and mark their types for removal.
-    // Types defined by the node module in the database (rather than by a separate
-    // module using hook_node_info) have a base value of 'node_content'. The isset()
-    // check prevents errors on old (pre-Drupal 7) databases.
-    if (isset($type_object->base) && $type_object->base != 'node_content' && empty($_node_types->types[$type_db])) {
+    // Check for node types either from disabled modules or otherwise not defined
+    // and mark as disabled.
+    if (empty($type_object->custom) && empty($_node_types->types[$type_db])) {
       $type_object->disabled = TRUE;
     }
     if (isset($_node_types->types[$type_db])) {
@@ -960,8 +959,6 @@ function node_load_multiple($nids = array(), $conditions = array(), $reset = FAL
  *   A fully-populated node object, or FALSE if the node is not found.
  */
 function node_load($nid = NULL, $vid = NULL, $reset = FALSE) {
-  if (!is_null($nid) && (!is_numeric($nid) || (float)$nid !== round($nid))) return FALSE;
-  if (!is_null($vid) && (!is_numeric($vid) || (float)$vid !== round($vid))) return FALSE;
   $nids = (isset($nid) ? array($nid) : array());
   $conditions = (isset($vid) ? array('vid' => $vid) : array());
   $node = node_load_multiple($nids, $conditions, $reset);
@@ -1582,9 +1579,7 @@ function node_permission() {
     ),
     'access content overview' => array(
       'title' => t('Access the content overview page'),
-      'description' => user_access('access content overview')
-        ? t('Get an overview of <a href="@url">all content</a>.', array('@url' => url('admin/content')))
-        : t('Get an overview of all content.'),
+      'description' => t('Get an overview of <a href="@url">all content</a>.', array('@url' => url('admin/content'))),
     ),
     'access content' => array(
       'title' => t('View published content'),
@@ -1612,7 +1607,7 @@ function node_permission() {
 }
 
 /**
- * Gathers the rankings from the the hook_ranking() implementations.
+ * Gathers the rankings from the hook_ranking() implementations.
  *
  * @param $query
  *   A query object that has been extended with the Search DB Extender.
@@ -1931,8 +1926,9 @@ function _node_revision_access($node, $op = 'view', $account = NULL) {
     // There should be at least two revisions. If the vid of the given node and
     // the vid of the current revision differ, then we already have two
     // different revisions so there is no need for a separate database check.
-    // Also, if you try to delete the current revision, that's not good.
-    if ($is_current_revision && (db_query('SELECT COUNT(vid) FROM {node_revision} WHERE nid = :nid', array(':nid' => $node->nid))->fetchField() == 1 || $op == 'delete')) {
+    // Also, if you try to revert to or delete the current revision, that's not
+    // good.
+    if ($is_current_revision && (db_query('SELECT COUNT(vid) FROM {node_revision} WHERE nid = :nid', array(':nid' => $node->nid))->fetchField() == 1 || $op == 'update' || $op == 'delete')) {
       $access[$cid] = FALSE;
     }
     elseif (user_access('administer nodes', $account)) {
@@ -1970,26 +1966,6 @@ function _node_add_access() {
     return TRUE;
   }
   return FALSE;
-}
-
-/**
- * Access callback: Checks whether the user has permission to add a node.
- *
- * This is a wrapper to node_access() that converst '-' to '_'.
- *
- * @param string $type
- *   The type of node to create.
- *
- * @return
- *   TRUE if the user has add permission, otherwise FALSE.
- *
- * @see node_menu()
- * @see node_access()
- */
-function _node_access_type($type) {
-  $altered_type = str_replace('-', '_', $type);
-
-  return node_access('create', $altered_type);
 }
 
 /**
@@ -2069,7 +2045,7 @@ function node_menu() {
     'type' => MENU_CALLBACK,
   );
   $items['node/add'] = array(
-    'title' => 'Add Content',
+    'title' => 'Add content',
     'page callback' => 'node_add_page',
     'access callback' => '_node_add_access',
     'file' => 'node.pages.inc',
@@ -2083,16 +2059,23 @@ function node_menu() {
     // are not passed to node_feed().
     'page arguments' => array(FALSE, array()),
   );
-  $items['node/add/%'] = array(
-    'title' => 'Create Node',
-    'title callback' => 'check_plain',
-    'page callback' => 'node_add',
-    'page arguments' => array(2),
-    'access callback' => '_node_access_type',
-    'access arguments' => array(2),
-    'description' => '',
-    'file' => 'node.pages.inc',
-  );
+  // @todo Remove this loop when we have a 'description callback' property.
+  // Reset internal static cache of _node_types_build(), forces to rebuild the
+  // node type information.
+  node_type_cache_reset();
+  foreach (node_type_get_types() as $type) {
+    $type_url_str = str_replace('_', '-', $type->type);
+    $items['node/add/' . $type_url_str] = array(
+      'title' => $type->name,
+      'title callback' => 'check_plain',
+      'page callback' => 'node_add',
+      'page arguments' => array($type->type),
+      'access callback' => 'node_access',
+      'access arguments' => array('create', $type->type),
+      'description' => $type->description,
+      'file' => 'node.pages.inc',
+    );
+  }
   $items['node/%node'] = array(
     'title callback' => 'node_page_title',
     'title arguments' => array(1),
@@ -2499,7 +2482,7 @@ function node_form_block_custom_block_delete_alter(&$form, &$form_state) {
 function node_form_block_custom_block_delete_submit($form, &$form_state) {
   db_delete('block_node_type')
     ->condition('module', 'block')
-    ->condition('delta', $form_state['values']['delta'])
+    ->condition('delta', $form_state['values']['bid'])
     ->execute();
 }
 
@@ -2654,7 +2637,6 @@ function node_feed($nids = FALSE, $channel = array()) {
   $output .= "</rss>\n";
 
   drupal_add_http_header('Content-Type', 'application/rss+xml; charset=utf-8');
-  drupal_send_headers();
   print $output;
 }
 
@@ -3038,15 +3020,7 @@ function node_access($op, $node, $account = NULL) {
   // - At least one module says to grant access.
   // If no module specified either allow or deny, we fall back to the
   // node_access table.
-  if (is_string($node) || (is_object($node) && property_exists($node, 'type'))) {
-    $access = module_invoke_all('node_access', $node, $op, $account);
-  }
-  else {
-    // if the $node variable is invalid, then deny access.
-    $access  = array();
-    $access[] = NODE_ACCESS_DENY;
-  }
-
+  $access = module_invoke_all('node_access', $node, $op, $account);
   if (in_array(NODE_ACCESS_DENY, $access, TRUE)) {
     $rights[$account->uid][$cid][$op] = FALSE;
     return FALSE;

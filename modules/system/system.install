@@ -31,9 +31,9 @@ function system_requirements($phase) {
       $requirements['install_profile'] = array(
         'title' => $t('Install profile'),
         'value' => $t('%profile_name (%profile-%version)', array(
-          '%profile_name' => isset($info['name']) ? $info['name'] : '',
+          '%profile_name' => $info['name'],
           '%profile' => $profile,
-          '%version' => isset($info['version']) ? $info['version'] : '',
+          '%version' => $info['version']
         )),
         'severity' => REQUIREMENT_INFO,
         'weight' => -9
@@ -1837,7 +1837,7 @@ function system_update_7003() {
     ));
     $or = db_condition('or');
     foreach ($result as $allowed) {
-      $or->condition('ip', $allowed->mask, 'ILIKE');
+      $or->condition('ip', $allowed->mask, 'LIKE');
     }
     if (count($or)) {
       db_delete('blocked_ips')
@@ -2055,7 +2055,7 @@ function system_update_7016() {
                         FROM pg_catalog.pg_attribute a
                         LEFT JOIN pg_class c ON (c.oid =  a.attrelid)
                         WHERE pg_catalog.pg_table_is_visible(c.oid) AND c.relkind = 'r'
-                        AND pg_catalog.format_type(a.atttypid, a.atttypmod) ILIKE '%unsigned%'");
+                        AND pg_catalog.format_type(a.atttypid, a.atttypmod) LIKE '%unsigned%'");
     foreach ($result as $row) {
       switch ($row->type) {
         case 'smallint_unsigned':
@@ -2854,7 +2854,14 @@ function system_update_7061(&$sandbox) {
         // We will convert filepaths to URI using the default scheme
         // and stripping off the existing file directory path.
         $file['uri'] = $scheme . preg_replace('!^' . preg_quote($basename) . '!', '', $file['filepath']);
-        $file['uri'] = file_stream_wrapper_uri_normalize($file['uri']);
+        // Normalize the URI but don't call file_stream_wrapper_uri_normalize()
+        // directly, since that is a higher-level API function which invokes
+        // hooks while validating the scheme, and those will not work during
+        // the upgrade. Instead, use a simpler version that just assumes the
+        // scheme from above is already valid.
+        if (($file_uri_scheme = file_uri_scheme($file['uri'])) && ($file_uri_target = file_uri_target($file['uri']))) {
+          $file['uri'] = $file_uri_scheme . '://' . $file_uri_target;
+        }
         unset($file['filepath']);
         // Insert into the file_managed table.
         // Each fid should only be stored once in file_managed.
