@@ -2690,7 +2690,7 @@ function drupal_deliver_html_page($page_callback_result) {
         drupal_maintenance_theme();
         drupal_add_http_header('Status', '503 Service unavailable', FALSE, 503);
         drupal_send_headers();
-        drupal_set_title(t('Site Under Maintenance'));
+        drupal_set_title(t('Website Currently Unavailable'));
         print theme('maintenance_page', array('content' => filter_xss_admin(variable_get('maintenance_mode_message',
           t('@site is currently under maintenance. We should be back shortly. Thank you for your patience.', array('@site' => variable_get('site_name', 'Drupal')))))));
         break;
