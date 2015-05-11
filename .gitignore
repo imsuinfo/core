@@ -2,24 +2,11 @@
 sites/default/passwords.php
 sites/default/settings.php
 
-# Ignore paths that contain user-generated content.
-sites/*/files
-sites/*/private
-files
-private
-access_denied
-not_found
-service_unavailable
-
 # ignore .gitignore files inside of drupal subdirectories
 sites/all/*/*/.gitignore
 
 # Custom ignores
-sites/default/deprecated
-sites/default/gnupg
-sites/default/registry-*.php
 *.swp
-favicon.ico
 
 # Ignore Mac Files
 ._*
