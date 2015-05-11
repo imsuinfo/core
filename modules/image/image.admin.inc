@@ -807,7 +807,7 @@ function theme_image_style_preview($variables) {
   $preview_attributes['style'] = 'width: ' . $preview_width . 'px; height: ' . $preview_height . 'px;';
 
   // In the previews, timestamps are added to prevent caching of images.
-  $output = '<div class="image-style-preview preview">';
+  $output = '<div class="image-style-preview preview clearfix">';
 
   // Build the preview of the original image.
   $original_url = file_create_url($original_path);

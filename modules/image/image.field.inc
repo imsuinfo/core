@@ -357,17 +357,6 @@ function image_field_widget_form(&$form, &$form_state, $field, $instance, $langc
   else {
     $elements['#file_upload_description'] = theme('file_upload_help', array('upload_validators' => $elements[0]['#upload_validators']));
   }
-
-  if (!empty($instance['alternate_label']['value'])) {
-    if (empty($instance['alternate_label']['format'])) {
-      $element['#title'] = check_plain($instance['alternate_label']['value']);
-      $element['value']['#title'] = $element['#title'];
-    }
-    else {
-      $element['#title'] = check_markup($instance['alternate_label']['value'], $instance['alternate_label']['format']);
-      $element['value']['#title'] = $element['#title'];
-    }
-  }
   return $elements;
 }
 
@@ -465,7 +454,7 @@ function image_field_widget_process($element, &$form_state, $form) {
 function theme_image_widget($variables) {
   $element = $variables['element'];
   $output = '';
-  $output .= '<div class="image-widget form-managed-file">';
+  $output .= '<div class="image-widget form-managed-file clearfix">';
 
   if (isset($element['preview'])) {
     $output .= '<div class="image-preview">';
@@ -560,7 +549,7 @@ function image_field_formatter_settings_summary($field, $instance, $view_mode) {
     $summary[] = $link_types[$settings['image_link']];
   }
 
-  return implode('<br>', $summary);
+  return implode('<br />', $summary);
 }
 
 /**
@@ -608,14 +597,12 @@ function image_field_formatter_view($entity_type, $entity, $field, $instance, $l
  * @ingroup themeable
  */
 function theme_image_formatter($variables) {
-  $item = $variables['item'] ;
-  $image = array();
+  $item = $variables['item'];
+  $image = array(
+    'path' => $item['uri'],
+  );
 
-  if (isset($item['uri'])) {
-    $image['path'] = $item['uri'];
-  }
-
-  if (isset($item['alt'])) {
+  if (array_key_exists('alt', $item)) {
     $image['alt'] = $item['alt'];
   }
 
