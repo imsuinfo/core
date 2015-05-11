@@ -2624,6 +2624,8 @@ function drupal_deliver_page($page_callback_result, $default_delivery_callback =
  * @see drupal_deliver_page()
  */
 function drupal_deliver_html_page($page_callback_result) {
+  global $user;
+
   // Emit the correct charset HTTP header, but not if the page callback
   // result is NULL, since that likely indicates that it printed something
   // in which case, no further headers may be sent, and not if code running
@@ -2644,8 +2646,56 @@ function drupal_deliver_html_page($page_callback_result) {
         // Print a 404 page.
         drupal_add_http_header('Status', '404 Not Found', FALSE, 404);
         drupal_send_headers();
-
         watchdog('page not found', check_plain($_GET['q']), NULL, WATCHDOG_WARNING);
+
+        $error_document_file_403 = variable_get('error_document_file_404', '/var/www/error_documents/4xx/404.html');
+        $error_document_custom_menu_1_logged_in = variable_get('error_document_custom_menu_1_logged_in', NULL);
+        $error_document_custom_menu_2_logged_in = variable_get('error_document_custom_menu_2_logged_in', NULL);
+        $error_document_load_blocks = variable_get('error_document_load_blocks', FALSE);
+
+        if (file_exists($error_document_file_403)) {
+          $page = array();
+          $block = "";
+
+          if ($error_document_load_blocks) {
+            $page['menus'] = block_get_blocks_by_region('menus');
+            $page['asides'] = block_get_blocks_by_region('asides');
+
+            if (!empty($page['menus']['workbench_menu_workbench_menu_block']['#markup'])) {
+              $block .= $page['menus']['workbench_menu_workbench_menu_block']['#markup'];
+            }
+
+            if (!empty($page['asides'])) {
+              foreach ($page['asides'] as $aside) {
+                if (!empty($aside['#markup'])) {
+                  $block .= $aside['#markup'];
+                }
+              }
+            }
+          }
+          unset($page);
+
+          $page = file_get_contents($error_document_file_403);
+
+          if ($user->uid > 0) {
+            if (is_string($error_document_custom_menu_1_logged_in)) {
+              $page = preg_replace('|<!--\(begin-header-menu-1\)-->.*<!--\(end-header-menu-1\)-->|is', '<!--(begin-header-menu-1)-->' . $error_document_custom_menu_1_logged_in . '<!--(end-header-menu-1)-->', $page);
+            }
+
+            if (is_string($error_document_custom_menu_2_logged_in)) {
+              $page = preg_replace('|<!--\(begin-header-menu-2\)-->.*<!--\(end-header-menu-2\)-->|is', '<!--(begin-header-menu-2)-->' . $error_document_custom_menu_2_logged_in . '<!--(end-header-menu-2)-->', $page);
+            }
+          }
+
+          if (!empty($block)) {
+            $page = str_replace('class="mcneese-content full', 'class="mcneese-content split', $page);
+            $page = str_replace('<div id="mcneese-content-main', '<div class="column-1 relative expanded html_tag-div" id="mcneese-page-side">' . $block . "</div>\n" . '<div id="mcneese-content-main"', $page);
+          }
+          unset($block);
+
+          print($page);
+          break;
+        }
 
         // Custom 404 handler.
         drupal_set_title('Page Not Found', PASS_THROUGH);
@@ -2667,6 +2717,71 @@ function drupal_deliver_html_page($page_callback_result) {
         drupal_add_http_header('Status', '403 Forbidden', FALSE, 403);
         drupal_send_headers();
         watchdog('access denied', check_plain($_GET['q']), NULL, WATCHDOG_WARNING);
+
+        $error_document_file_403 = variable_get('error_document_file_403', '/var/www/error_documents/4xx/403.html');
+        $error_document_custom_menu_1_logged_in = variable_get('error_document_custom_menu_1_logged_in', NULL);
+        $error_document_custom_menu_2_logged_in = variable_get('error_document_custom_menu_2_logged_in', NULL);
+        $error_document_load_blocks = variable_get('error_document_load_blocks', FALSE);
+
+        if (file_exists($error_document_file_403)) {
+          $page = array();
+          $block = "";
+
+          if ($error_document_load_blocks) {
+            $page['menus'] = block_get_blocks_by_region('menus');
+            $page['asides'] = block_get_blocks_by_region('asides');
+
+            if (!empty($page['menus']['workbench_menu_workbench_menu_block']['#markup'])) {
+              $block .= $page['menus']['workbench_menu_workbench_menu_block']['#markup'];
+            }
+
+            if (!empty($page['asides'])) {
+              foreach ($page['asides'] as $aside) {
+                if (!empty($aside['#markup'])) {
+                  $block .= $aside['#markup'];
+                }
+              }
+            }
+          }
+          unset($page);
+
+          $page = file_get_contents($error_document_file_403);
+
+          if ($user->uid > 0) {
+            if (is_string($error_document_custom_menu_1_logged_in)) {
+              $page = preg_replace('|<!--\(begin-header-menu-1\)-->.*<!--\(end-header-menu-1\)-->|is', '<!--(begin-header-menu-1)-->' . $error_document_custom_menu_1_logged_in . '<!--(end-header-menu-1)-->', $page);
+            }
+
+            if (is_string($error_document_custom_menu_2_logged_in)) {
+             $page = preg_replace('|<!--\(begin-header-menu-2\)-->.*<!--\(end-header-menu-2\)-->|is', '<!--(begin-header-menu-2)-->' . $error_document_custom_menu_2_logged_in . '<!--(end-header-menu-2)-->', $page);
+             }
+          }
+
+          if (!empty($block)) {
+            $page = str_replace('class="mcneese-content full', 'class="mcneese-content split', $page);
+            $page = str_replace('<div id="mcneese-content-main', '<div class="column-1 relative expanded html_tag-div" id="mcneese-page-side">' . $block . "</div>\n" . '<div id="mcneese-content-main', $page);
+          }
+          unset($block);
+
+          global $user;
+          if ($user->uid > 0) {
+            $page = str_replace('<!--(replace-login-form)-->', "<br>\n" . 'If you are already logged in, then you probably have followed an outdated link to an obsolete page.<br>' . "\n", $page);
+          }
+          elseif ($error_document_load_blocks) {
+            $content = block_get_blocks_by_region('content');
+            if (!empty($content['user_login'])) {
+              $login = drupal_render($content);
+              if (!empty($login)) {
+                $page = str_replace('<!--(replace-login-form)-->', $login, $page);
+              }
+              unset($login);
+            }
+            unset($content);
+          }
+
+          print($page);
+          break;
+        }
 
         // Custom 403 handler.
         drupal_set_title('Access Denied', PASS_THROUGH);
