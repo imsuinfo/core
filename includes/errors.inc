@@ -183,8 +183,26 @@ function _drupal_log_error($error, $fatal = FALSE) {
 
     $error_document_file_500 = variable_get('error_document_file_500', '/var/www/error_documents/5xx/500.html');
     if (file_exists($error_document_file_500)) {
-      $file = file_get_contents($error_document_file_500);
-      print($file);
+      $page = file_get_contents($error_document_file_500);
+
+      if (function_exists('cf_theme_get_variables')) {
+        $cf = & drupal_static('cf_theme_get_variables', array());
+        cf_theme_get_variables($cf);
+
+        $page = str_replace(' is-using_database ', ' ', $page);
+        $page = str_replace(' is-anonymous ', ' ', $page);
+        $page = str_replace(' is-logged_in ', ' ', $page);
+        $page = str_replace(' is-html5 ', ' ', $page);
+        $page = str_replace(' is-fixed_width ', ' ', $page);
+        $page = str_replace(' is-flex_width ', ' ', $page);
+        $page = preg_replace('/ at-[^ ]* /i', ' ', $page);
+        $markup_css = isset($cf['markup_css']['body']['class']) ? $cf['markup_css']['body']['class'] : '';
+        $markup_css = str_replace(' is-expanded ', ' ', $markup_css);
+        $markup_css = str_replace(' is-collapsed ', ' ', $markup_css);
+        $page = str_replace('<body class="mcneese ', '<body class="mcneese ' . $markup_css . ' ', $page);
+      }
+
+      print($page);
       exit();
     }
   }

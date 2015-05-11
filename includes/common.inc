@@ -2678,6 +2678,8 @@ function drupal_deliver_html_page($page_callback_result) {
           $page = file_get_contents($error_document_file_403);
 
           if ($user->uid > 0) {
+            $page = str_replace(' is-anonymous ', ' is-logged_in ', $page);
+
             if (is_string($error_document_custom_menu_1_logged_in)) {
               $page = preg_replace('|<!--\(begin-header-menu-1\)-->.*<!--\(end-header-menu-1\)-->|is', '<!--(begin-header-menu-1)-->' . $error_document_custom_menu_1_logged_in . '<!--(end-header-menu-1)-->', $page);
             }
@@ -2685,6 +2687,36 @@ function drupal_deliver_html_page($page_callback_result) {
             if (is_string($error_document_custom_menu_2_logged_in)) {
               $page = preg_replace('|<!--\(begin-header-menu-2\)-->.*<!--\(end-header-menu-2\)-->|is', '<!--(begin-header-menu-2)-->' . $error_document_custom_menu_2_logged_in . '<!--(end-header-menu-2)-->', $page);
             }
+
+            if (function_exists('_toolbar_is_collapsed') && user_access('access toolbar', $user)) {
+              $toolbar_view = toolbar_view();
+              $toolbar_view['#pre_render'] = array(
+                'toolbar_pre_render',
+              );
+
+              if (function_exists('shortcut_toolbar_pre_render')) {
+                $toolbar_view['#pre_render'][] = 'shortcut_toolbar_pre_render';
+              }
+              $toolbar = drupal_render($toolbar_view);
+              $page = str_replace('<!--(begin-page_top)-->', "<!--(begin-page_top)-->\n" . $toolbar, $page);
+              unset($toolbar);
+              unset($toolbar_view);
+            }
+          }
+
+          if (function_exists('cf_theme_get_variables')) {
+            $cf = & drupal_static('cf_theme_get_variables', array());
+            $page = str_replace(' is-using_database ', ' ', $page);
+            $page = str_replace(' is-anonymous ', ' ', $page);
+            $page = str_replace(' is-logged_in ', ' ', $page);
+            $page = str_replace(' is-html5 ', ' ', $page);
+            $page = str_replace(' is-fixed_width ', ' ', $page);
+            $page = str_replace(' is-flex_width ', ' ', $page);
+            $page = preg_replace('/ at-[^ ]* /i', ' ', $page);
+            $markup_css = isset($cf['markup_css']['body']['class']) ? $cf['markup_css']['body']['class'] : '';
+            $markup_css = str_replace(' is-expanded ', ' ', $markup_css);
+            $markup_css = str_replace(' is-collapsed ', ' ', $markup_css);
+            $page = str_replace('<body class="mcneese ', '<body class="mcneese ' . $markup_css . ' ', $page);
           }
 
           if (!empty($block)) {
@@ -2748,13 +2780,45 @@ function drupal_deliver_html_page($page_callback_result) {
           $page = file_get_contents($error_document_file_403);
 
           if ($user->uid > 0) {
+            $page = str_replace(' is-anonymous ', ' is-logged_in ', $page);
+
             if (is_string($error_document_custom_menu_1_logged_in)) {
               $page = preg_replace('|<!--\(begin-header-menu-1\)-->.*<!--\(end-header-menu-1\)-->|is', '<!--(begin-header-menu-1)-->' . $error_document_custom_menu_1_logged_in . '<!--(end-header-menu-1)-->', $page);
             }
 
             if (is_string($error_document_custom_menu_2_logged_in)) {
              $page = preg_replace('|<!--\(begin-header-menu-2\)-->.*<!--\(end-header-menu-2\)-->|is', '<!--(begin-header-menu-2)-->' . $error_document_custom_menu_2_logged_in . '<!--(end-header-menu-2)-->', $page);
-             }
+            }
+
+            if (function_exists('_toolbar_is_collapsed') && user_access('access toolbar', $user)) {
+              $toolbar_view = toolbar_view();
+              $toolbar_view['#pre_render'] = array(
+                'toolbar_pre_render',
+              );
+
+              if (function_exists('shortcut_toolbar_pre_render')) {
+                $toolbar_view['#pre_render'][] = 'shortcut_toolbar_pre_render';
+              }
+              $toolbar = drupal_render($toolbar_view);
+              $page = str_replace('<!--(begin-page_top)-->', "<!--(begin-page_top)-->\n" . $toolbar, $page);
+              unset($toolbar);
+              unset($toolbar_view);
+            }
+          }
+
+          if (function_exists('cf_theme_get_variables')) {
+            $cf = & drupal_static('cf_theme_get_variables', array());
+            $page = str_replace(' is-using_database ', ' ', $page);
+            $page = str_replace(' is-anonymous ', ' ', $page);
+            $page = str_replace(' is-logged_in ', ' ', $page);
+            $page = str_replace(' is-html5 ', ' ', $page);
+            $page = str_replace(' is-fixed_width ', ' ', $page);
+            $page = str_replace(' is-flex_width ', ' ', $page);
+            $page = preg_replace('/ at-[^ ]* /i', ' ', $page);
+            $markup_css = isset($cf['markup_css']['body']['class']) ? $cf['markup_css']['body']['class'] : '';
+            $markup_css = str_replace(' is-expanded ', ' ', $markup_css);
+            $markup_css = str_replace(' is-collapsed ', ' ', $markup_css);
+            $page = str_replace('<body class="mcneese ', '<body class="mcneese ' . $markup_css . ' ', $page);
           }
 
           if (!empty($block)) {
@@ -2763,7 +2827,6 @@ function drupal_deliver_html_page($page_callback_result) {
           }
           unset($block);
 
-          global $user;
           if ($user->uid > 0) {
             $page = str_replace('<!--(replace-login-form)-->', "<br>\n" . 'If you are already logged in, then you probably have followed an outdated link to an obsolete page.<br>' . "\n", $page);
           }
