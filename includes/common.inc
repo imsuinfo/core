@@ -2624,6 +2624,8 @@ function drupal_deliver_page($page_callback_result, $default_delivery_callback =
  * @see drupal_deliver_page()
  */
 function drupal_deliver_html_page($page_callback_result) {
+  global $user;
+
   // Emit the correct charset HTTP header, but not if the page callback
   // result is NULL, since that likely indicates that it printed something
   // in which case, no further headers may be sent, and not if code running
@@ -2644,37 +2646,102 @@ function drupal_deliver_html_page($page_callback_result) {
         // Print a 404 page.
         drupal_add_http_header('Status', '404 Not Found', FALSE, 404);
         drupal_send_headers();
-
         watchdog('page not found', check_plain($_GET['q']), NULL, WATCHDOG_WARNING);
 
-        // Check for and return a fast 404 page if configured.
-        drupal_fast_404();
+        $error_document_file_403 = variable_get('error_document_file_404', '/var/www/error_documents/4xx/404.html');
+        $error_document_custom_menu_1_logged_in = variable_get('error_document_custom_menu_1_logged_in', NULL);
+        $error_document_custom_menu_2_logged_in = variable_get('error_document_custom_menu_2_logged_in', NULL);
+        $error_document_load_blocks = variable_get('error_document_load_blocks', FALSE);
 
-        // Keep old path for reference, and to allow forms to redirect to it.
-        if (!isset($_GET['destination'])) {
-          // Make sure that the current path is not interpreted as external URL.
-          if (!url_is_external($_GET['q'])) {
-            $_GET['destination'] = $_GET['q'];
+        if (file_exists($error_document_file_403)) {
+          $page = array();
+          $block = "";
+
+          if ($error_document_load_blocks) {
+            $page['menus'] = block_get_blocks_by_region('menus');
+            $page['asides'] = block_get_blocks_by_region('asides');
+
+            if (!empty($page['menus']['workbench_menu_workbench_menu_block']['#markup'])) {
+              $block .= $page['menus']['workbench_menu_workbench_menu_block']['#markup'];
+            }
+
+            if (!empty($page['asides'])) {
+              foreach ($page['asides'] as $aside) {
+                if (!empty($aside['#markup'])) {
+                  $block .= $aside['#markup'];
+                }
+              }
+            }
           }
+          unset($page);
+
+          $page = file_get_contents($error_document_file_403);
+
+          if ($user->uid > 0) {
+            $page = str_replace(' is-anonymous ', ' is-logged_in ', $page);
+
+            if (is_string($error_document_custom_menu_1_logged_in)) {
+              $page = preg_replace('|<!--\(begin-header-menu-1\)-->.*<!--\(end-header-menu-1\)-->|is', '<!--(begin-header-menu-1)-->' . $error_document_custom_menu_1_logged_in . '<!--(end-header-menu-1)-->', $page);
+            }
+
+            if (is_string($error_document_custom_menu_2_logged_in)) {
+              $page = preg_replace('|<!--\(begin-header-menu-2\)-->.*<!--\(end-header-menu-2\)-->|is', '<!--(begin-header-menu-2)-->' . $error_document_custom_menu_2_logged_in . '<!--(end-header-menu-2)-->', $page);
+            }
+
+            if (function_exists('_toolbar_is_collapsed') && user_access('access toolbar', $user)) {
+              $toolbar_view = toolbar_view();
+              $toolbar_view['#pre_render'] = array(
+                'toolbar_pre_render',
+              );
+
+              if (function_exists('shortcut_toolbar_pre_render')) {
+                $toolbar_view['#pre_render'][] = 'shortcut_toolbar_pre_render';
+              }
+              $toolbar = drupal_render($toolbar_view);
+              $page = str_replace('<!--(begin-page_top)-->', "<!--(begin-page_top)-->\n" . $toolbar, $page);
+              unset($toolbar);
+              unset($toolbar_view);
+            }
+          }
+
+          if (function_exists('cf_theme_get_variables')) {
+            $cf = & drupal_static('cf_theme_get_variables', array());
+            $page = str_replace(' is-using_database ', ' ', $page);
+            $page = str_replace(' is-anonymous ', ' ', $page);
+            $page = str_replace(' is-logged_in ', ' ', $page);
+            $page = str_replace(' is-html5 ', ' ', $page);
+            $page = str_replace(' is-fixed_width ', ' ', $page);
+            $page = str_replace(' is-flex_width ', ' ', $page);
+            $page = preg_replace('/ at-[^ ]* /i', ' ', $page);
+            $markup_css = isset($cf['markup_css']['body']['class']) ? $cf['markup_css']['body']['class'] : '';
+            $markup_css = str_replace(' is-expanded ', ' ', $markup_css);
+            $markup_css = str_replace(' is-collapsed ', ' ', $markup_css);
+            $page = str_replace('<body class="mcneese ', '<body class="mcneese ' . $markup_css . ' ', $page);
+          }
+
+          if (!empty($block)) {
+            $page = str_replace('class="mcneese-content full', 'class="mcneese-content split', $page);
+            $page = str_replace('<div id="mcneese-content-main', '<div class="column-1 relative expanded html_tag-div" id="mcneese-page-side">' . $block . "</div>\n" . '<div id="mcneese-content-main"', $page);
+          }
+          unset($block);
+
+          print($page);
+          break;
         }
 
-        $path = drupal_get_normal_path(variable_get('site_404', ''));
-        if ($path && $path != $_GET['q']) {
-          // Custom 404 handler. Set the active item in case there are tabs to
-          // display, or other dependencies on the path.
-          menu_set_active_item($path);
-          $return = menu_execute_active_handler($path, FALSE);
-        }
+        // Custom 404 handler.
+        drupal_set_title('Page Not Found', PASS_THROUGH);
+        $return = '<br>';
+        $return .= '<h1 style="text-align: center;">Oops!</h1>';
+        $return .= '<h2 style="text-align: center;">This page is no longer available (404).</h2>';
+        $return .= '<div style="text-align: center;"><br>';
+        $return .= '  The page you have requested either does not exist or has been removed.<br>';
+        $return .= '  <br>';
+        $return .= '  If you think this is in error, then please use the contact information provided in the page footer.<br>';
+        $return .= '</div>';
+        $return .= '<br>';
 
-        if (empty($return) || $return == MENU_NOT_FOUND || $return == MENU_ACCESS_DENIED) {
-          // Standard 404 handler.
-          drupal_set_title(t('Page not found'));
-          $return = t('The requested page "@path" could not be found.', array('@path' => request_uri()));
-        }
-
-        drupal_set_page_content($return);
-        $page = element_info('page');
-        print drupal_render_page($page);
+        print drupal_render_page($return);
         break;
 
       case MENU_ACCESS_DENIED:
@@ -2683,37 +2750,160 @@ function drupal_deliver_html_page($page_callback_result) {
         drupal_send_headers();
         watchdog('access denied', check_plain($_GET['q']), NULL, WATCHDOG_WARNING);
 
-        // Keep old path for reference, and to allow forms to redirect to it.
-        if (!isset($_GET['destination'])) {
-          // Make sure that the current path is not interpreted as external URL.
-          if (!url_is_external($_GET['q'])) {
-            $_GET['destination'] = $_GET['q'];
+        $error_document_file_403 = variable_get('error_document_file_403', '/var/www/error_documents/4xx/403.html');
+        $error_document_custom_menu_1_logged_in = variable_get('error_document_custom_menu_1_logged_in', NULL);
+        $error_document_custom_menu_2_logged_in = variable_get('error_document_custom_menu_2_logged_in', NULL);
+        $error_document_load_blocks = variable_get('error_document_load_blocks', FALSE);
+
+        if (file_exists($error_document_file_403)) {
+          $page = array();
+          $block = "";
+
+          if ($error_document_load_blocks) {
+            $page['menus'] = block_get_blocks_by_region('menus');
+            $page['asides'] = block_get_blocks_by_region('asides');
+
+            if (!empty($page['menus']['workbench_menu_workbench_menu_block']['#markup'])) {
+              $block .= $page['menus']['workbench_menu_workbench_menu_block']['#markup'];
+            }
+
+            if (!empty($page['asides'])) {
+              foreach ($page['asides'] as $aside) {
+                if (!empty($aside['#markup'])) {
+                  $block .= $aside['#markup'];
+                }
+              }
+            }
           }
+          unset($page);
+
+          $page = file_get_contents($error_document_file_403);
+
+          if ($user->uid > 0) {
+            $page = str_replace(' is-anonymous ', ' is-logged_in ', $page);
+
+            if (is_string($error_document_custom_menu_1_logged_in)) {
+              $page = preg_replace('|<!--\(begin-header-menu-1\)-->.*<!--\(end-header-menu-1\)-->|is', '<!--(begin-header-menu-1)-->' . $error_document_custom_menu_1_logged_in . '<!--(end-header-menu-1)-->', $page);
+            }
+
+            if (is_string($error_document_custom_menu_2_logged_in)) {
+             $page = preg_replace('|<!--\(begin-header-menu-2\)-->.*<!--\(end-header-menu-2\)-->|is', '<!--(begin-header-menu-2)-->' . $error_document_custom_menu_2_logged_in . '<!--(end-header-menu-2)-->', $page);
+            }
+
+            if (function_exists('_toolbar_is_collapsed') && user_access('access toolbar', $user)) {
+              $toolbar_view = toolbar_view();
+              $toolbar_view['#pre_render'] = array(
+                'toolbar_pre_render',
+              );
+
+              if (function_exists('shortcut_toolbar_pre_render')) {
+                $toolbar_view['#pre_render'][] = 'shortcut_toolbar_pre_render';
+              }
+              $toolbar = drupal_render($toolbar_view);
+              $page = str_replace('<!--(begin-page_top)-->', "<!--(begin-page_top)-->\n" . $toolbar, $page);
+              unset($toolbar);
+              unset($toolbar_view);
+            }
+          }
+
+          if (function_exists('cf_theme_get_variables')) {
+            $cf = & drupal_static('cf_theme_get_variables', array());
+            $page = str_replace(' is-using_database ', ' ', $page);
+            $page = str_replace(' is-anonymous ', ' ', $page);
+            $page = str_replace(' is-logged_in ', ' ', $page);
+            $page = str_replace(' is-html5 ', ' ', $page);
+            $page = str_replace(' is-fixed_width ', ' ', $page);
+            $page = str_replace(' is-flex_width ', ' ', $page);
+            $page = preg_replace('/ at-[^ ]* /i', ' ', $page);
+            $markup_css = isset($cf['markup_css']['body']['class']) ? $cf['markup_css']['body']['class'] : '';
+            $markup_css = str_replace(' is-expanded ', ' ', $markup_css);
+            $markup_css = str_replace(' is-collapsed ', ' ', $markup_css);
+            $page = str_replace('<body class="mcneese ', '<body class="mcneese ' . $markup_css . ' ', $page);
+          }
+
+          if (!empty($block)) {
+            $page = str_replace('class="mcneese-content full', 'class="mcneese-content split', $page);
+            $page = str_replace('<div id="mcneese-content-main', '<div class="column-1 relative expanded html_tag-div" id="mcneese-page-side">' . $block . "</div>\n" . '<div id="mcneese-content-main', $page);
+          }
+          unset($block);
+
+          if ($user->uid > 0) {
+            $page = str_replace('<!--(replace-login-form)-->', "<br>\n" . 'If you are already logged in, then you probably have followed an outdated link to an obsolete page.<br>' . "\n", $page);
+          }
+          elseif ($error_document_load_blocks) {
+            $content = block_get_blocks_by_region('content');
+            if (!empty($content['user_login'])) {
+              $login = drupal_render($content);
+              if (!empty($login)) {
+                $page = str_replace('<!--(replace-login-form)-->', $login, $page);
+              }
+              unset($login);
+            }
+            unset($content);
+          }
+
+          print($page);
+          break;
         }
 
-        $path = drupal_get_normal_path(variable_get('site_403', ''));
-        if ($path && $path != $_GET['q']) {
-          // Custom 403 handler. Set the active item in case there are tabs to
-          // display or other dependencies on the path.
-          menu_set_active_item($path);
-          $return = menu_execute_active_handler($path, FALSE);
-        }
-
-        if (empty($return) || $return == MENU_NOT_FOUND || $return == MENU_ACCESS_DENIED) {
-          // Standard 403 handler.
-          drupal_set_title(t('Access denied'));
-          $return = t('You are not authorized to access this page.');
-        }
+        // Custom 403 handler.
+        drupal_set_title('Access Denied', PASS_THROUGH);
+        $return = '<br>';
+        $return .= '<h1 style="text-align: center;">Oops!</h1>';
+        $return .= '<h2 style="text-align: center;">This page is restricted (403).</h2>';
+        $return .= '<div style="text-align: center;"><br>';
+        $return .= '  The page you have requested is restricted to editors or you may have followed an outdated link pointing to to a page that has been unpublished.<br>';
+        $return .= '  <br>';
+        $return .= '  Before you can proceed to view the page you have requested, you must log on to the site.<br>';
+        $return .= '  <br>';
+        $return .= '  If you are already logged in, then you probably have followed an outdated link to an obsolete page.<br>';
+        $return .= '</div>';
+        $return .= '<br>';
 
         print drupal_render_page($return);
         break;
 
       case MENU_SITE_OFFLINE:
         // Print a 503 page.
+        $error_document_file_503 = variable_get('error_document_file_503', '/var/www/error_documents/5xx/503.html');
+        $emergency_mode = variable_get('emergency_mode', FALSE);
+
+        if ($emergency_mode == 0 && file_exists($error_document_file_503)) {
+          drupal_add_http_header('Status', '503 Service Unavailable', FALSE, 503);
+          drupal_send_headers();
+
+          $page = file_get_contents($error_document_file_503);
+
+          if (function_exists('cf_theme_get_variables')) {
+            try {
+              $cf = & drupal_static('cf_theme_get_variables', array());
+              cf_theme_get_variables($cf);
+
+              $page = str_replace(' is-using_database ', ' ', $page);
+              $page = str_replace(' is-anonymous ', ' ', $page);
+              $page = str_replace(' is-logged_in ', ' ', $page);
+              $page = str_replace(' is-html5 ', ' ', $page);
+              $page = str_replace(' is-fixed_width ', ' ', $page);
+              $page = str_replace(' is-flex_width ', ' ', $page);
+              $page = preg_replace('/ at-[^ ]* /i', ' ', $page);
+              $markup_css = isset($cf['markup_css']['body']['class']) ? $cf['markup_css']['body']['class'] : '';
+              $markup_css = str_replace(' is-expanded ', ' ', $markup_css);
+              $markup_css = str_replace(' is-collapsed ', ' ', $markup_css);
+              $page = str_replace('<body class="mcneese ', '<body class="mcneese ' . $markup_css . ' ', $page);
+            }
+            catch (Exception $ex) {
+              // if the code is currently being modified, then errors could occur, so attempt to silently ignore them.
+            }
+          }
+
+          print($page);
+          break;
+        }
+
         drupal_maintenance_theme();
-        drupal_add_http_header('Status', '503 Service unavailable', FALSE, 503);
+        drupal_add_http_header('Status', '503 Service Unavailable', FALSE, 503);
         drupal_send_headers();
-        drupal_set_title(t('Site under maintenance'));
+        drupal_set_title(t('Website Currently Unavailable'));
         print theme('maintenance_page', array('content' => filter_xss_admin(variable_get('maintenance_mode_message',
           t('@site is currently under maintenance. We should be back shortly. Thank you for your patience.', array('@site' => variable_get('site_name', 'Drupal')))))));
         break;
