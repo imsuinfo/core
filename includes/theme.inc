@@ -1074,6 +1074,10 @@ function theme($hook, $variables = array()) {
     }
   }
 
+  if (!isset($variables)) {
+    $variables = array();
+  }
+
   // If a renderable array is passed as $variables, then set $variables to
   // the arguments expected by the theme function.
   if (isset($variables['#theme']) || isset($variables['#theme_wrappers'])) {
