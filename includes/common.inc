@@ -2717,11 +2717,11 @@ function drupal_deliver_html_page($page_callback_result) {
             $page = str_replace(' is-html5 ', ' ', $page);
             $page = str_replace(' is-fixed_width ', ' ', $page);
             $page = str_replace(' is-flex_width ', ' ', $page);
-            $page = preg_replace('/ at-[^ ]* /i', ' ', $page);
+            $page = preg_replace('/ at-\w+ /i', ' ', $page);
             $markup_css = isset($cf['markup_css']['body']['class']) ? $cf['markup_css']['body']['class'] : '';
             $markup_css = str_replace(' is-expanded ', ' ', $markup_css);
             $markup_css = str_replace(' is-collapsed ', ' ', $markup_css);
-            $page = str_replace('<body class="mcneese ', '<body class="mcneese ' . $markup_css . ' ', $page);
+            $page = str_replace('<body id="mcneese-body" class="mcneese ', '<body id="mcneese-body" class="mcneese ' . $markup_css . ' ', $page);
           }
 
           if (!empty($block)) {
@@ -2824,11 +2824,11 @@ function drupal_deliver_html_page($page_callback_result) {
             $page = str_replace(' is-html5 ', ' ', $page);
             $page = str_replace(' is-fixed_width ', ' ', $page);
             $page = str_replace(' is-flex_width ', ' ', $page);
-            $page = preg_replace('/ at-[^ ]* /i', ' ', $page);
+            $page = preg_replace('/ at-\w+ /i', ' ', $page);
             $markup_css = isset($cf['markup_css']['body']['class']) ? $cf['markup_css']['body']['class'] : '';
             $markup_css = str_replace(' is-expanded ', ' ', $markup_css);
             $markup_css = str_replace(' is-collapsed ', ' ', $markup_css);
-            $page = str_replace('<body class="mcneese ', '<body class="mcneese ' . $markup_css . ' ', $page);
+            $page = str_replace('<body id="mcneese-body" class="mcneese ', '<body id="mcneese-body" class="mcneese ' . $markup_css . ' ', $page);
           }
 
           if (!empty($block)) {
@@ -2898,11 +2898,11 @@ function drupal_deliver_html_page($page_callback_result) {
               $page = str_replace(' is-html5 ', ' ', $page);
               $page = str_replace(' is-fixed_width ', ' ', $page);
               $page = str_replace(' is-flex_width ', ' ', $page);
-              $page = preg_replace('/ at-[^ ]* /i', ' ', $page);
+              $page = preg_replace('/ at-\w+ /i', ' ', $page);
               $markup_css = isset($cf['markup_css']['body']['class']) ? $cf['markup_css']['body']['class'] : '';
               $markup_css = str_replace(' is-expanded ', ' ', $markup_css);
               $markup_css = str_replace(' is-collapsed ', ' ', $markup_css);
-              $page = str_replace('<body class="mcneese ', '<body class="mcneese ' . $markup_css . ' ', $page);
+              $page = str_replace('<body id="mcneese-body" class="mcneese ', '<body id="mcneese-body" class="mcneese ' . $markup_css . ' ', $page);
             }
             catch (Exception $ex) {
               // if the code is currently being modified, then errors could occur, so attempt to silently ignore them.
