@@ -1274,8 +1274,16 @@ function drupal_send_headers($default_headers = array(), $only_default = FALSE) 
  * @see drupal_page_set_cache()
  */
 function drupal_page_header() {
-  drupal_add_http_header('Last-Modified', gmdate(DATE_RFC1123, REQUEST_TIME));
-  drupal_add_http_header('Cache-Control', 'no-cache, must-revalidate, post-check=0, pre-check=0');
+  $headers = &drupal_static('drupal_http_headers', array());
+
+  if (!isset($headers['last-modified'])) {
+    drupal_add_http_header('Last-Modified', gmdate(DATE_RFC1123, REQUEST_TIME));
+  }
+
+  if (!isset($headers['cache-control'])) {
+    drupal_add_http_header('Cache-Control', 'no-cache, must-revalidate, post-check=0, pre-check=0');
+  }
+
   #drupal_add_http_header('ETag', '"' . REQUEST_TIME . '"');
 }
 
