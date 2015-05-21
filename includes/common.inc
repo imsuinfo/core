@@ -2634,6 +2634,7 @@ function drupal_deliver_page($page_callback_result, $default_delivery_callback =
  */
 function drupal_deliver_html_page($page_callback_result) {
   global $user;
+  global $conf;
 
   // Emit the correct charset HTTP header, but not if the page callback
   // result is NULL, since that likely indicates that it printed something
@@ -2654,7 +2655,6 @@ function drupal_deliver_html_page($page_callback_result) {
       case MENU_NOT_FOUND:
         // Print a 404 page.
         drupal_add_http_header('Status', '404 Not Found', FALSE, 404);
-        drupal_send_headers();
         watchdog('page not found', check_plain($_GET['q']), NULL, WATCHDOG_WARNING);
 
         $error_document_file_404 = variable_get('error_document_file_404', '/var/www/error_documents/4xx/404.html');
@@ -2750,6 +2750,7 @@ function drupal_deliver_html_page($page_callback_result) {
           }
           unset($block);
 
+          drupal_send_headers();
           print($page);
           break;
         }
@@ -2786,7 +2787,6 @@ function drupal_deliver_html_page($page_callback_result) {
       case MENU_ACCESS_DENIED:
         // Print a 403 page.
         drupal_add_http_header('Status', '403 Forbidden', FALSE, 403);
-        drupal_send_headers();
         watchdog('access denied', check_plain($_GET['q']), NULL, WATCHDOG_WARNING);
 
         $error_document_file_403 = variable_get('error_document_file_403', '/var/www/error_documents/4xx/403.html');
@@ -2891,12 +2891,22 @@ function drupal_deliver_html_page($page_callback_result) {
               $login = drupal_render($content);
               if (!empty($login)) {
                 $page = str_replace('<!--(replace-login-form)-->', "<br>\n" . $login, $page);
+
+                if (isset($conf['default_headers-form']) && is_array($conf['default_headers-form'])) {
+                  foreach ($conf['default_headers-form'] as $header_name => $header_value) {
+                    drupal_add_http_header($header_name, $header_value);
+                  }
+                }
+                elseif (!isset($conf['default_headers-cache_control']) || $conf['default_headers-cache_control'] === TRUE) {
+                  drupal_add_http_header('Cache-Control', 'private, must-revalidate');
+                }
               }
               unset($login);
             }
             unset($content);
           }
 
+          drupal_send_headers();
           print($page);
           break;
         }
@@ -2929,6 +2939,7 @@ function drupal_deliver_html_page($page_callback_result) {
         $return .= '</div>';
         $return .= '<br>';
 
+        drupal_send_headers();
         print drupal_render_page($return);
         break;
 
@@ -2939,7 +2950,6 @@ function drupal_deliver_html_page($page_callback_result) {
 
         if ($emergency_mode == 0 && is_string($error_document_file_503) && file_exists($error_document_file_503)) {
           drupal_add_http_header('Status', '503 Service Unavailable', FALSE, 503);
-          drupal_send_headers();
 
           $page = file_get_contents($error_document_file_503);
 
@@ -2982,25 +2992,28 @@ function drupal_deliver_html_page($page_callback_result) {
             }
           }
 
+          drupal_send_headers();
           print($page);
           break;
         }
 
         drupal_maintenance_theme();
         drupal_add_http_header('Status', '503 Service Unavailable', FALSE, 503);
-        drupal_send_headers();
         drupal_set_title(t('Website Currently Unavailable'));
+        drupal_send_headers();
         print theme('maintenance_page', array('content' => filter_xss_admin(variable_get('maintenance_mode_message',
           t('@site is currently under maintenance. We should be back shortly. Thank you for your patience.', array('@site' => variable_get('site_name', 'Drupal')))))));
         break;
     }
   }
   elseif (isset($page_callback_result)) {
-    drupal_send_headers();
 
     // Print anything besides a menu constant, assuming it's not NULL or
     // undefined.
-    print drupal_render_page($page_callback_result);
+    $drupal_page =  drupal_render_page($page_callback_result);
+    drupal_send_headers();
+    print($drupal_page);
+    unset($drupal_page);
   }
 
   // Perform end-of-request tasks.
