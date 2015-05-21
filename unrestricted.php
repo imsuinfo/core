@@ -81,7 +81,7 @@ function unrestricted_not_found() {
   $headers = array();
   $headers['status'] = array('value' => '404 Not Found', 'status_code' => 404);
   $headers['Content-Type'] = array('value' => 'text/html');
-  $headers['Date'] = array('value' => date('r', $instance));
+  $headers['Date'] = array('value' => gmdate(DATE_RFC1123, $instance));
 
   unrestricted_send_headers($headers);
 
@@ -109,7 +109,7 @@ function unrestricted_service_unavailable($message = NULL) {
   $headers = array();
   $headers['status'] = array('value' => '503 Service Unavailable', 'status_code' => 503);
   $headers['Content-Type'] = array('value' => 'text/html');
-  $headers['Date'] = array('value' => date('r', $instance));
+  $headers['Date'] = array('value' => gmdate(DATE_RFC1123, $instance));
 
   unrestricted_send_headers($headers);
 
@@ -138,7 +138,7 @@ function unrestricted_not_acceptable() {
   $headers = array();
   $headers['status'] = array('value' => '406 Not Acceptable', 'status_code' => 406);
   $headers['Content-Type'] = array('value' => 'text/html');
-  $headers['Date'] = array('value' => date('r', $instance));
+  $headers['Date'] = array('value' => gmdate(DATE_RFC1123, $instance));
 
   unrestricted_send_headers($headers);
 
@@ -156,7 +156,7 @@ function unrestricted_precondition_failed() {
   $headers = array();
   $headers['status'] = array('value' => '412 Pre-Condition Failed', 'status_code' => 412);
   $headers['Content-Type'] = array('value' => 'text/html');
-  $headers['Date'] = array('value' => date('r', $instance));
+  $headers['Date'] = array('value' => gmdate(DATE_RFC1123, $instance));
 
   unrestricted_send_headers($headers);
 
@@ -673,10 +673,12 @@ function unrestricted_get_file_data(&$information, $settings) {
   $headers['Content-Length'] = array('value' => $information['file']['size']);
   $headers['Content-Location'] = array('value' => $settings['base_path'] . MCNEESE_FILE_DB_FILE_PATH . '/' . MCNEESE_FILE_DB_PATH_BY_HASH . '/' . $information['file']['shortsum'] . '/' . $filename . $extension);
   $headers['Content-Type'] = array('value' => $information['file']['mimetype']);
-  $headers['Date'] = array('value' => date('r', $instance));
+  $headers['Date'] = array('value' => gmdate(DATE_RFC1123, $instance));
   $headers['Etag'] = array('value' => '"' . MCNEESE_FILE_DB_PATH_BY_HASH_ALGORITHM . '://' . $information['file']['checksum'] . '"');
-  $headers['Last-Modified'] = array('value' => date('r', $information['file']['timestamp']));
-  $headers['content-transfer-encoding'] = array('value' => 'binary');
+  $headers['Last-Modified'] = array('value' => gmdate(DATE_RFC1123, $information['file']['timestamp']));
+  $headers['Content-Transfer-Encoding'] = array('value' => 'binary');
+  $headers['Cache-Control'] = 'Public';
+  $headers['Link'] = array('value' => '<' . $settings['base_path'] . MCNEESE_FILE_DB_FILE_PATH . '/' . MCNEESE_FILE_DB_PATH_BY_HASH . '/' . $information['file']['shortsum'] . '>; rel="shortlink", <' . $headers['Content-Location']['value'] . '>; rel="canonical"');
   unrestricted_send_headers($headers);
 
   // when there are no changes, there is no reason to transmit the file (this is a client-side caching optimization).
@@ -740,10 +742,12 @@ function unrestricted_get_file_hash(&$information, $settings) {
   $headers['Content-Length'] = array('value' => strlen($data));
   $headers['Content-Location'] = array('value' => $settings['base_path'] . MCNEESE_FILE_DB_FILE_PATH . '/' . MCNEESE_FILE_DB_PATH_BY_HASH_SUM . '/' . $information['file']['shortsum'] . '/' . $information['file']['filename'] . '.' . $information['file']['extension'] . '.' . MCNEESE_FILE_DB_PATH_BY_HASH_SUM_EXTENSION);
   $headers['Content-Type'] = array('value' => 'text/plain');
-  $headers['Date'] = array('value' => date('r', $instance));
+  $headers['Date'] = array('value' => gmdate(DATE_RFC1123, $instance));
   $headers['Etag'] = array('value' => '"' . MCNEESE_FILE_DB_PATH_BY_HASH_ALGORITHM . '://' . $information['file']['checksum'] . '.' . MCNEESE_FILE_DB_PATH_BY_HASH_SUM_EXTENSION . '"');
-  $headers['Last-Modified'] = array('value' => date('r', $information['file']['timestamp']));
-  $headers['content-transfer-encoding'] = array('value' => 'binary');
+  $headers['Last-Modified'] = array('value' => gmdate(DATE_RFC1123, $information['file']['timestamp']));
+  $headers['Content-Transfer-Encoding'] = array('value' => 'binary');
+  $headers['Cache-Control'] = 'Public';
+  $headers['Link'] = array('value' => '<' . $settings['base_path'] . MCNEESE_FILE_DB_FILE_PATH . '/' . MCNEESE_FILE_DB_PATH_BY_HASH_SUM . '/' . $information['file']['shortsum'] . '>; rel="shortlink", <' . $headers['Content-Location']['value'] . '>; rel="canonical"');
   unrestricted_send_headers($headers);
 
   // when there are no changes, there is no reason to transmit the file (this is a client-side caching optimization).
