@@ -1276,12 +1276,41 @@ function drupal_send_headers($default_headers = array(), $only_default = FALSE) 
 function drupal_page_header() {
   $headers = &drupal_static('drupal_http_headers', array());
 
-  if (!isset($headers['last-modified'])) {
+  global $conf;
+  global $user;
+
+  if (!isset($user->uid) || $user->uid == 0) {
+    if (isset($conf['default_headers-public']) && is_array($conf['default_headers-public'])) {
+      foreach ($conf['default_headers-public'] as $header_name => $header_value) {
+        drupal_add_http_header($header_name, $header_value);
+      }
+    }
+  }
+  else {
+    if (isset($conf['default_headers-private']) && is_array($conf['default_headers-private'])) {
+      foreach ($conf['default_headers-private'] as $header_name => $header_value) {
+        drupal_add_http_header($header_name, $header_value);
+      }
+    }
+  }
+
+  if (!isset($headers['last-modified']) && (!isset($conf['default_headers-last_modified']) || $conf['default_headers-last_modified'] === TRUE)) {
     drupal_add_http_header('Last-Modified', gmdate(DATE_RFC1123, REQUEST_TIME));
   }
 
-  if (!isset($headers['cache-control'])) {
-    drupal_add_http_header('Cache-Control', 'no-cache, must-revalidate, post-check=0, pre-check=0');
+  if (!isset($headers['cache-control']) && (!isset($conf['default_headers-cache_control']) || $conf['default_headers-cache_control'] === TRUE)) {
+    if (!isset($user->uid) || $user->uid == 0) {
+      drupal_add_http_header('Cache-Control', 'public');
+    }
+    else {
+      drupal_add_http_header('Cache-Control', 'private, must-revalidate');
+    }
+  }
+
+  if (!isset($headers['expires']) && (!isset($conf['default_headers-expires']) || $conf['default_headers-expires'] === TRUE)) {
+    if (!isset($user->uid) || $user->uid == 0) {
+      drupal_add_http_header('Expires', gmdate(DATE_RFC7231, strtotime('+20 minutes', REQUEST_TIME)));
+    }
   }
 
   #drupal_add_http_header('ETag', '"' . REQUEST_TIME . '"');
