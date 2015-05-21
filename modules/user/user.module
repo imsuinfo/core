@@ -1435,6 +1435,17 @@ function user_block_view($delta = '') {
     case 'login':
       // For usability's sake, avoid showing two login forms on one page.
       if (!$user->uid && !(arg(0) == 'user' && !is_numeric(arg(1)))) {
+        // use different cache-control settings when a form is in use.
+        global $conf;
+
+        if (isset($conf['default_headers-form']) && is_array($conf['default_headers-form'])) {
+          foreach ($conf['default_headers-form'] as $header_name => $header_value) {
+            drupal_add_http_header($header_name, $header_value);
+          }
+        }
+        elseif (!isset($conf['default_headers-cache_control']) || $conf['default_headers-cache_control'] === TRUE) {
+          drupal_add_http_header('Cache-Control', 'private, must-revalidate');
+        }
 
         $block['subject'] = t('User login');
         $block['content'] = drupal_get_form('user_login_block');
