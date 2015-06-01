@@ -2838,14 +2838,14 @@ function drupal_deliver_html_page($page_callback_result) {
           unset($block);
 
           if ($user->uid > 0) {
-            $page = str_replace('<!--(replace-login-form)-->', "<br>\n" . 'If you are already logged in, then you probably have followed an outdated link to an obsolete page.<br>' . "\n", $page);
+            $page = str_replace('<!--(replace-login-form)-->', "", $page);
           }
           elseif ($error_document_load_blocks) {
             $content = block_get_blocks_by_region('content');
             if (!empty($content['user_login'])) {
               $login = drupal_render($content);
               if (!empty($login)) {
-                $page = str_replace('<!--(replace-login-form)-->', $login, $page);
+                $page = str_replace('<!--(replace-login-form)-->', "<br>\n" . $login, $page);
 
                 if (isset($conf['default_headers-form']) && is_array($conf['default_headers-form'])) {
                   foreach ($conf['default_headers-form'] as $header_name => $header_value) {
