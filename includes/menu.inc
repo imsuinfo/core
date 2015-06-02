@@ -553,7 +553,7 @@ function menu_execute_active_handler($path = NULL, $deliver = TRUE) {
   if ($page_callback_result == MENU_SITE_ONLINE) {
     $router_item = menu_get_item($path);
 
-    if ((is_null($read_only_path) && $router_items_not_found['null']) || isset($router_items_not_found['paths'][$read_only_path])) {
+    if (empty($router_item) || (is_null($read_only_path) && $router_items_not_found['null']) || isset($router_items_not_found['paths'][$read_only_path])) {
       $page_callback_result = MENU_NOT_FOUND;
     }
     else {
