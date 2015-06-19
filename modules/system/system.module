@@ -1820,7 +1820,7 @@ function system_authorized_get_url(array $options = array()) {
  * Returns the URL for the authorize.php script when it is processing a batch.
  */
 function system_authorized_batch_processing_url() {
-  return '';
+  return system_authorized_get_url(array('query' => array('batch' => '1')));
 }
 
 /**
@@ -1829,7 +1829,8 @@ function system_authorized_batch_processing_url() {
  * @see system_authorized_init()
  */
 function system_authorized_run($callback, $file, $arguments = array(), $page_title = NULL) {
-  return;
+  system_authorized_init($callback, $file, $arguments, $page_title);
+  drupal_goto(system_authorized_get_url());
 }
 
 /**
@@ -1838,7 +1839,9 @@ function system_authorized_run($callback, $file, $arguments = array(), $page_tit
  * @see batch_process()
  */
 function system_authorized_batch_process() {
-  return;
+  $finish_url = system_authorized_get_url();
+  $process_url = system_authorized_batch_processing_url();
+  batch_process($finish_url, $process_url);
 }
 
 /**
@@ -2949,7 +2952,7 @@ function system_get_module_admin_tasks($module, $info) {
       ->fields('ml')
       // Weight should be taken from {menu_links}, not {menu_router}.
       ->fields('m', array_diff(drupal_schema_fields_sql('menu_router'), array('weight')))
-      ->condition('ml.link_path', 'admin/%', 'ILIKE')
+      ->condition('ml.link_path', 'admin/%', 'LIKE')
       ->condition('ml.hidden', 0, '>=')
       ->condition('ml.module', 'system')
       ->condition('m.number_parts', 1, '>')
@@ -3057,7 +3060,7 @@ function system_cron() {
     ->execute();
   db_delete('queue')
     ->condition('created', REQUEST_TIME - 864000, '<')
-    ->condition('name', 'drupal_batch:%', 'ILIKE')
+    ->condition('name', 'drupal_batch:%', 'LIKE')
     ->execute();
 
   // Reset expired items in the default queue implementation table. If that's
