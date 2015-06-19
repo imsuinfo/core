@@ -8247,8 +8247,7 @@ function entity_form_submit_build_entity($entity_type, $entity, $form, &$form_st
  *     failed. See xmlrpc_error().
  */
 function xmlrpc($url, $args, $options = array()) {
-  require_once DRUPAL_ROOT . '/includes/xmlrpc.inc';
-  return _xmlrpc($url, $args, $options);
+  return FALSE;
 }
 
 /**
