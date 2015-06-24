@@ -2706,6 +2706,10 @@ function drupal_deliver_html_page($page_callback_result) {
 
           if (function_exists('cf_theme_get_variables')) {
             $cf = & drupal_static('cf_theme_get_variables', array());
+            if (empty($cf)) {
+              cf_theme_get_variables($cf);
+            }
+
             $page = str_replace(' is-using_database ', ' ', $page);
             $page = str_replace(' is-anonymous ', ' ', $page);
             $page = str_replace(' is-logged_in ', ' ', $page);
@@ -2808,6 +2812,10 @@ function drupal_deliver_html_page($page_callback_result) {
 
           if (function_exists('cf_theme_get_variables')) {
             $cf = & drupal_static('cf_theme_get_variables', array());
+            if (empty($cf)) {
+              cf_theme_get_variables($cf);
+            }
+
             $page = str_replace(' is-using_database ', ' ', $page);
             $page = str_replace(' is-anonymous ', ' ', $page);
             $page = str_replace(' is-logged_in ', ' ', $page);
@@ -2887,7 +2895,9 @@ function drupal_deliver_html_page($page_callback_result) {
           if (function_exists('cf_theme_get_variables')) {
             try {
               $cf = & drupal_static('cf_theme_get_variables', array());
-              cf_theme_get_variables($cf);
+              if (empty($cf)) {
+                cf_theme_get_variables($cf);
+              }
 
               $page = str_replace(' is-using_database ', ' ', $page);
               $page = str_replace(' is-anonymous ', ' ', $page);
