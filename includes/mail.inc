@@ -261,6 +261,13 @@ function drupal_mail_system($module, $key) {
   $id = $module . '_' . $key;
 
   $configuration = variable_get('mail_system', array('default-system' => 'DefaultMailSystem'));
+  $mail_includes = variable_get('mail_system_includes', array());
+
+  if (is_array($mail_includes)) {
+    foreach ($mail_includes as $mail_include) {
+     include_once($mail_include);
+    }
+  }
 
   // Look for overrides for the default class, starting from the most specific
   // id, and falling back to the module name.
@@ -272,6 +279,11 @@ function drupal_mail_system($module, $key) {
   }
   else {
     $class = $configuration['default-system'];
+  }
+
+  // Use the default mail class as a fallback.
+  if (!class_exists($class)) {
+    $class = 'DefaultMailSystem';
   }
 
   if (empty($instances[$class])) {
