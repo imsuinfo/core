@@ -292,7 +292,13 @@ function theme_dblog_message($variables) {
     }
     // Message to translate with injected variables.
     else {
-      $output = t($event->message, unserialize($event->variables));
+      $unserialized = unserialize($event->variables);
+      if (is_array($unserialized)) {
+        $output = t($event->message, $unserialized);
+      }
+      else {
+        $output = t($event->message);
+      }
     }
     // If the output is expected to be a link, strip all the tags and
     // special characters by using filter_xss() without any allowed tags.
