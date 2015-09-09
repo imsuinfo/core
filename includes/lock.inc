@@ -81,8 +81,7 @@ function _lock_id() {
 
   if (!isset($lock_id)) {
     // Assign a unique id.
-    // lock id is not random enough, so try some more mangling to increase the randomness
-    $lock_id = mt_rand() . '_' . uniqid(NULL, TRUE) . '_' . mt_rand() . '_' . mt_rand();
+    $lock_id = uniqid(mt_rand(), TRUE);
     // We only register a shutdown function if a lock is used.
     drupal_register_shutdown_function('lock_release_all', $lock_id);
   }
