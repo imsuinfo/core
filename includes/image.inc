@@ -201,7 +201,12 @@ function image_scale_and_crop(stdClass $image, $width, $height) {
  * @see image_scale()
  */
 function image_dimensions_scale(array &$dimensions, $width = NULL, $height = NULL, $upscale = FALSE) {
-  $aspect = $dimensions['height'] / $dimensions['width'];
+  if (isset($dimensions['height']) && $dimensions['height'] > 0 && isset($dimensions['width']) && $dimensions['width'] > 0) {
+    $aspect = $dimensions['height'] / $dimensions['width'];
+  }
+  else {
+    $aspect = 1.0;
+  }
 
   // Calculate one of the dimensions from the other target dimension,
   // ensuring the same aspect ratio as the source dimensions. If one of the
