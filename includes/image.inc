@@ -167,7 +167,12 @@ function image_get_info($filepath, $toolkit = FALSE) {
  * @see image_crop()
  */
 function image_scale_and_crop(stdClass $image, $width, $height) {
-  $scale = max($width / $image->info['width'], $height / $image->info['height']);
+  if (isset($image->info['width']) && $image->info['width'] > 0 && isset($image->info['height']) && $image->info['height'] > 0) {
+    $scale = max($width / $image->info['width'], $height / $image->info['height']);
+  }
+  else {
+    $scale = 1.0;
+  }
   $x = ($image->info['width'] * $scale - $width) / 2;
   $y = ($image->info['height'] * $scale - $height) / 2;
 
@@ -334,7 +339,13 @@ function image_rotate(stdClass $image, $degrees, $background = NULL) {
  * @see image_gd_crop()
  */
 function image_crop(stdClass $image, $x, $y, $width, $height) {
-  $aspect = $image->info['height'] / $image->info['width'];
+  if (isset($image->info['width']) && $image->info['width'] > 0 && isset($image->info['height']) && $image->info['height'] > 0) {
+    $aspect = $image->info['height'] / $image->info['width'];
+  }
+  else {
+    $aspect = 1.0;
+  }
+
   if (empty($height)) $height = $width / $aspect;
   if (empty($width)) $width = $height * $aspect;
 
