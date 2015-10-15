@@ -425,10 +425,10 @@ function unrestricted_get_file_information($uri, $settings) {
     }
 
     if (!array_key_exists('connect_type', $settings['database_drupal']) || is_null($settings['database_drupal']['connect_type'])) {
-      $drupal_connection = pg_connect($connect_string);
+      $drupal_connection = pg_pconnect($connect_string);
     }
     else {
-      $drupal_connection = pg_connect($connect_string, $settings['database_drupal']['connect_type']);
+      $drupal_connection = pg_pconnect($connect_string, $settings['database_drupal']['connect_type']);
     }
 
     if ($drupal_connection === FALSE) {
@@ -489,10 +489,10 @@ function unrestricted_get_file_information($uri, $settings) {
   }
 
   if (!array_key_exists('connect_type', $settings['database']) || is_null($settings['database']['connect_type'])) {
-    $information['connection'] = pg_connect($connect_string);
+    $information['connection'] = pg_pconnect($connect_string);
   }
   else {
-    $information['connection'] = pg_connect($connect_string, $settings['database']['connect_type']);
+    $information['connection'] = pg_pconnect($connect_string, $settings['database']['connect_type']);
   }
 
   if ($information['connection'] === FALSE) {
