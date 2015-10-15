@@ -381,11 +381,7 @@ class ThemeRegistry Extends DrupalCacheArray {
   function __construct($cid, $bin) {
     $this->cid = $cid;
     $this->bin = $bin;
-    $this->persistable = FALSE;
-
-    if (isset($_SERVER['REQUEST_METHOD'])) {
-      $this->persistable = module_load_all(NULL) && $_SERVER['REQUEST_METHOD'] == 'GET';
-    }
+    $this->persistable = module_load_all(NULL) && $_SERVER['REQUEST_METHOD'] == 'GET';
 
     $data = array();
     if ($this->persistable && $cached = cache_get($this->cid, $this->bin)) {
@@ -1070,10 +1066,6 @@ function theme($hook, $variables = array()) {
     }
   }
 
-  if (!isset($variables)) {
-    $variables = array();
-  }
-
   // If a renderable array is passed as $variables, then set $variables to
   // the arguments expected by the theme function.
   if (isset($variables['#theme']) || isset($variables['#theme_wrappers'])) {
@@ -1718,11 +1710,29 @@ function theme_status_messages($variables) {
  * copy if none of the enabled modules or the active theme implement any
  * preprocess or process functions or override this theme implementation.
  *
- * @param $variables
- *   An associative array containing the keys 'text', 'path', and 'options'.
- *   See the l() function for information about these variables.
+ * @param array $variables
+ *   An associative array containing the keys:
+ *   - text: The text of the link.
+ *   - path: The internal path or external URL being linked to. It is used as
+ *     the $path parameter of the url() function.
+ *   - options: (optional) An array that defaults to empty, but can contain:
+ *     - attributes: Can contain optional attributes:
+ *       - class: must be declared in an array. Example: 'class' =>
+ *         array('class_name1','class_name2').
+ *       - title: must be a string. Example: 'title' => 'Example title'
+ *       - Others are more flexible as long as they work with
+ *         drupal_attributes($variables['options']['attributes]).
+ *     - html: Boolean flag that tells whether text contains HTML or plain
+ *       text. If set to TRUE, the text value will not be sanitized so the
+         calling function must ensure that it already contains safe HTML.
+ *   The elements $variables['options']['attributes'] and
+ *   $variables['options']['html'] are used in this function similarly to the
+ *   way that $options['attributes'] and $options['html'] are used in l().
+ *   The link itself is built by the url() function, which takes
+ *   $variables['path'] and $variables['options'] as arguments.
  *
  * @see l()
+ * @see url()
  */
 function theme_link($variables) {
   return '<a href="' . check_plain(url($variables['path'], $variables['options'])) . '"' . drupal_attributes($variables['options']['attributes']) . '>' . ($variables['options']['html'] ? $variables['text'] : check_plain($variables['text'])) . '</a>';
@@ -1872,7 +1882,7 @@ function theme_image($variables) {
     }
   }
 
-  return '<img' . drupal_attributes($attributes) . '>';
+  return '<img' . drupal_attributes($attributes) . ' />';
 }
 
 /**
@@ -2020,12 +2030,12 @@ function theme_table($variables) {
         $output .= ' <colgroup' . drupal_attributes($attributes) . '>';
         $i = 0;
         foreach ($cols as $col) {
-          $output .= ' <col' . drupal_attributes($col) . '>';
+          $output .= ' <col' . drupal_attributes($col) . ' />';
         }
         $output .= " </colgroup>\n";
       }
       else {
-        $output .= ' <colgroup' . drupal_attributes($attributes) . ">\n";
+        $output .= ' <colgroup' . drupal_attributes($attributes) . " />\n";
       }
     }
   }
@@ -2266,7 +2276,7 @@ function theme_html_tag($variables) {
   $element = $variables['element'];
   $attributes = isset($element['#attributes']) ? drupal_attributes($element['#attributes']) : '';
   if (!isset($element['#value'])) {
-    return '<' . $element['#tag'] . $attributes . ">\n";
+    return '<' . $element['#tag'] . $attributes . " />\n";
   }
   else {
     $output = '<' . $element['#tag'] . $attributes . '>';
@@ -2624,7 +2634,7 @@ function template_preprocess_html(&$variables) {
  */
 function template_preprocess_page(&$variables) {
   // Move some variables to the top level for themer convenience and template cleanliness.
-  $variables['show_messages'] = isset($variables['page']['#show_messages']) ? $variables['page']['#show_messages'] : TRUE;
+  $variables['show_messages'] = $variables['page']['#show_messages'];
 
   foreach (system_region_list($GLOBALS['theme']) as $region_key => $region_name) {
     if (!isset($variables['page'][$region_key])) {

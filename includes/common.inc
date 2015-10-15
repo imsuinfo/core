@@ -330,6 +330,19 @@ function _drupal_default_html_head() {
     // Security: This always has to be output first.
     '#weight' => -1000,
   );
+  // Show Drupal and the major version number in the META GENERATOR tag.
+  // Get the major version.
+  list($version, ) = explode('.', VERSION);
+  $elements['system_meta_generator'] = array(
+    '#type' => 'html_tag',
+    '#tag' => 'meta',
+    '#attributes' => array(
+      'name' => 'Generator',
+      'content' => 'Drupal ' . $version . ' (http://drupal.org)',
+    ),
+  );
+  // Also send the generator in the HTTP header.
+  $elements['system_meta_generator']['#attached']['drupal_add_http_header'][] = array('X-Generator', $elements['system_meta_generator']['#attributes']['content']);
   return $elements;
 }
 
@@ -666,8 +679,6 @@ function drupal_encode_path($path) {
  * @see url()
  */
 function drupal_goto($path = '', array $options = array(), $http_response_code = 302) {
-  if (headers_sent()) return FALSE;
-
   // A destination in $_GET always overrides the function arguments.
   // We do not allow absolute URLs to be passed via $_GET, as this can be an attack vector.
   if (isset($_GET['destination']) && !url_is_external($_GET['destination'])) {
@@ -1046,6 +1057,12 @@ function drupal_http_request($url, array $options = array()) {
 
   switch ($code) {
     case 200: // OK
+    case 201: // Created
+    case 202: // Accepted
+    case 203: // Non-Authoritative Information
+    case 204: // No Content
+    case 205: // Reset Content
+    case 206: // Partial Content
     case 304: // Not modified
       break;
     case 301: // Moved permanently
@@ -2291,17 +2308,7 @@ function url($path = NULL, array $options = array()) {
   }
 
   $base = $options['absolute'] ? $options['base_url'] . '/' : base_path();
-
-  if (empty($path)) {
-    $prefix = rtrim($options['prefix'], '/');
-  }
-  else {
-    $prefix = $options['prefix'];
-
-    if (substr($path, 0, 1) == '/') {
-      $path = substr($path, 1);
-    }
-  }
+  $prefix = empty($path) ? rtrim($options['prefix'], '/') : $options['prefix'];
 
   // With Clean URLs.
   if (!empty($GLOBALS['conf']['clean_url'])) {
@@ -2624,9 +2631,6 @@ function drupal_deliver_page($page_callback_result, $default_delivery_callback =
  * @see drupal_deliver_page()
  */
 function drupal_deliver_html_page($page_callback_result) {
-  global $user;
-  global $conf;
-
   // Emit the correct charset HTTP header, but not if the page callback
   // result is NULL, since that likely indicates that it printed something
   // in which case, no further headers may be sent, and not if code running
@@ -2645,299 +2649,84 @@ function drupal_deliver_html_page($page_callback_result) {
     switch ($page_callback_result) {
       case MENU_NOT_FOUND:
         // Print a 404 page.
-        drupal_add_http_header('Status', '404 Not Found', FALSE, 404);
+        drupal_add_http_header('Status', '404 Not Found');
+
         watchdog('page not found', check_plain($_GET['q']), NULL, WATCHDOG_WARNING);
 
-        $error_document_file_403 = variable_get('error_document_file_404', '/var/www/error_documents/4xx/404.html');
-        $error_document_custom_menu_1_logged_in = variable_get('error_document_custom_menu_1_logged_in', NULL);
-        $error_document_custom_menu_2_logged_in = variable_get('error_document_custom_menu_2_logged_in', NULL);
-        $error_document_load_blocks = variable_get('error_document_load_blocks', FALSE);
+        // Check for and return a fast 404 page if configured.
+        drupal_fast_404();
 
-        if (file_exists($error_document_file_403)) {
-          $page = array();
-          $block = "";
-
-          if ($error_document_load_blocks) {
-            $page['menus'] = block_get_blocks_by_region('menus');
-            $page['asides'] = block_get_blocks_by_region('asides');
-
-            if (!empty($page['menus']['workbench_menu_workbench_menu_block']['#markup'])) {
-              $block .= $page['menus']['workbench_menu_workbench_menu_block']['#markup'];
-            }
-
-            if (!empty($page['asides'])) {
-              foreach ($page['asides'] as $aside) {
-                if (!empty($aside['#markup'])) {
-                  $block .= $aside['#markup'];
-                }
-              }
-            }
+        // Keep old path for reference, and to allow forms to redirect to it.
+        if (!isset($_GET['destination'])) {
+          // Make sure that the current path is not interpreted as external URL.
+          if (!url_is_external($_GET['q'])) {
+            $_GET['destination'] = $_GET['q'];
           }
-          unset($page);
-
-          $page = file_get_contents($error_document_file_403);
-
-          if ($user->uid > 0) {
-            $page = str_replace(' is-anonymous ', ' is-logged_in ', $page);
-
-            if (is_string($error_document_custom_menu_1_logged_in)) {
-              $page = preg_replace('|<!--\(begin-header-menu-1\)-->.*<!--\(end-header-menu-1\)-->|is', '<!--(begin-header-menu-1)-->' . $error_document_custom_menu_1_logged_in . '<!--(end-header-menu-1)-->', $page);
-            }
-
-            if (is_string($error_document_custom_menu_2_logged_in)) {
-              $page = preg_replace('|<!--\(begin-header-menu-2\)-->.*<!--\(end-header-menu-2\)-->|is', '<!--(begin-header-menu-2)-->' . $error_document_custom_menu_2_logged_in . '<!--(end-header-menu-2)-->', $page);
-            }
-
-            if (function_exists('_toolbar_is_collapsed') && user_access('access toolbar', $user)) {
-              $toolbar_view = toolbar_view();
-              $toolbar_view['#pre_render'] = array(
-                'toolbar_pre_render',
-              );
-
-              if (function_exists('shortcut_toolbar_pre_render')) {
-                $toolbar_view['#pre_render'][] = 'shortcut_toolbar_pre_render';
-              }
-              $toolbar = drupal_render($toolbar_view);
-              $page = str_replace('<!--(begin-page_top)-->', "<!--(begin-page_top)-->\n" . $toolbar, $page);
-              unset($toolbar);
-              unset($toolbar_view);
-            }
-          }
-
-          if (function_exists('cf_theme_get_variables')) {
-            $cf = & drupal_static('cf_theme_get_variables', array());
-            if (empty($cf)) {
-              cf_theme_get_variables($cf);
-            }
-
-            $page = str_replace(' is-using_database ', ' ', $page);
-            $page = str_replace(' is-anonymous ', ' ', $page);
-            $page = str_replace(' is-logged_in ', ' ', $page);
-            $page = str_replace(' is-html5 ', ' ', $page);
-            $page = str_replace(' is-fixed_width ', ' ', $page);
-            $page = str_replace(' is-flex_width ', ' ', $page);
-            $page = preg_replace('/ at-\w+ /i', ' ', $page);
-            $markup_css = isset($cf['markup_css']['body']['class']) ? $cf['markup_css']['body']['class'] : '';
-            $markup_css = str_replace(' is-expanded ', ' ', $markup_css);
-            $markup_css = str_replace(' is-collapsed ', ' ', $markup_css);
-            $page = str_replace('<body id="mcneese-body" class="mcneese ', '<body id="mcneese-body" class="mcneese ' . $markup_css . ' ', $page);
-          }
-
-          if (!empty($block)) {
-            $page = str_replace('class="mcneese-content full', 'class="mcneese-content split', $page);
-            $page = str_replace('<div id="mcneese-content-main', '<div class="column-1 relative expanded html_tag-div" id="mcneese-page-side">' . $block . "</div>\n" . '<div id="mcneese-content-main"', $page);
-          }
-          unset($block);
-
-          drupal_send_headers();
-          print($page);
-          break;
         }
 
-        // Custom 404 handler.
-        drupal_set_title('Page Not Found', PASS_THROUGH);
-        $return = '<br>';
-        $return .= '<h1 style="text-align: center;">Oops!</h1>';
-        $return .= '<h2 style="text-align: center;">This page is no longer available (404).</h2>';
-        $return .= '<div style="text-align: center;"><br>';
-        $return .= '  The page you have requested either does not exist or has been removed.<br>';
-        $return .= '  <br>';
-        $return .= '  If you think this is in error, then please use the contact information provided in the page footer.<br>';
-        $return .= '</div>';
-        $return .= '<br>';
+        $path = drupal_get_normal_path(variable_get('site_404', ''));
+        if ($path && $path != $_GET['q']) {
+          // Custom 404 handler. Set the active item in case there are tabs to
+          // display, or other dependencies on the path.
+          menu_set_active_item($path);
+          $return = menu_execute_active_handler($path, FALSE);
+        }
 
-        print drupal_render_page($return);
+        if (empty($return) || $return == MENU_NOT_FOUND || $return == MENU_ACCESS_DENIED) {
+          // Standard 404 handler.
+          drupal_set_title(t('Page not found'));
+          $return = t('The requested page "@path" could not be found.', array('@path' => request_uri()));
+        }
+
+        drupal_set_page_content($return);
+        $page = element_info('page');
+        print drupal_render_page($page);
         break;
 
       case MENU_ACCESS_DENIED:
         // Print a 403 page.
-        drupal_add_http_header('Status', '403 Forbidden', FALSE, 403);
+        drupal_add_http_header('Status', '403 Forbidden');
         watchdog('access denied', check_plain($_GET['q']), NULL, WATCHDOG_WARNING);
 
-        $error_document_file_403 = variable_get('error_document_file_403', '/var/www/error_documents/4xx/403.html');
-        $error_document_custom_menu_1_logged_in = variable_get('error_document_custom_menu_1_logged_in', NULL);
-        $error_document_custom_menu_2_logged_in = variable_get('error_document_custom_menu_2_logged_in', NULL);
-        $error_document_load_blocks = variable_get('error_document_load_blocks', FALSE);
-
-        if (file_exists($error_document_file_403)) {
-          $page = array();
-          $block = "";
-
-          if ($error_document_load_blocks) {
-            $page['menus'] = block_get_blocks_by_region('menus');
-            $page['asides'] = block_get_blocks_by_region('asides');
-
-            if (!empty($page['menus']['workbench_menu_workbench_menu_block']['#markup'])) {
-              $block .= $page['menus']['workbench_menu_workbench_menu_block']['#markup'];
-            }
-
-            if (!empty($page['asides'])) {
-              foreach ($page['asides'] as $aside) {
-                if (!empty($aside['#markup'])) {
-                  $block .= $aside['#markup'];
-                }
-              }
-            }
+        // Keep old path for reference, and to allow forms to redirect to it.
+        if (!isset($_GET['destination'])) {
+          // Make sure that the current path is not interpreted as external URL.
+          if (!url_is_external($_GET['q'])) {
+            $_GET['destination'] = $_GET['q'];
           }
-          unset($page);
-
-          $page = file_get_contents($error_document_file_403);
-
-          if ($user->uid > 0) {
-            $page = str_replace(' is-anonymous ', ' is-logged_in ', $page);
-
-            if (is_string($error_document_custom_menu_1_logged_in)) {
-              $page = preg_replace('|<!--\(begin-header-menu-1\)-->.*<!--\(end-header-menu-1\)-->|is', '<!--(begin-header-menu-1)-->' . $error_document_custom_menu_1_logged_in . '<!--(end-header-menu-1)-->', $page);
-            }
-
-            if (is_string($error_document_custom_menu_2_logged_in)) {
-             $page = preg_replace('|<!--\(begin-header-menu-2\)-->.*<!--\(end-header-menu-2\)-->|is', '<!--(begin-header-menu-2)-->' . $error_document_custom_menu_2_logged_in . '<!--(end-header-menu-2)-->', $page);
-            }
-
-            if (function_exists('_toolbar_is_collapsed') && user_access('access toolbar', $user)) {
-              $toolbar_view = toolbar_view();
-              $toolbar_view['#pre_render'] = array(
-                'toolbar_pre_render',
-              );
-
-              if (function_exists('shortcut_toolbar_pre_render')) {
-                $toolbar_view['#pre_render'][] = 'shortcut_toolbar_pre_render';
-              }
-              $toolbar = drupal_render($toolbar_view);
-              $page = str_replace('<!--(begin-page_top)-->', "<!--(begin-page_top)-->\n" . $toolbar, $page);
-              unset($toolbar);
-              unset($toolbar_view);
-            }
-          }
-
-          if (function_exists('cf_theme_get_variables')) {
-            $cf = & drupal_static('cf_theme_get_variables', array());
-            if (empty($cf)) {
-              cf_theme_get_variables($cf);
-            }
-
-            $page = str_replace(' is-using_database ', ' ', $page);
-            $page = str_replace(' is-anonymous ', ' ', $page);
-            $page = str_replace(' is-logged_in ', ' ', $page);
-            $page = str_replace(' is-html5 ', ' ', $page);
-            $page = str_replace(' is-fixed_width ', ' ', $page);
-            $page = str_replace(' is-flex_width ', ' ', $page);
-            $page = preg_replace('/ at-\w+ /i', ' ', $page);
-            $markup_css = isset($cf['markup_css']['body']['class']) ? $cf['markup_css']['body']['class'] : '';
-            $markup_css = str_replace(' is-expanded ', ' ', $markup_css);
-            $markup_css = str_replace(' is-collapsed ', ' ', $markup_css);
-            $page = str_replace('<body id="mcneese-body" class="mcneese ', '<body id="mcneese-body" class="mcneese ' . $markup_css . ' ', $page);
-          }
-
-          if (!empty($block)) {
-            $page = str_replace('class="mcneese-content full', 'class="mcneese-content split', $page);
-            $page = str_replace('<div id="mcneese-content-main', '<div class="column-1 relative expanded html_tag-div" id="mcneese-page-side">' . $block . "</div>\n" . '<div id="mcneese-content-main', $page);
-          }
-          unset($block);
-
-          if ($user->uid > 0) {
-            $page = str_replace('<!--(replace-login-form)-->', "", $page);
-          }
-          elseif ($error_document_load_blocks) {
-            $content = block_get_blocks_by_region('content');
-            if (!empty($content['user_login'])) {
-              $login = drupal_render($content);
-              if (!empty($login)) {
-                $page = str_replace('<!--(replace-login-form)-->', "<br>\n" . $login, $page);
-
-                if (isset($conf['default_headers-form']) && is_array($conf['default_headers-form'])) {
-                  foreach ($conf['default_headers-form'] as $header_name => $header_value) {
-                    drupal_add_http_header($header_name, $header_value);
-                  }
-                }
-                elseif (!isset($conf['default_headers-cache_control']) || $conf['default_headers-cache_control'] === TRUE) {
-                  drupal_add_http_header('Cache-Control', 'private, must-revalidate');
-                }
-              }
-              unset($login);
-            }
-            unset($content);
-          }
-
-          drupal_send_headers();
-          print($page);
-          break;
         }
 
-        // Custom 403 handler.
-        drupal_set_title('Access Denied', PASS_THROUGH);
-        $return = '<br>';
-        $return .= '<h1 style="text-align: center;">Oops!</h1>';
-        $return .= '<h2 style="text-align: center;">This page is restricted (403).</h2>';
-        $return .= '<div style="text-align: center;"><br>';
-        $return .= '  The page you have requested is restricted to editors or you may have followed an outdated link pointing to to a page that has been unpublished.<br>';
-        $return .= '  <br>';
-        $return .= '  Before you can proceed to view the page you have requested, you must log on to the site.<br>';
-        $return .= '  <br>';
-        $return .= '  If you are already logged in, then you probably have followed an outdated link to an obsolete page.<br>';
-        $return .= '</div>';
-        $return .= '<br>';
+        $path = drupal_get_normal_path(variable_get('site_403', ''));
+        if ($path && $path != $_GET['q']) {
+          // Custom 403 handler. Set the active item in case there are tabs to
+          // display or other dependencies on the path.
+          menu_set_active_item($path);
+          $return = menu_execute_active_handler($path, FALSE);
+        }
 
-        drupal_send_headers();
+        if (empty($return) || $return == MENU_NOT_FOUND || $return == MENU_ACCESS_DENIED) {
+          // Standard 403 handler.
+          drupal_set_title(t('Access denied'));
+          $return = t('You are not authorized to access this page.');
+        }
+
         print drupal_render_page($return);
         break;
 
       case MENU_SITE_OFFLINE:
         // Print a 503 page.
-        $error_document_file_503 = variable_get('error_document_file_503', '/var/www/error_documents/5xx/503.html');
-        $emergency_mode = variable_get('emergency_mode', FALSE);
-
-        if ($emergency_mode == 0 && file_exists($error_document_file_503)) {
-          drupal_add_http_header('Status', '503 Service Unavailable', FALSE, 503);
-
-          $page = file_get_contents($error_document_file_503);
-
-          if (function_exists('cf_theme_get_variables')) {
-            try {
-              $cf = & drupal_static('cf_theme_get_variables', array());
-              if (empty($cf)) {
-                cf_theme_get_variables($cf);
-              }
-
-              $page = str_replace(' is-using_database ', ' ', $page);
-              $page = str_replace(' is-anonymous ', ' ', $page);
-              $page = str_replace(' is-logged_in ', ' ', $page);
-              $page = str_replace(' is-html5 ', ' ', $page);
-              $page = str_replace(' is-fixed_width ', ' ', $page);
-              $page = str_replace(' is-flex_width ', ' ', $page);
-              $page = preg_replace('/ at-\w+ /i', ' ', $page);
-              $markup_css = isset($cf['markup_css']['body']['class']) ? $cf['markup_css']['body']['class'] : '';
-              $markup_css = str_replace(' is-expanded ', ' ', $markup_css);
-              $markup_css = str_replace(' is-collapsed ', ' ', $markup_css);
-              $page = str_replace('<body id="mcneese-body" class="mcneese ', '<body id="mcneese-body" class="mcneese ' . $markup_css . ' ', $page);
-            }
-            catch (Exception $ex) {
-              // if the code is currently being modified, then errors could occur, so attempt to silently ignore them.
-            }
-          }
-
-          drupal_send_headers();
-          print($page);
-          break;
-        }
-
         drupal_maintenance_theme();
-        drupal_add_http_header('Status', '503 Service Unavailable', FALSE, 503);
-        drupal_set_title(t('Website Currently Unavailable'));
-        drupal_send_headers();
+        drupal_add_http_header('Status', '503 Service unavailable');
+        drupal_set_title(t('Site under maintenance'));
         print theme('maintenance_page', array('content' => filter_xss_admin(variable_get('maintenance_mode_message',
           t('@site is currently under maintenance. We should be back shortly. Thank you for your patience.', array('@site' => variable_get('site_name', 'Drupal')))))));
         break;
     }
   }
   elseif (isset($page_callback_result)) {
-
     // Print anything besides a menu constant, assuming it's not NULL or
     // undefined.
-    $drupal_page =  drupal_render_page($page_callback_result);
-    drupal_send_headers();
-    print($drupal_page);
-    unset($drupal_page);
+    print drupal_render_page($page_callback_result);
   }
 
   // Perform end-of-request tasks.
@@ -3029,11 +2818,11 @@ function drupal_map_assoc($array, $function = NULL) {
  * into script execution a call such as set_time_limit(20) is made, the
  * script will run for a total of 45 seconds before timing out.
  *
- * It also means that it is possible to decrease the total time limit if
- * the sum of the new time limit and the current time spent running the
- * script is inferior to the original time limit. It is inherent to the way
- * set_time_limit() works, it should rather be called with an appropriate
- * value every time you need to allocate a certain amount of time
+ * If the current time limit is not unlimited it is possible to decrease the
+ * total time limit if the sum of the new time limit and the current time spent
+ * running the script is inferior to the original time limit. It is inherent to
+ * the way set_time_limit() works, it should rather be called with an
+ * appropriate value every time you need to allocate a certain amount of time
  * to execute a task than only once at the beginning of the script.
  *
  * Before calling set_time_limit(), we check if this function is available
@@ -3050,7 +2839,11 @@ function drupal_map_assoc($array, $function = NULL) {
  */
 function drupal_set_time_limit($time_limit) {
   if (function_exists('set_time_limit')) {
-    @set_time_limit($time_limit);
+    $current = ini_get('max_execution_time');
+    // Do not set time limit if it is currently unlimited.
+    if ($current != 0) {
+      @set_time_limit($time_limit);
+    }
   }
 }
 
@@ -4078,7 +3871,7 @@ function drupal_delete_file_if_stale($uri) {
  * @return
  *   The cleaned identifier.
  */
-function drupal_clean_css_identifier($identifier, $filter = array(' ' => '-', '/' => '-', '[' => '-', ']' => '')) {
+function drupal_clean_css_identifier($identifier, $filter = array(' ' => '-', '_' => '-', '/' => '-', '[' => '-', ']' => '')) {
   // By default, we filter using Drupal's coding standards.
   $identifier = strtr($identifier, $filter);
 
@@ -5408,10 +5201,10 @@ function _drupal_bootstrap_full() {
     return;
   }
   $called = TRUE;
-  require_once DRUPAL_ROOT . '/includes/path.inc';
+  require_once DRUPAL_ROOT . '/' . variable_get('path_inc', 'includes/path.inc');
   require_once DRUPAL_ROOT . '/includes/theme.inc';
   require_once DRUPAL_ROOT . '/includes/pager.inc';
-  require_once DRUPAL_ROOT . '/includes/menu.inc';
+  require_once DRUPAL_ROOT . '/' . variable_get('menu_inc', 'includes/menu.inc');
   require_once DRUPAL_ROOT . '/includes/tablesort.inc';
   require_once DRUPAL_ROOT . '/includes/file.inc';
   require_once DRUPAL_ROOT . '/includes/unicode.inc';
@@ -5429,6 +5222,11 @@ function _drupal_bootstrap_full() {
   fix_gpc_magic();
   // Load all enabled modules
   module_load_all();
+  // Reset drupal_alter() and module_implements() static caches as these
+  // include implementations for vital modules only when called early on
+  // in the bootstrap.
+  drupal_static_reset('drupal_alter');
+  drupal_static_reset('module_implements');
   // Make sure all stream wrappers are registered.
   file_get_stream_wrappers();
   // Ensure mt_rand is reseeded, to prevent random values from one page load
@@ -5525,8 +5323,8 @@ function drupal_page_set_cache() {
  *
  * Do not call this function from a test. Use $this->cronRun() instead.
  *
- * @return
- *   TRUE if cron ran successfully.
+ * @return bool
+ *   TRUE if cron ran successfully and FALSE if cron is already running.
  */
 function drupal_cron_run() {
   // Allow execution to continue even if the request gets canceled.
@@ -5542,12 +5340,7 @@ function drupal_cron_run() {
   $GLOBALS['user'] = drupal_anonymous_user();
 
   // Try to allocate enough time to run all the hook_cron implementations.
-  $max_execution_time = ini_get('max_execution_time');
-
-  if ($max_execution_time < 240) {
-    $max_execution_time = 240;
-    drupal_set_time_limit($max_execution_time);
-  }
+  drupal_set_time_limit(240);
 
   $return = FALSE;
   // Grab the defined cron queues.
@@ -5555,7 +5348,7 @@ function drupal_cron_run() {
   drupal_alter('cron_queue_info', $queues);
 
   // Try to acquire cron lock.
-  if (!lock_acquire('cron', (float) $max_execution_time)) {
+  if (!lock_acquire('cron', 240.0)) {
     // Cron is still running normally.
     watchdog('cron', 'Attempting to re-run cron while it is already running.', array(), WATCHDOG_WARNING);
   }
@@ -5579,6 +5372,7 @@ function drupal_cron_run() {
 
     // Record cron time.
     variable_set('cron_last', REQUEST_TIME);
+    watchdog('cron', 'Cron run completed.', array(), WATCHDOG_NOTICE);
 
     // Release cron lock.
     lock_release('cron');
@@ -5592,12 +5386,12 @@ function drupal_cron_run() {
       // Do not run if queue wants to skip.
       continue;
     }
-    $function = $info['worker callback'];
+    $callback = $info['worker callback'];
     $end = time() + (isset($info['time']) ? $info['time'] : 15);
     $queue = DrupalQueue::get($queue_name);
     while (time() < $end && ($item = $queue->claimItem())) {
       try {
-        $function($item->data);
+        call_user_func($callback, $item->data);
         $queue->deleteItem($item);
       }
       catch (Exception $e) {
@@ -7304,7 +7098,8 @@ function drupal_uninstall_schema($module) {
  * specification of a schema, as it was defined in a module's
  * hook_schema(). No additional default values will be set,
  * hook_schema_alter() is not invoked and these unprocessed
- * definitions won't be cached.
+ * definitions won't be cached. To retrieve the schema after
+ * hook_schema_alter() has been invoked use drupal_get_schema().
  *
  * This function can be used to retrieve a schema specification in
  * hook_schema(), so it allows you to derive your tables from existing
@@ -7377,6 +7172,7 @@ function _drupal_schema_initialize(&$schema, $module, $remove_descriptions = TRU
  */
 function drupal_schema_field_types($table) {
   $table_schema = drupal_get_schema($table);
+  $field_types = array();
   foreach ($table_schema['fields'] as $field_name => $field_info) {
     $field_types[$field_name] = isset($field_info['type']) ? $field_info['type'] : NULL;
   }
@@ -7584,7 +7380,16 @@ function drupal_write_record($table, &$record, $primary_keys = array()) {
  * Information stored in a module .info file:
  * - name: The real name of the module for display purposes.
  * - description: A brief description of the module.
- * - dependencies: An array of shortnames of other modules this module requires.
+ * - dependencies: An array of dependency strings. Each is in the form
+ *   'project:module (versions)'; with the following meanings:
+ *   - project: (optional) Project shortname, recommended to ensure uniqueness,
+ *     if the module is part of a project hosted on drupal.org. If omitted,
+ *     also omit the : that follows. The project name is currently ignored by
+ *     Drupal core but is used for automated testing.
+ *   - module: (required) Module shortname within the project.
+ *   - (versions): Optional version information, consisting of one or more
+ *     comma-separated operator/value pairs or simply version numbers, which
+ *     can contain "x" as a wildcard. Examples: (>=7.22, <7.28), (7.x-3.x).
  * - package: The name of the package of modules this module belongs to.
  *
  * See forum.info for an example of a module .info file.
@@ -7664,7 +7469,6 @@ function drupal_parse_info_file($filename) {
  */
 function drupal_parse_info_format($data) {
   $info = array();
-  $constants = get_defined_constants();
 
   if (preg_match_all('
     @^\s*                           # Start at the beginning of a line, ignoring leading whitespace
@@ -7704,8 +7508,8 @@ function drupal_parse_info_format($data) {
       }
 
       // Handle PHP constants.
-      if (isset($constants[$value])) {
-        $value = $constants[$value];
+      if (preg_match('/^\w+$/i', $value) && defined($value)) {
+        $value = constant($value);
       }
 
       // Insert actual value.
@@ -7869,7 +7673,12 @@ function debug($data, $label = NULL, $print_r = FALSE) {
  * Parses a dependency for comparison by drupal_check_incompatibility().
  *
  * @param $dependency
- *   A dependency string, for example 'foo (>=7.x-4.5-beta5, 3.x)'.
+ *   A dependency string, which specifies a module dependency, and optionally
+ *   the project it comes from and versions that are supported. Supported
+ *   formats include:
+ *   - 'module'
+ *   - 'project:module'
+ *   - 'project:module (>=version, version)'
  *
  * @return
  *   An associative array with three keys:
@@ -7884,6 +7693,12 @@ function debug($data, $label = NULL, $print_r = FALSE) {
  * @see drupal_check_incompatibility()
  */
 function drupal_parse_dependency($dependency) {
+  $value = array();
+  // Split out the optional project name.
+  if (strpos($dependency, ':')) {
+    list($project_name, $dependency) = explode(':', $dependency);
+    $value['project'] = $project_name;
+  }
   // We use named subpatterns and support every op that version_compare
   // supports. Also, op is optional and defaults to equals.
   $p_op = '(?P<operation>!=|==|=|<|<=|>|>=|<>)?';
@@ -7892,7 +7707,6 @@ function drupal_parse_dependency($dependency) {
   $p_major = '(?P<major>\d+)';
   // By setting the minor version to x, branches can be matched.
   $p_minor = '(?P<minor>(?:\d+|x)(?:-[A-Za-z]+\d+)?)';
-  $value = array();
   $parts = explode('(', $dependency, 2);
   $value['name'] = trim($parts[0]);
   if (isset($parts[1])) {
@@ -8181,7 +7995,7 @@ function entity_get_controller($entity_type) {
   if (!isset($controllers[$entity_type])) {
     $type_info = entity_get_info($entity_type);
     $class = $type_info['controller class'];
-    $controllers[$entity_type] = empty($class) ? new DrupalDefaultEntityController($entity_type) : new $class($entity_type);
+    $controllers[$entity_type] = new $class($entity_type);
   }
   return $controllers[$entity_type];
 }
@@ -8476,7 +8290,8 @@ function entity_form_submit_build_entity($entity_type, $entity, $form, &$form_st
  *     failed. See xmlrpc_error().
  */
 function xmlrpc($url, $args, $options = array()) {
-  return FALSE;
+  require_once DRUPAL_ROOT . '/includes/xmlrpc.inc';
+  return _xmlrpc($url, $args, $options);
 }
 
 /**

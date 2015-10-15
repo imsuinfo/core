@@ -8,7 +8,7 @@
 /**
  * The current system version.
  */
-define('VERSION', '7.39');
+define('VERSION', '7.40');
 
 /**
  * Core API compatibility.
@@ -362,7 +362,7 @@ abstract class DrupalCacheArray implements ArrayAccess {
    * Implements ArrayAccess::offsetGet().
    */
   public function offsetGet($offset) {
-    if (isset($this->storage[$offset])) {
+    if (isset($this->storage[$offset]) || array_key_exists($offset, $this->storage)) {
       return $this->storage[$offset];
     }
     else {
@@ -659,8 +659,7 @@ function drupal_environment_initialize() {
     $_SERVER['HTTP_HOST'] = strtolower($_SERVER['HTTP_HOST']);
     if (!drupal_valid_http_host($_SERVER['HTTP_HOST'])) {
       // HTTP_HOST is invalid, e.g. if containing slashes it may be an attack.
-      drupal_add_http_header('status', '400 Bad Request', FALSE, 400);
-      drupal_send_headers();
+      header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request');
       exit;
     }
   }
@@ -669,6 +668,13 @@ function drupal_environment_initialize() {
     // defined for E_ALL compliance.
     $_SERVER['HTTP_HOST'] = '';
   }
+
+  // When clean URLs are enabled, emulate ?q=foo/bar using REQUEST_URI. It is
+  // not possible to append the query string using mod_rewrite without the B
+  // flag (this was added in Apache 2.2.8), because mod_rewrite unescapes the
+  // path before passing it on to PHP. This is a problem when the path contains
+  // e.g. "&" or "%" that have special meanings in URLs and must be encoded.
+  $_GET['q'] = request_path();
 
   // Enforce E_ALL, but allow users to set levels not part of E_ALL.
   error_reporting(E_ALL | error_reporting());
@@ -1049,7 +1055,7 @@ function drupal_page_get_cache($check_only = FALSE) {
  * Determines the cacheability of the current page.
  *
  * @param $allow_caching
- *   Set to FALSE if you want to prevent this page to get cached.
+ *   Set to FALSE if you want to prevent this page from being cached.
  *
  * @return
  *   TRUE if the current page can be cached, FALSE otherwise.
@@ -1132,38 +1138,28 @@ function drupal_load($type, $name) {
  *   The HTTP header value; if equal to FALSE, the specified header is unset.
  *   If $name is 'Status', this is expected to be a status code followed by a
  *   reason phrase, e.g. "404 Not Found".
- *   If $value is NULL, then this will remove the header.
  * @param $append
  *   Whether to append the value to an existing header or to replace it.
- * @param int $status_code
- *   (optional) the numeric status code to supply, such as 404/
  */
-function drupal_add_http_header($name, $value, $append = FALSE, $status_code = NULL) {
+function drupal_add_http_header($name, $value, $append = FALSE) {
   // The headers as name/value pairs.
   $headers = &drupal_static('drupal_http_headers', array());
 
   $name_lower = strtolower($name);
   _drupal_set_preferred_header_name($name);
 
-  $value_array = array();
-  $value_array['value'] = $value;
-  $value_array['status_code'] = $status_code;
-
-  if (is_bool($value)) {
-    $headers[$name_lower] = $value_array;
-  }
-  elseif (is_null($value)) {
-    unset($headers[$name_lower]);
+  if ($value === FALSE) {
+    $headers[$name_lower] = FALSE;
   }
   elseif (isset($headers[$name_lower]) && $append) {
     // Multiple headers with identical names may be combined using comma (RFC
     // 2616, section 4.2).
-    $headers[$name_lower]['value'] .= ',' . $value;
-    $headers[$name_lower]['status_code'] = $status_code;
+    $headers[$name_lower] .= ',' . $value;
   }
   else {
-    $headers[$name_lower] = $value_array;
+    $headers[$name_lower] = $value;
   }
+  drupal_send_headers(array($name => $headers[$name_lower]), TRUE);
 }
 
 /**
@@ -1216,41 +1212,24 @@ function _drupal_set_preferred_header_name($name = NULL) {
  *   specified headers.
  */
 function drupal_send_headers($default_headers = array(), $only_default = FALSE) {
-  if (headers_sent()) {
-    return;
-  }
-
+  $headers_sent = &drupal_static(__FUNCTION__, FALSE);
   $headers = drupal_get_http_header();
-  if ($only_default) {
+  if ($only_default && $headers_sent) {
     $headers = array();
   }
+  $headers_sent = TRUE;
 
   $header_names = _drupal_set_preferred_header_name();
   foreach ($default_headers as $name => $value) {
-    if (is_array($value)) {
-      $value_array = $value;
-    }
-    else {
-      $value_array = array();
-      $value_array['value'] = $value;
-      $value_array['status_code'] = NULL;
-    }
-
     $name_lower = strtolower($name);
     if (!isset($headers[$name_lower])) {
-      $headers[$name_lower] = $value_array;
+      $headers[$name_lower] = $value;
       $header_names[$name_lower] = $name;
     }
   }
-  foreach ($headers as $name_lower => $value_array) {
-    if (!is_array($value_array) || !array_key_exists('value', $value_array)) continue;
-
-    $value = $value_array['value'];
-
-    if (!is_string($value)) continue;
-
+  foreach ($headers as $name_lower => $value) {
     if ($name_lower == 'status') {
-      header($_SERVER['SERVER_PROTOCOL'] . ' ' . $value, $value_array['status_code']);
+      header($_SERVER['SERVER_PROTOCOL'] . ' ' . $value);
     }
     // Skip headers that have been unset.
     elseif ($value !== FALSE) {
@@ -1274,46 +1253,21 @@ function drupal_send_headers($default_headers = array(), $only_default = FALSE) 
  * @see drupal_page_set_cache()
  */
 function drupal_page_header() {
-  $headers = &drupal_static('drupal_http_headers', array());
-
-  global $conf;
-  global $user;
-
-  if (!isset($user->uid) || $user->uid == 0) {
-    if (isset($conf['default_headers-public']) && is_array($conf['default_headers-public'])) {
-      foreach ($conf['default_headers-public'] as $header_name => $header_value) {
-        drupal_add_http_header($header_name, $header_value);
-      }
-    }
+  $headers_sent = &drupal_static(__FUNCTION__, FALSE);
+  if ($headers_sent) {
+    return TRUE;
   }
-  else {
-    if (isset($conf['default_headers-private']) && is_array($conf['default_headers-private'])) {
-      foreach ($conf['default_headers-private'] as $header_name => $header_value) {
-        drupal_add_http_header($header_name, $header_value);
-      }
-    }
-  }
+  $headers_sent = TRUE;
 
-  if (!isset($headers['last-modified']) && (!isset($conf['default_headers-last_modified']) || $conf['default_headers-last_modified'] === TRUE)) {
-    drupal_add_http_header('Last-Modified', gmdate(DATE_RFC1123, REQUEST_TIME));
-  }
-
-  if (!isset($headers['cache-control']) && (!isset($conf['default_headers-cache_control']) || $conf['default_headers-cache_control'] === TRUE)) {
-    if (!isset($user->uid) || $user->uid == 0) {
-      drupal_add_http_header('Cache-Control', 'public');
-    }
-    else {
-      drupal_add_http_header('Cache-Control', 'private, must-revalidate');
-    }
-  }
-
-  if (!isset($headers['expires']) && (!isset($conf['default_headers-expires']) || $conf['default_headers-expires'] === TRUE)) {
-    if (!isset($user->uid) || $user->uid == 0) {
-      drupal_add_http_header('Expires', gmdate(DATE_RFC7231, strtotime('+20 minutes', REQUEST_TIME)));
-    }
-  }
-
-  #drupal_add_http_header('ETag', '"' . REQUEST_TIME . '"');
+  $default_headers = array(
+    'Expires' => 'Sun, 19 Nov 1978 05:00:00 GMT',
+    'Cache-Control' => 'no-cache, must-revalidate, post-check=0, pre-check=0',
+    // Prevent browsers from sniffing a response and picking a MIME type
+    // different from the declared content-type, since that can lead to
+    // XSS and other vulnerabilities.
+    'X-Content-Type-Options' => 'nosniff',
+  );
+  drupal_send_headers($default_headers);
 }
 
 /**
@@ -1360,7 +1314,7 @@ function drupal_serve_page_from_cache(stdClass $cache) {
 
   // Entity tag should change if the output changes.
   $etag = '"' . $cache->created . '-' . intval($return_compressed) . '"';
-  drupal_add_http_header('Etag', $etag);
+  header('Etag: ' . $etag);
 
   // See if the client has provided the required HTTP headers.
   $if_modified_since = isset($_SERVER['HTTP_IF_MODIFIED_SINCE']) ? strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE']) : FALSE;
@@ -1369,7 +1323,7 @@ function drupal_serve_page_from_cache(stdClass $cache) {
   if ($if_modified_since && $if_none_match
       && $if_none_match == $etag // etag must match
       && $if_modified_since == $cache->created) {  // if-modified-since must match
-    drupal_add_http_header('status', '304 Not Modified', FALSE, 304);
+    header($_SERVER['SERVER_PROTOCOL'] . ' 304 Not Modified');
     drupal_send_headers($default_headers);
     return;
   }
@@ -1381,6 +1335,14 @@ function drupal_serve_page_from_cache(stdClass $cache) {
 
   $default_headers['Last-Modified'] = gmdate(DATE_RFC7231, $cache->created);
 
+  // HTTP/1.0 proxies does not support the Vary header, so prevent any caching
+  // by sending an Expires date in the past. HTTP/1.1 clients ignores the
+  // Expires header if a Cache-Control: max-age= directive is specified (see RFC
+  // 2616, section 14.9.3).
+  $default_headers['Expires'] = 'Sun, 19 Nov 1978 05:00:00 GMT';
+
+  drupal_send_headers($default_headers);
+
   // Allow HTTP proxies to cache pages for anonymous users without a session
   // cookie. The Vary header is used to indicates the set of request-header
   // fields that fully determines whether a cache is permitted to use the
@@ -1388,17 +1350,17 @@ function drupal_serve_page_from_cache(stdClass $cache) {
   // revalidation. If a Vary header has been set in hook_boot(), it is assumed
   // that the module knows how to cache the page.
   if (!isset($hook_boot_headers['vary']) && !variable_get('omit_vary_cookie')) {
-    drupal_add_http_header('vary', 'Cookie');
+    header('Vary: Cookie');
   }
 
   if ($page_compression) {
-    drupal_add_http_header('vary', 'Accept-Encoding', TRUE);
+    header('Vary: Accept-Encoding', FALSE);
     // If page_compression is enabled, the cache contains gzipped data.
     if ($return_compressed) {
       // $cache->data['body'] is already gzip'ed, so make sure
       // zlib.output_compression does not compress it once more.
       ini_set('zlib.output_compression', '0');
-      drupal_add_http_header('Content-Encoding', 'gzip');
+      header('Content-Encoding: gzip');
     }
     else {
       // The client does not support compression, so unzip the data in the
@@ -1406,8 +1368,6 @@ function drupal_serve_page_from_cache(stdClass $cache) {
       $cache->data['body'] = gzinflate(substr(substr($cache->data['body'], 10), 0, -8));
     }
   }
-
-  drupal_send_headers($default_headers);
 
   // Print the page.
   print $cache->data['body'];
@@ -1608,11 +1568,7 @@ function format_string($string, array $args = array()) {
  * @ingroup sanitization
  */
 function check_plain($text) {
-  if (!is_string($text) && !is_numeric($text)) {
-    return '';
-  }
-
-  return htmlspecialchars($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+  return htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
 }
 
 /**
@@ -1824,7 +1780,7 @@ function watchdog($type, $message, $variables = array(), $severity = WATCHDOG_NO
  * @see theme_status_messages()
  */
 function drupal_set_message($message = NULL, $type = 'status', $repeat = TRUE) {
-  if ($message) {
+  if ($message || $message === '0' || $message === 0) {
     if (!isset($_SESSION['messages'][$type])) {
       $_SESSION['messages'][$type] = array();
     }
@@ -1976,8 +1932,7 @@ function drupal_is_denied($ip) {
 function drupal_block_denied($ip) {
   // Deny access to blocked IP addresses - t() is not yet available.
   if (drupal_is_denied($ip)) {
-    drupal_add_http_header('status', '403 Forbidden', FALSE, 403);
-    drupal_send_headers();
+    header($_SERVER['SERVER_PROTOCOL'] . ' 403 Forbidden');
     print 'Sorry, ' . check_plain(ip_address()) . ' has been banned.';
     exit();
   }
@@ -2387,7 +2342,7 @@ function _drupal_exception_handler($exception) {
     if (error_displayable()) {
       print '<h1>Additional uncaught exception thrown while handling exception.</h1>';
       print '<h2>Original</h2><p>' . _drupal_render_exception_safe($exception) . '</p>';
-      print '<h2>Additional</h2><p>' . _drupal_render_exception_safe($exception2) . '</p><hr>';
+      print '<h2>Additional</h2><p>' . _drupal_render_exception_safe($exception2) . '</p><hr />';
     }
   }
 }
@@ -2405,13 +2360,6 @@ function _drupal_bootstrap_configuration() {
   timer_start('page');
   // Initialize the configuration, including variables from settings.php.
   drupal_settings_initialize();
-
-  // When clean URLs are enabled, emulate ?q=foo/bar using REQUEST_URI. It is
-  // not possible to append the query string using mod_rewrite without the B
-  // flag (this was added in Apache 2.2.8), because mod_rewrite unescapes the
-  // path before passing it on to PHP. This is a problem when the path contains
-  // e.g. "&" or "%" that have special meanings in URLs and must be encoded.
-  $_GET['q'] = request_path();
 }
 
 /**
@@ -2445,8 +2393,8 @@ function _drupal_bootstrap_page_cache() {
     $cache = drupal_page_get_cache();
     // If there is a cached page, display it.
     if (is_object($cache)) {
+      header('X-Drupal-Cache: HIT');
       // Restore the metadata cached with the page.
-      drupal_add_http_header('X-Drupal-Cache', 'HIT');
       $_GET['q'] = $cache->data['path'];
       drupal_set_title($cache->data['title'], PASS_THROUGH);
       date_default_timezone_set(drupal_get_user_timezone());
@@ -2455,7 +2403,6 @@ function _drupal_bootstrap_page_cache() {
       if (variable_get('page_cache_invoke_hooks', TRUE)) {
         bootstrap_invoke_all('boot');
       }
-      drupal_send_headers();
       drupal_serve_page_from_cache($cache);
       // If the skipping of the bootstrap hooks is not enforced, call
       // hook_exit.
@@ -2466,7 +2413,7 @@ function _drupal_bootstrap_page_cache() {
       exit;
     }
     else {
-      drupal_add_http_header('X-Drupal-Cache', 'MISS');
+      header('X-Drupal-Cache: MISS');
     }
   }
 }
@@ -2475,6 +2422,14 @@ function _drupal_bootstrap_page_cache() {
  * Initializes the database system and registers autoload functions.
  */
 function _drupal_bootstrap_database() {
+  // Redirect the user to the installation script if Drupal has not been
+  // installed yet (i.e., if no $databases array has been defined in the
+  // settings.php file) and we are not already installing.
+  if (empty($GLOBALS['databases']) && !drupal_installation_attempted()) {
+    include_once DRUPAL_ROOT . '/includes/install.inc';
+    install_goto('install.php');
+  }
+
   // The user agent header is used to pass a database prefix in the request when
   // running tests. However, for security reasons, it is imperative that we
   // validate we ourselves made the request.
@@ -2513,6 +2468,9 @@ function _drupal_bootstrap_database() {
   // the install or upgrade process.
   spl_autoload_register('drupal_autoload_class');
   spl_autoload_register('drupal_autoload_interface');
+  if (version_compare(PHP_VERSION, '5.4') >= 0) {
+    spl_autoload_register('drupal_autoload_trait');
+  }
 }
 
 /**
@@ -2661,7 +2619,7 @@ function drupal_fast_404() {
   if ($exclude_paths && !preg_match($exclude_paths, $_GET['q'])) {
     $fast_paths = variable_get('404_fast_paths', FALSE);
     if ($fast_paths && preg_match($fast_paths, $_GET['q'])) {
-      drupal_add_http_header('status', '404 Not Found', FALSE, 404);
+      drupal_add_http_header('Status', '404 Not Found');
       $fast_404_html = variable_get('404_fast_html', '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML+RDFa 1.0//EN" "http://www.w3.org/MarkUp/DTD/xhtml-rdfa-1.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><title>404 Not Found</title></head><body><h1>Not Found</h1><p>The requested URL "@path" was not found on this server.</p></body></html>');
       // Replace @path in the variable with the page path.
       print strtr($fast_404_html, array('@path' => check_plain(request_uri())));
@@ -2862,8 +2820,7 @@ function request_path() {
     return $path;
   }
 
-  $clean_url = variable_get('clean_url', FALSE);
-  if (!$clean_url && isset($_GET['q']) && is_string($_GET['q'])) {
+  if (isset($_GET['q']) && is_string($_GET['q'])) {
     // This is a request with a ?q=foo/bar query string. $_GET['q'] is
     // overwritten in drupal_path_initialize(), but request_path() is called
     // very early in the bootstrap process, so the original value is saved in
@@ -2963,12 +2920,7 @@ function ip_address() {
   $ip_address = &drupal_static(__FUNCTION__);
 
   if (!isset($ip_address)) {
-    if (isset($_SERVER['REMOTE_ADDR'])) {
-      $ip_address = $_SERVER['REMOTE_ADDR'];
-    }
-    else {
-      $ip_address = '127.0.0.1';
-    }
+    $ip_address = $_SERVER['REMOTE_ADDR'];
 
     if (variable_get('reverse_proxy', 0)) {
       $reverse_proxy_header = variable_get('reverse_proxy_header', 'HTTP_X_FORWARDED_FOR');
@@ -3007,7 +2959,9 @@ function ip_address() {
  * Gets the schema definition of a table, or the whole database schema.
  *
  * The returned schema will include any modifications made by any
- * module that implements hook_schema_alter().
+ * module that implements hook_schema_alter(). To get the schema without
+ * modifications, use drupal_get_schema_unprocessed().
+ *
  *
  * @param $table
  *   The name of the table. If not given, the schema of all tables is returned.
@@ -3045,12 +2999,7 @@ class SchemaCache extends DrupalCacheArray {
    */
   public function __construct() {
     // Cache by request method.
-    if (isset($_SERVER['REQUEST_METHOD'])) {
-      parent::__construct('schema:runtime:' . ($_SERVER['REQUEST_METHOD'] == 'GET'), 'cache');
-    }
-    else {
-      parent::__construct('schema:runtime:' . FALSE, 'cache');
-    }
+    parent::__construct('schema:runtime:' . ($_SERVER['REQUEST_METHOD'] == 'GET'), 'cache');
   }
 
   /**
@@ -3168,6 +3117,22 @@ function drupal_autoload_class($class) {
 }
 
 /**
+ * Confirms that a trait is available.
+ *
+ * This function is rarely called directly. Instead, it is registered as an
+ * spl_autoload() handler, and PHP calls it for us when necessary.
+ *
+ * @param string $trait
+ *   The name of the trait to check or load.
+ *
+ * @return bool
+ *   TRUE if the trait is currently available, FALSE otherwise.
+ */
+function drupal_autoload_trait($trait) {
+  return _registry_check_code('trait', $trait);
+}
+
+/**
  * Checks for a resource in the registry.
  *
  * @param $type
@@ -3183,37 +3148,15 @@ function drupal_autoload_class($class) {
  *   NULL if either of the REGISTRY_* constants is passed in as $type.
  */
 function _registry_check_code($type, $name = NULL) {
-  global $conf;
-
-  if (array_key_exists('static_registry', $conf) && is_array($conf['static_registry'])) {
-    if ($type == REGISTRY_RESET_LOOKUP_CACHE || $type == REGISTRY_WRITE_LOOKUP_CACHE || is_null($name)) {
-      // not applicable to static registry.
-      return;
-    }
-
-    $file = FALSE;
-    if (isset($conf['static_registry']['by_type'][$type][$name]['filename'])) {
-      $file = $conf['static_registry']['by_type'][$type][$name]['filename'];
-    }
-
-    if ($file) {
-      require_once DRUPAL_ROOT . '/' . $file;
-      return TRUE;
-    }
-    else {
-      return FALSE;
-    }
-  }
-
   static $lookup_cache, $cache_update_needed;
 
-  if ($type == 'class' && class_exists($name) || $type == 'interface' && interface_exists($name)) {
+  if ($type == 'class' && class_exists($name) || $type == 'interface' && interface_exists($name) || $type == 'trait' && trait_exists($name)) {
     return TRUE;
   }
 
   if (!isset($lookup_cache)) {
     $lookup_cache = array();
-    if (function_exists('cache_get') && $cache = cache_get('lookup_cache', 'cache_bootstrap')) {
+    if ($cache = cache_get('lookup_cache', 'cache_bootstrap')) {
       $lookup_cache = $cache->data;
     }
   }
@@ -3229,7 +3172,7 @@ function _registry_check_code($type, $name = NULL) {
   // Called from drupal_page_footer, we write to permanent storage if there
   // changes to the lookup cache for this request.
   if ($type == REGISTRY_WRITE_LOOKUP_CACHE) {
-    if ($cache_update_needed && function_exists('cache_set')) {
+    if ($cache_update_needed) {
       cache_set('lookup_cache', $lookup_cache, 'cache_bootstrap');
     }
     return;
@@ -3486,7 +3429,7 @@ function drupal_static_reset($name = NULL) {
  * Detects whether the current script is running in a command-line environment.
  */
 function drupal_is_cli() {
-  return (!isset($_SERVER['SERVER_SOFTWARE']) && (php_sapi_name() == 'cli' || (isset($_SERVER['argc']) && is_numeric($_SERVER['argc']) && $_SERVER['argc'] > 0)));
+  return (!isset($_SERVER['SERVER_SOFTWARE']) && (php_sapi_name() == 'cli' || (is_numeric($_SERVER['argc']) && $_SERVER['argc'] > 0)));
 }
 
 /**
@@ -3559,7 +3502,7 @@ function _drupal_shutdown_function() {
    require_once DRUPAL_ROOT . '/includes/errors.inc';
    if (error_displayable()) {
       print '<h1>Uncaught exception thrown in shutdown function.</h1>';
-      print '<p>' . _drupal_render_exception_safe($exception) . '</p><hr>';
+      print '<p>' . _drupal_render_exception_safe($exception) . '</p><hr />';
     }
   }
 }

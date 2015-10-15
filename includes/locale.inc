@@ -1929,7 +1929,7 @@ function _locale_translate_seek() {
   foreach ($strings as $lid => $string) {
     $rows[] = array(
       $groups[$string['group']],
-      array('data' => check_plain(truncate_utf8($string['source'], 150, FALSE, TRUE)) . '<br><small>' . $string['location'] . '</small>'),
+      array('data' => check_plain(truncate_utf8($string['source'], 150, FALSE, TRUE)) . '<br /><small>' . $string['location'] . '</small>'),
       $string['context'],
       array('data' => _locale_translate_language_list($string, $limit_language), 'align' => 'center'),
       array('data' => l(t('edit'), "admin/config/regional/translate/edit/$lid", array('query' => drupal_get_destination())), 'class' => array('nowrap')),
@@ -2306,6 +2306,8 @@ function _locale_batch_build($files, $finished = NULL, $components = array()) {
 }
 
 /**
+ * Implements callback_batch_operation().
+ *
  * Perform interface translation import as a batch step.
  *
  * @param $filepath
@@ -2324,6 +2326,8 @@ function _locale_batch_import($filepath, &$context) {
 }
 
 /**
+ * Implements callback_batch_finished().
+ *
  * Finished callback of system page locale import batch.
  * Inform the user of translation files imported.
  */
@@ -2334,6 +2338,8 @@ function _locale_batch_system_finished($success, $results) {
 }
 
 /**
+ * Implements callback_batch_finished().
+ *
  * Finished callback of language addition locale import batch.
  * Inform the user of translation files imported.
  */

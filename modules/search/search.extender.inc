@@ -285,7 +285,7 @@ class SearchQuery extends SelectQueryExtender {
         foreach ($key as $or) {
           list($num_new_scores) = $this->parseWord($or);
           $any |= $num_new_scores;
-          $queryor->condition('d.data', "% $or %", 'ILIKE');
+          $queryor->condition('d.data', "% $or %", 'LIKE');
         }
         if (count($queryor)) {
           $this->conditions->condition($queryor);
@@ -297,7 +297,7 @@ class SearchQuery extends SelectQueryExtender {
       else {
         $simple_and = TRUE;
         list($num_new_scores, $num_valid_words) = $this->parseWord($key);
-        $this->conditions->condition('d.data', "% $key %", 'ILIKE');
+        $this->conditions->condition('d.data', "% $key %", 'LIKE');
         if (!$num_valid_words) {
           $this->simple = FALSE;
         }
@@ -310,7 +310,7 @@ class SearchQuery extends SelectQueryExtender {
     }
     // Negative matches.
     foreach ($this->keys['negative'] as $key) {
-      $this->conditions->condition('d.data', "% $key %", 'NOT ILIKE');
+      $this->conditions->condition('d.data', "% $key %", 'NOT LIKE');
       $this->simple = FALSE;
     }
 
@@ -409,10 +409,10 @@ class SearchQuery extends SelectQueryExtender {
    * used. However, if at least one call to addScore() has taken place, the
    * keyword relevance score is not automatically added.
    *
-   * Also note that if you call orderBy() directly on the query, search scores
-   * will not automatically be used to order search results. Your orderBy()
-   * expression can reference 'calculated_score', which will be the total
-   * calculated score value.
+   * Note that you must use this method to add ordering to your searches, and
+   * not call orderBy() directly, when using the SearchQuery extender. This is
+   * because of the two-pass system the SearchQuery class uses to normalize
+   * scores.
    *
    * @param $score
    *   The score expression, which should evaluate to a number between 0 and 1.

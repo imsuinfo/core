@@ -131,17 +131,9 @@ states.Dependent.prototype = {
    */
   compare: function (reference, selector, state) {
     var value = this.values[selector][state.name];
-    var name = reference.constructor.name;
-
-    // some browsers, like IE8+, need additional help to work as expected.
-    if (!name) {
-      name = $.type(reference);
-      name = name.charAt(0).toUpperCase() + name.slice(1);
-    }
-
-    if (name in states.Dependent.comparisons) {
+    if (reference.constructor.name in states.Dependent.comparisons) {
       // Use a custom compare function for certain reference value types.
-      return states.Dependent.comparisons[name](reference, value);
+      return states.Dependent.comparisons[reference.constructor.name](reference, value);
     }
     else {
       // Do a plain comparison otherwise.
@@ -501,7 +493,11 @@ $(document).bind('state:disabled', function(e) {
 $(document).bind('state:required', function(e) {
   if (e.trigger) {
     if (e.value) {
-      $(e.target).closest('.form-item, .form-wrapper').find('label').append('<span class="form-required">*</span>');
+      var $label = $(e.target).closest('.form-item, .form-wrapper').find('label');
+      // Avoids duplicate required markers on initialization.
+      if (!$label.find('.form-required').length) {
+        $label.append('<span class="form-required">*</span>');
+      }
     }
     else {
       $(e.target).closest('.form-item, .form-wrapper').find('label .form-required').remove();
