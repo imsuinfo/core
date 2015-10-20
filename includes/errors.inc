@@ -181,7 +181,7 @@ function _drupal_log_error($error, $fatal = FALSE) {
     drupal_add_http_header('Status', '500 Service Unavailable');
 
     $error_document_file_500 = variable_get('error_document_file_500', '/var/www/error_documents/5xx/500.html');
-    if (file_exists($error_document_file_500)) {
+    if (is_string($error_document_file_500) && file_exists($error_document_file_500)) {
       $page = file_get_contents($error_document_file_500);
 
       if (function_exists('cf_theme_get_variables')) {

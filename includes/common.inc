@@ -2654,12 +2654,12 @@ function drupal_deliver_html_page($page_callback_result) {
         drupal_add_http_header('Status', '404 Not Found', FALSE, 404);
         watchdog('page not found', check_plain($_GET['q']), NULL, WATCHDOG_WARNING);
 
-        $error_document_file_403 = variable_get('error_document_file_404', '/var/www/error_documents/4xx/404.html');
+        $error_document_file_404 = variable_get('error_document_file_404', '/var/www/error_documents/4xx/404.html');
         $error_document_custom_menu_1_logged_in = variable_get('error_document_custom_menu_1_logged_in', NULL);
         $error_document_custom_menu_2_logged_in = variable_get('error_document_custom_menu_2_logged_in', NULL);
         $error_document_load_blocks = variable_get('error_document_load_blocks', FALSE);
 
-        if (file_exists($error_document_file_403)) {
+        if (is_string($error_document_file_404) && file_exists($error_document_file_404)) {
           $page = array();
           $block = "";
 
@@ -2681,7 +2681,7 @@ function drupal_deliver_html_page($page_callback_result) {
           }
           unset($page);
 
-          $page = file_get_contents($error_document_file_403);
+          $page = file_get_contents($error_document_file_404);
 
           if ($user->uid > 0) {
             $page = str_replace(' is-anonymous ', ' is-logged_in ', $page);
@@ -2765,7 +2765,7 @@ function drupal_deliver_html_page($page_callback_result) {
         $error_document_custom_menu_2_logged_in = variable_get('error_document_custom_menu_2_logged_in', NULL);
         $error_document_load_blocks = variable_get('error_document_load_blocks', FALSE);
 
-        if (file_exists($error_document_file_403)) {
+        if (is_string($error_document_file_403) && file_exists($error_document_file_403)) {
           $page = array();
           $block = "";
 
@@ -2893,7 +2893,7 @@ function drupal_deliver_html_page($page_callback_result) {
         $error_document_file_503 = variable_get('error_document_file_503', '/var/www/error_documents/5xx/503.html');
         $emergency_mode = variable_get('emergency_mode', FALSE);
 
-        if ($emergency_mode == 0 && file_exists($error_document_file_503)) {
+        if ($emergency_mode == 0 && is_string($error_document_file_503) && file_exists($error_document_file_503)) {
           drupal_add_http_header('Status', '503 Service Unavailable', FALSE, 503);
 
           $page = file_get_contents($error_document_file_503);
