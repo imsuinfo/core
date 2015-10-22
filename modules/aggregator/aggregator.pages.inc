@@ -435,7 +435,6 @@ function theme_aggregator_page_rss($variables) {
   $category = $variables['category'];
 
   drupal_add_http_header('Content-Type', 'application/rss+xml; charset=utf-8');
-  drupal_send_headers();
 
   $items = '';
   $feed_length = variable_get('feed_item_length', 'fulltext');
@@ -502,7 +501,6 @@ function theme_aggregator_page_opml($variables) {
   $feeds = $variables['feeds'];
 
   drupal_add_http_header('Content-Type', 'text/xml; charset=utf-8');
-  drupal_send_headers();
 
   $output  = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
   $output .= "<opml version=\"1.1\">\n";

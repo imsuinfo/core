@@ -864,7 +864,6 @@ function image_style_deliver($style, $scheme) {
       drupal_add_http_header('Status', '503 Service Unavailable');
       drupal_add_http_header('Content-Type', 'text/html; charset=utf-8');
       drupal_add_http_header('Retry-After', 3);
-      drupal_send_headers();
       print t('Image generation in progress. Try again shortly.');
       drupal_exit();
     }
@@ -880,15 +879,12 @@ function image_style_deliver($style, $scheme) {
 
   if ($success) {
     $image = image_load($derivative_uri);
-    if (is_object($image)) {
-      file_transfer($image->source, array('Content-Type' => $image->info['mime_type'], 'Content-Length' => $image->info['file_size']));
-    }
+    file_transfer($image->source, array('Content-Type' => $image->info['mime_type'], 'Content-Length' => $image->info['file_size']));
   }
   else {
     watchdog('image', 'Unable to generate the derived image located at %path.', array('%path' => $derivative_uri));
     drupal_add_http_header('Status', '500 Internal Server Error');
     drupal_add_http_header('Content-Type', 'text/html; charset=utf-8');
-    drupal_send_headers();
     print t('Error generating image.');
     drupal_exit();
   }
@@ -1104,42 +1100,9 @@ function image_style_path($style_name, $uri) {
   }
   else {
     $path = $uri;
-    $scheme = image_style_default_scheme();
-
-    if ($scheme != 'public' && $scheme != 'private') {
-      $wrappers = file_get_stream_wrappers(STREAM_WRAPPERS_READ);
-      unset($wrappers[$scheme]);
-
-      // find out which stream it belongs to by a walkthrough of available streams.
-      foreach ($wrappers as $wrapper_scheme => $wrapper) {
-        if (file_exists($wrapper_scheme . '://' . $uri)) {
-          $scheme = $wrapper_scheme;
-          break;
-        }
-      }
-    }
+    $scheme = file_default_scheme();
   }
   return $scheme . '://styles/' . $style_name . '/' . $scheme . '/' . $path;
-}
-
-/**
- * A standard way to load the default image scheme.
- *
- * Allows for a custom image scheme 'image_style_default_scheme' to be defined in
- * the sites/default/settings.php file. Otherwise, the default file scheme is
- * returned.
- *
- * @return string
- *   A formatted scheme string.
- */
-function image_style_default_scheme() {
-  global $conf;
-
-  if (empty($conf['image_style_default_scheme'])) {
-    return file_default_scheme();
-  }
-
-  return $conf['image_style_default_scheme'];
 }
 
 /**

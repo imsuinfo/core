@@ -49,7 +49,7 @@ function profile_browse() {
         $query->condition('v.value', $value);
         break;
       case 'list':
-        $query->condition('v.value', '%' . db_like($value) . '%', 'ILIKE');
+        $query->condition('v.value', '%' . db_like($value) . '%', 'LIKE');
         break;
       default:
         return MENU_NOT_FOUND;
@@ -122,7 +122,7 @@ function profile_autocomplete($field, $string) {
     $values = db_select('profile_value')
       ->fields('profile_value', array('value'))
       ->condition('fid', $field)
-      ->condition('value', db_like($string) . '%', 'ILIKE')
+      ->condition('value', db_like($string) . '%', 'LIKE')
       ->groupBy('value')
       ->orderBy('value')
       ->range(0, 10)

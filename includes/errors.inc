@@ -149,15 +149,7 @@ function _drupal_render_exception_safe($exception) {
  *   TRUE if an error should be displayed.
  */
 function error_displayable($error = NULL) {
-  global $user;
-
-  if (!is_object($user) || !property_exists($user, 'uid') || $user->uid == 0) {
-    $error_level = variable_get('error_level_anonymous', ERROR_REPORTING_DISPLAY_ALL);
-  }
-  else {
-    $error_level = variable_get('error_level', ERROR_REPORTING_DISPLAY_ALL);
-  }
-
+  $error_level = variable_get('error_level', ERROR_REPORTING_DISPLAY_ALL);
   $updating = (defined('MAINTENANCE_MODE') && MAINTENANCE_MODE == 'update');
   $all_errors_displayed = ($error_level == ERROR_REPORTING_DISPLAY_ALL);
   $error_needs_display = ($error_level == ERROR_REPORTING_DISPLAY_SOME &&
@@ -177,36 +169,6 @@ function error_displayable($error = NULL) {
  *   TRUE if the error is fatal.
  */
 function _drupal_log_error($error, $fatal = FALSE) {
-  if ($fatal && !drupal_is_cli()) {
-    drupal_add_http_header('Status', '500 Service Unavailable');
-
-    $error_document_file_500 = variable_get('error_document_file_500', '/var/www/error_documents/5xx/500.html');
-    if (is_string($error_document_file_500) && file_exists($error_document_file_500)) {
-      $page = file_get_contents($error_document_file_500);
-
-      if (function_exists('cf_theme_get_variables')) {
-        $cf = & drupal_static('cf_theme_get_variables', array());
-        cf_theme_get_variables($cf);
-
-        $page = str_replace(' is-using_database ', ' ', $page);
-        $page = str_replace(' is-anonymous ', ' ', $page);
-        $page = str_replace(' is-logged_in ', ' ', $page);
-        $page = str_replace(' is-html5 ', ' ', $page);
-        $page = str_replace(' is-fixed_width ', ' ', $page);
-        $page = str_replace(' is-flex_width ', ' ', $page);
-        $page = preg_replace('/ at-\w+ /i', ' ', $page);
-        $markup_css = isset($cf['markup_css']['body']['class']) ? $cf['markup_css']['body']['class'] : '';
-        $markup_css = str_replace(' is-expanded ', ' ', $markup_css);
-        $markup_css = str_replace(' is-collapsed ', ' ', $markup_css);
-        $page = str_replace('<body id="mcneese-body" class="mcneese ', '<body id="mcneese-body" class="mcneese ' . $markup_css . ' ', $page);
-      }
-
-      drupal_send_headers();
-      print($page);
-      exit();
-    }
-  }
-
   // Initialize a maintenance theme if the bootstrap was not complete.
   // Do it early because drupal_set_message() triggers a drupal_theme_initialize().
   if ($fatal && (drupal_get_bootstrap_phase() != DRUPAL_BOOTSTRAP_FULL)) {
@@ -240,8 +202,7 @@ function _drupal_log_error($error, $fatal = FALSE) {
   watchdog('php', '%type: !message in %function (line %line of %file).', $error, $error['severity_level']);
 
   if ($fatal) {
-    drupal_add_http_header('Status', '500 Service Unavailable');
-    drupal_send_headers();
+    drupal_add_http_header('Status', '500 Service unavailable (with message)');
   }
 
   if (drupal_is_cli()) {
