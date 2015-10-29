@@ -14,7 +14,7 @@
 
 Drupal.ajax = Drupal.ajax || {};
 
-Drupal.settings.urlIsAjaxTrusted = Drupal.settings.urlIsAjaxTrusted || {};
+/* Drupal.settings.urlIsAjaxTrusted = Drupal.settings.urlIsAjaxTrusted || {}; */
 
 /**
  * Attaches the Ajax behavior to each Ajax form element.
@@ -179,13 +179,14 @@ Drupal.ajax = function (base, element, element_settings) {
       //   #ajax) can bypass header verification. This is especially useful for
       //   Ajax with multipart forms. Because IFRAME transport is used, the
       //   response headers cannot be accessed for verification.
+/*
       if (response !== null && !Drupal.settings.urlIsAjaxTrusted[ajax.url]) {
         if (xmlhttprequest.getResponseHeader('X-Drupal-Ajax-Token') !== '1') {
           var customMessage = Drupal.t("The response failed verification so will not be processed.");
           return ajax.error(xmlhttprequest, ajax.url, customMessage);
         }
       }
-
+*/
       return ajax.success(response, status);
     },
     complete: function (xmlhttprequest, status) {
@@ -200,9 +201,11 @@ Drupal.ajax = function (base, element, element_settings) {
 
   // Bind the ajaxSubmit function to the element event.
   $(ajax.element).bind(element_settings.event, function (event) {
+/*
     if (!Drupal.settings.urlIsAjaxTrusted[ajax.url] && !Drupal.urlIsLocal(ajax.url)) {
       throw new Error(Drupal.t('The callback URL is not local and not trusted: !url', {'!url': ajax.url}));
     }
+*/
     return ajax.eventResponse(this, event);
   });
 
