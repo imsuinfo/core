@@ -232,7 +232,7 @@
 function ajax_render($commands = array()) {
   // Although ajax_deliver() does this, some contributed and custom modules
   // render Ajax responses without using that delivery callback.
-  ajax_set_verification_header();
+  #ajax_set_verification_header();
 
   // Ajax responses aren't rendered with html.tpl.php, so we have to call
   // drupal_get_css() and drupal_get_js() here, in order to have new files added
@@ -492,7 +492,7 @@ function ajax_deliver($page_callback_result) {
   }
 
   // Let ajax.js know that this response is safe to process.
-  ajax_set_verification_header();
+  #ajax_set_verification_header();
 
   // Print the response.
   $commands = ajax_prepare_response($page_callback_result);
@@ -592,6 +592,8 @@ function ajax_prepare_response($page_callback_result) {
  * @see Drupal.ajax.options.success()
  */
 function ajax_set_verification_header() {
+  return;
+  /*
   $added = &drupal_static(__FUNCTION__);
 
   // User-uploaded files cannot set any response headers, so a custom header is
@@ -604,6 +606,7 @@ function ajax_set_verification_header() {
     // Avoid sending the header twice.
     $added = TRUE;
   }
+  */
 }
 
 /**
