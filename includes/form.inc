@@ -4232,10 +4232,10 @@ function form_process_autocomplete($element) {
     $element['#autocomplete_input']['#id'] = $element['#id'] .'-autocomplete';
     // Force autocomplete to use non-clean URLs since this protects against the
     // browser interpreting the path plus search string as an actual file.
-    $current_clean_url = isset($GLOBALS['conf']['clean_url']) ? $GLOBALS['conf']['clean_url'] : NULL;
-    $GLOBALS['conf']['clean_url'] = 0;
+    #$current_clean_url = isset($GLOBALS['conf']['clean_url']) ? $GLOBALS['conf']['clean_url'] : NULL;
+    #$GLOBALS['conf']['clean_url'] = 0;
     $element['#autocomplete_input']['#url_value'] = url($element['#autocomplete_path'], array('absolute' => TRUE));
-    $GLOBALS['conf']['clean_url'] = $current_clean_url;
+    #$GLOBALS['conf']['clean_url'] = $current_clean_url;
   }
   return $element;
 }
