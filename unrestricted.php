@@ -742,7 +742,7 @@ function unrestricted_get_file_hash(&$information, $settings) {
   $headers['Accept-Ranges'] = array('value' => 'File Transfer');
   $headers['Content-Description'] = array('value' => 'File Transfer');
   $headers['Content-Disposition'] = array('value' => 'inline; filename="' . mime_header_encode($information['file']['filename'] . '.' . MCNEESE_FILE_DB_PATH_BY_HASH_SUM_EXTENSION) . '"');
-  $headers['Content-Length'] = array('value' => unrestricted_calculate_content_length($data));
+  $headers['Content-Length'] = array('value' => strlen($data));
   $headers['Content-Location'] = array('value' => mime_header_encode($settings['base_path'] . MCNEESE_FILE_DB_FILE_PATH . '/' . MCNEESE_FILE_DB_PATH_BY_HASH_SUM . '/' . $information['file']['shortsum'] . '/' . $information['file']['filename'] . '.' . $information['file']['extension'] . '.' . MCNEESE_FILE_DB_PATH_BY_HASH_SUM_EXTENSION));
   $headers['Content-Type'] = array('value' => 'text/plain');
   $headers['Date'] = array('value' => gmdate(DATE_RFC1123, $instance));
@@ -794,46 +794,6 @@ function unrestricted_get_instance($reset = FALSE) {
   }
 
   return $instance;
-}
-
-/**
- * Calculate the 8-bit length (octet) of the content/body.
- *
- * RFC 7230 describes the content-length as referring to the count based on every 8-bits, which is a single octet.
- * Using strlen() would be incorrect because characters are 7-bit.
- * Using mb_strlen() would be incorrect because it contains mixed lengths.
- * Using any string test would be incorrect because the content may already be binary data.
- *
- * The solution is to break apart the string into 8-bit chunks and then calculate the length.
- * This may be expensive depending on the size of the data and ideally should only be called once.
- *
- * @return int|bool
- *   Total number of octals on success, FALSE otherwise.
- *
- * @see: set_response_content_length()
- * @see: https://tools.ietf.org/html/rfc7230#section-3.3.2
- */
-function unrestricted_calculate_content_length($text) {
-  // The concept here is to break apart the string into an array of multi-byte friendly characters.
-  // PHP does not provide a pack or unpack option for 8-bits, so 16-bits unsigned will be used.
-  $unpacked = unpack('S*', $text);
-
-  $count_of_16 = count($unpacked);
-  unset($unpacked);
-
-  if ($count_of_16 == 0) {
-    unset($count_of_16);
-    return 0;
-  }
-
-  // determine the number of octals based off of the number of 16-bit chunks.
-  $total = $count_of_16 * 2;
-  if ($count_of_16 % 8 == 0) {
-    $total -= 1;
-  }
-  unset($count_of_16);
-
-  return $total;
 }
 
 unrestricted_main();
