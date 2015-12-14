@@ -742,7 +742,7 @@ function unrestricted_get_file_hash(&$information, $settings) {
   $headers['Accept-Ranges'] = array('value' => 'File Transfer');
   $headers['Content-Description'] = array('value' => 'File Transfer');
   $headers['Content-Disposition'] = array('value' => 'inline; filename="' . mime_header_encode($information['file']['filename'] . '.' . MCNEESE_FILE_DB_PATH_BY_HASH_SUM_EXTENSION) . '"');
-  $headers['Content-Length'] = array('value' => unrestricted_bytes_in_string($data));
+  $headers['Content-Length'] = array('value' => strlen($data));
   $headers['Content-Location'] = array('value' => mime_header_encode($settings['base_path'] . MCNEESE_FILE_DB_FILE_PATH . '/' . MCNEESE_FILE_DB_PATH_BY_HASH_SUM . '/' . $information['file']['shortsum'] . '/' . $information['file']['filename'] . '.' . $information['file']['extension'] . '.' . MCNEESE_FILE_DB_PATH_BY_HASH_SUM_EXTENSION));
   $headers['Content-Type'] = array('value' => 'text/plain');
   $headers['Date'] = array('value' => gmdate(DATE_RFC1123, $instance));
@@ -794,66 +794,6 @@ function unrestricted_get_instance($reset = FALSE) {
   }
 
   return $instance;
-}
-
-/**
- * Calculate the 8-bit length (octet) of some string.
- *
- * This is distint from an strlen() in that it does not count characters, it only counts bytes.
- *
- * RFC 7230 describes the content-length as referring to the count based on every 8-bits, which is a single octet.
- * Using strlen() could be incorrect because of the php setting: mbstring.func_overload.
- * Using mb_strlen() would be incorrect because it contains mixed lengths.
- * Using drupal_strlen() would be incorrect because it counts multibyte and even ignores some UTF-8 bytes when counting.
- *
- * @param string $string
- *   The PHP string to count the number of bytes of.
- *
- * The solution is to break apart the string into 8-bit chunks and then calculate the length using mb_strcut().
- * This may be expensive depending on the size of the data and ideally should only be called once.
- *
- * @return int|bool
- *   Total number of octals on success, FALSE otherwise.
- *
- * @see: https://tools.ietf.org/html/rfc7230#section-3.3.2
- * @see: mb_strcutunrestricted)
- */
-function unrestricted_bytes_in_string($string) {
-  // if only dealing with ASCII, then it is safe to use PHP's strlen() function.
-  if (mb_detect_encoding($string) == 'ASCII') {
-    return strlen($string);
-  }
-
-  $total = 0;
-  $length = strlen($string);
-  $character = 0;
-  $cut_size = 0;
-
-  // Use a hard limit of the maximum character size to 32-bits (which is a max cut_size of 4).
-  for (; $character < $length; $character++) {
-    $piece = NULL;
-    $cut_size = 1;
-    for (; $cut_size < 4; $cut_size++) {
-      $piece = mb_strcut($string, $total, $cut_size);
-
-      if (strlen($piece) != 0) {
-        break;
-      }
-    }
-
-    if ($cut_size > 4) {
-      break;
-    }
-
-    $total += $cut_size;
-  }
-
-  if ($cut_size >= 4) {
-    // failed to process properly, so fallback to strlen() as a failsafe.
-    return strlen($string);
-  }
-
-  return $total;
 }
 
 unrestricted_main();
