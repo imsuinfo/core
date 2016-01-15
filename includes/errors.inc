@@ -184,6 +184,18 @@ function _drupal_log_error($error, $fatal = FALSE) {
     if (is_string($error_document_file_500) && file_exists($error_document_file_500)) {
       $page = file_get_contents($error_document_file_500);
 
+
+      // get all drupal messages and present them to the user.
+      $messages = drupal_get_messages();
+      if (is_array($messages) && !empty($messages)) {
+        $renderred_messages = theme('status_messages', array('messages' => $messages));
+        $renderred_messages = preg_replace('|<header class="html_tag-header messages-header">|is', '<header class="html_tag-header messages-header element-invisible">', $renderred_messages);
+        $page = preg_replace('|<!--\(begin-page-main\)-->|is', '<!--(begin-page-main)-->' . "\n" . print_r($renderred_messages, TRUE), $page);
+        unset($renderred_messages);
+      }
+      unset($messages);
+
+
       if (function_exists('cf_theme_get_variables')) {
         $cf = & drupal_static('cf_theme_get_variables', array());
         cf_theme_get_variables($cf);
