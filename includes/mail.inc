@@ -261,13 +261,6 @@ function drupal_mail_system($module, $key) {
   $id = $module . '_' . $key;
 
   $configuration = variable_get('mail_system', array('default-system' => 'DefaultMailSystem'));
-  $mail_includes = variable_get('mail_system_includes', array());
-
-  if (is_array($mail_includes)) {
-    foreach ($mail_includes as $mail_include) {
-     include_once($mail_include);
-    }
-  }
 
   // Look for overrides for the default class, starting from the most specific
   // id, and falling back to the module name.
@@ -279,11 +272,6 @@ function drupal_mail_system($module, $key) {
   }
   else {
     $class = $configuration['default-system'];
-  }
-
-  // Use the default mail class as a fallback.
-  if (!class_exists($class)) {
-    $class = 'DefaultMailSystem';
   }
 
   if (empty($instances[$class])) {
@@ -363,6 +351,29 @@ interface MailSystemInterface {
 function drupal_wrap_mail($text, $indent = '') {
   // Convert CRLF into LF.
   $text = str_replace("\r", '', $text);
+  // See if soft-wrapping is allowed.
+  $clean_indent = _drupal_html_to_text_clean($indent);
+  $soft = strpos($clean_indent, ' ') === FALSE;
+  // Check if the string has line breaks.
+  if (strpos($text, "\n") !== FALSE) {
+    // Remove trailing spaces to make existing breaks hard, but leave signature
+    // marker untouched (RFC 3676, Section 4.3).
+    $text = preg_replace('/(?(?<!^--) +\n|  +\n)/m', "\n", $text);
+    // Wrap each line at the needed width.
+    $lines = explode("\n", $text);
+    array_walk($lines, '_drupal_wrap_mail_line', array('soft' => $soft, 'length' => strlen($indent)));
+    $text = implode("\n", $lines);
+  }
+  else {
+    // Wrap this line.
+    _drupal_wrap_mail_line($text, 0, array('soft' => $soft, 'length' => strlen($indent)));
+  }
+  // Empty lines with nothing but spaces.
+  $text = preg_replace('/^ +\n/m', "\n", $text);
+  // Space-stuff special lines.
+  $text = preg_replace('/^(>| |From)/m', ' $1', $text);
+  // Apply indentation. We only include non-'>' indentation on the first line.
+  $text = $indent . substr(preg_replace('/^/m', $clean_indent, $text), strlen($indent));
 
   return $text;
 }
@@ -555,7 +566,7 @@ function _drupal_wrap_mail_line(&$line, $key, $values) {
   // Use soft-breaks only for purely quoted or unindented text.
   $line = wordwrap($line, 77 - $values['length'], $values['soft'] ? " \n" : "\n");
   // Break really long words at the maximum width allowed.
-  $line = wordwrap($line, 996 - $values['length'], $values['soft'] ? " \n" : "\n");
+  $line = wordwrap($line, 996 - $values['length'], $values['soft'] ? " \n" : "\n", TRUE);
 }
 
 /**

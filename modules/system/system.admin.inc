@@ -1373,14 +1373,8 @@ function system_modules_uninstall_submit($form, &$form_state) {
   if (!empty($form['#confirmed'])) {
     // Call the uninstall routine for each selected module.
     $modules = array_keys($form_state['values']['uninstall']);
-    $result = drupal_uninstall_modules($modules);
-
-    if ($result === TRUE) {
-      drupal_set_message(t('The selected modules have been uninstalled.'));
-    }
-    else {
-      drupal_set_message(t('The selected modules have failed to uninstall.'), 'error');
-    }
+    drupal_uninstall_modules($modules);
+    drupal_set_message(t('The selected modules have been uninstalled.'));
 
     $form_state['redirect'] = 'admin/modules/uninstall';
   }
@@ -1679,18 +1673,7 @@ function system_logging_settings() {
       ERROR_REPORTING_DISPLAY_SOME => t('Errors and warnings'),
       ERROR_REPORTING_DISPLAY_ALL => t('All messages'),
     ),
-  );
-
-  $form['error_level_anonymous'] = array(
-    '#type' => 'radios',
-    '#title' => t('Error messages to display (for anonymous users)'),
-    '#default_value' => variable_get('error_level_anonymous', ERROR_REPORTING_DISPLAY_ALL),
-    '#options' => array(
-      ERROR_REPORTING_HIDE => t('None'),
-      ERROR_REPORTING_DISPLAY_SOME => t('Errors and warnings'),
-      ERROR_REPORTING_DISPLAY_ALL => t('All messages'),
-    ),
-    '#description' => t('It is recommended that sites running on production environments do not display any errors for anonymous users.'),
+    '#description' => t('It is recommended that sites running on production environments do not display any errors.'),
   );
 
   return system_settings_form($form);
@@ -2510,11 +2493,11 @@ function theme_admin_page($variables) {
     }
   }
 
-  $output = '<div class="admin">';
+  $output = '<div class="admin clearfix">';
   $output .= theme('system_compact_link');
 
   foreach ($container as $id => $data) {
-    $output .= '<div class="' . $id . '">';
+    $output .= '<div class="' . $id . ' clearfix">';
     $output .= $data;
     $output .= '</div>';
   }
@@ -2562,10 +2545,10 @@ function theme_system_admin_index($variables) {
     }
   }
 
-  $output = '<div class="admin">';
+  $output = '<div class="admin clearfix">';
   $output .= theme('system_compact_link');
   foreach ($container as $id => $data) {
-    $output .= '<div class="' . $id . '">';
+    $output .= '<div class="' . $id . ' clearfix">';
     $output .= $data;
     $output .= '</div>';
   }
@@ -2754,7 +2737,7 @@ function theme_system_themes_page($variables) {
       continue;
     }
     // Start new theme group.
-    $output .= '<div class="system-themes-list system-themes-list-'. $state .'"><h2>'. $title .'</h2>';
+    $output .= '<div class="system-themes-list system-themes-list-'. $state .' clearfix"><h2>'. $title .'</h2>';
 
     foreach ($theme_groups[$state] as $theme) {
 

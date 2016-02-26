@@ -25,7 +25,7 @@ function taxonomy_help($path, $arg) {
       $output .= '<h3>' . t('Uses') . '</h3>';
       $output .= '<dl>';
       $output .= '<dt>' . t('Creating vocabularies') . '</dt>';
-      $output .= '<dd>' . t('Users with sufficient <a href="@perm">permissions</a> can create <em>vocabularies</em> and <em>terms</em> through the <a href="@taxo">Taxonomy page</a>. The page listing the terms provides a drag-and-drop interface for controlling the order of the terms and sub-terms within a vocabulary, in a hierarchical fashion. A <em>controlled vocabulary</em> classifying music by genre with terms and sub-terms could look as follows:', array('@taxo' => url('admin/structure/taxonomy'), '@perm' => url('admin/people/permissions', array('fragment'=>'module-taxonomy'))));
+      $output .= '<dd>' . t('Users with sufficient <a href="@perm">permissions</a> can create <em>vocabularies</em> and <em>terms</em> through the <a href="@taxo">Taxonomy page</a>. The page listing the terms provides a drag-and-drop interface for controlling the order of the terms and sub-terms within a vocabulary, in a hierarchical fashion. A <em>controlled vocabulary</em> classifying music by genre with terms and sub-terms could look as follows:', array('@taxo' => url('admin/structure/taxonomy'), '@perm' => url('admin/people/permissions', array('fragment' => 'module-taxonomy'))));
       $output .= '<ul><li>' . t('<em>vocabulary</em>: Music') . '</li>';
       $output .= '<ul><li>' . t('<em>term</em>: Jazz') . '</li>';
       $output .= '<ul><li>' . t('<em>sub-term</em>: Swing') . '</li>';
@@ -1255,7 +1255,7 @@ class TaxonomyTermController extends DrupalDefaultEntityController {
       $query_conditions = &$query->conditions();
       foreach ($query_conditions as $key => $condition) {
         if (is_array($condition) && $condition['field'] == 'base.name') {
-          $query_conditions[$key]['operator'] = 'ILIKE';
+          $query_conditions[$key]['operator'] = 'LIKE';
           $query_conditions[$key]['value'] = db_like($query_conditions[$key]['value']);
         }
       }
@@ -1743,17 +1743,6 @@ function taxonomy_field_widget_form(&$form, &$form_state, $field, $instance, $la
     '#maxlength' => 1024,
     '#element_validate' => array('taxonomy_autocomplete_validate'),
   );
-
-  if (!empty($instance['alternate_label']['value'])) {
-    if (empty($instance['alternate_label']['format'])) {
-      $element['#title'] = check_plain($instance['alternate_label']['value']);
-      $element['value']['#title'] = $element['#title'];
-    }
-    else {
-      $element['#title'] = check_markup($instance['alternate_label']['value'], $instance['alternate_label']['format']);
-      $element['value']['#title'] = $element['#title'];
-    }
-  }
 
   return $element;
 }

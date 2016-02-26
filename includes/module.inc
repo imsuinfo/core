@@ -320,15 +320,26 @@ function module_load_install($module) {
  *   The name of the included file, if successful; FALSE otherwise.
  */
 function module_load_include($type, $module, $name = NULL) {
+  static $files = array();
+
   if (!isset($name)) {
     $name = $module;
+  }
+
+  $key = $type . ':' . $module . ':' . $name;
+  if (isset($files[$key])) {
+    return $files[$key];
   }
 
   if (function_exists('drupal_get_path')) {
     $file = DRUPAL_ROOT . '/' . drupal_get_path('module', $module) . "/$name.$type";
     if (is_file($file)) {
       require_once $file;
+      $files[$key] = $file;
       return $file;
+    }
+    else {
+      $files[$key] = FALSE;
     }
   }
   return FALSE;
@@ -365,20 +376,22 @@ function module_load_all_includes($type, $name = NULL) {
  * - Invoke hook_modules_installed().
  * - Invoke hook_modules_enabled().
  *
- * @param $module_list
+ * @param string[] $module_list
  *   An array of module names.
- * @param $enable_dependencies
+ * @param bool $enable_dependencies
  *   If TRUE, dependencies will automatically be added and enabled in the
  *   correct order. This incurs a significant performance cost, so use FALSE
  *   if you know $module_list is already complete and in the correct order.
  *
- * @return
+ * @return bool
  *   FALSE if one or more dependencies are missing, TRUE otherwise.
  *
  * @see hook_install()
  * @see hook_enable()
  * @see hook_modules_installed()
  * @see hook_modules_enabled()
+ * @see module_disable()
+ * @see drupal_uninstall_modules()
  */
 function module_enable($module_list, $enable_dependencies = TRUE) {
   if ($enable_dependencies) {
@@ -423,18 +436,13 @@ function module_enable($module_list, $enable_dependencies = TRUE) {
 
   $modules_installed = array();
   $modules_enabled = array();
-
-  $transaction = db_transaction();
-  try {
-    foreach ($module_list as $module) {
-      // Only process modules that are not already enabled.
-      $existing = db_query("SELECT status FROM {system} WHERE type = :type AND name = :name", array(
-        ':type' => 'module',
-        ':name' => $module))
-        ->fetchObject();
-      if ($existing->status != 0) {
-        continue;
-      }
+  foreach ($module_list as $module) {
+    // Only process modules that are not already enabled.
+    $existing = db_query("SELECT status FROM {system} WHERE type = :type AND name = :name", array(
+      ':type' => 'module',
+      ':name' => $module))
+      ->fetchObject();
+    if ($existing->status == 0) {
       // Load the module's code.
       drupal_load('module', $module);
       module_load_install($module);
@@ -492,24 +500,16 @@ function module_enable($module_list, $enable_dependencies = TRUE) {
       $modules_enabled[] = $module;
       watchdog('system', '%module module enabled.', array('%module' => $module), WATCHDOG_INFO);
     }
-
-    // If any modules were newly installed, invoke hook_modules_installed().
-    if (!empty($modules_installed)) {
-      module_invoke_all('modules_installed', $modules_installed);
-    }
-
-    // If any modules were newly enabled, invoke hook_modules_enabled().
-    if (!empty($modules_enabled)) {
-      module_invoke_all('modules_enabled', $modules_enabled);
-    }
-
-    unset($transaction);
   }
-  catch (Exception $ex) {
-    $transaction->rollback();
-    drupal_set_message(t('The selected modules have failed to install.'), 'error');
-    watchdog_exception('system', $ex, "Failed to install and enable the modules: %modules, reason: %ex.", array('%modules' => print_r($module_list, TRUE), '%ex' => $ex->getMessage()), WATCHDOG_ERROR);
-    return FALSE;
+
+  // If any modules were newly installed, invoke hook_modules_installed().
+  if (!empty($modules_installed)) {
+    module_invoke_all('modules_installed', $modules_installed);
+  }
+
+  // If any modules were newly enabled, invoke hook_modules_enabled().
+  if (!empty($modules_enabled)) {
+    module_invoke_all('modules_enabled', $modules_enabled);
   }
 
   return TRUE;
@@ -518,12 +518,15 @@ function module_enable($module_list, $enable_dependencies = TRUE) {
 /**
  * Disables a given set of modules.
  *
- * @param $module_list
+ * @param string[] $module_list
  *   An array of module names.
- * @param $disable_dependents
+ * @param bool $disable_dependents
  *   If TRUE, dependent modules will automatically be added and disabled in the
  *   correct order. This incurs a significant performance cost, so use FALSE
  *   if you know $module_list is already complete and in the correct order.
+ *
+ * @see drupal_uninstall_modules()
+ * @see module_enable()
  */
 function module_disable($module_list, $disable_dependents = TRUE) {
   if ($disable_dependents) {
@@ -735,6 +738,7 @@ function module_implements($hook, $sort = FALSE, $reset = FALSE) {
     drupal_static_reset('module_hook_info');
     drupal_static_reset('drupal_alter');
     cache_clear_all('hook_info', 'cache_bootstrap');
+    cache_clear_all('system_cache_tables', 'cache');
     return;
   }
 
