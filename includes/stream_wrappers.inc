@@ -37,11 +37,6 @@ define('STREAM_WRAPPERS_ALL', 0x0000);
 define('STREAM_WRAPPERS_LOCAL', 0x0001);
 
 /**
- * Stream wrapper bit flag -- refers to a remote file system location.
- */
-define('STREAM_WRAPPERS_REMOTE', 0x0002);
-
-/**
  * Stream wrapper bit flag -- wrapper is readable (almost always true).
  */
 define('STREAM_WRAPPERS_READ', 0x0004);
@@ -782,9 +777,8 @@ class DrupalPublicStreamWrapper extends DrupalLocalStreamWrapper {
    * Return the HTML URI of a public file.
    */
   function getExternalUrl() {
-    global $base_path;
     $path = str_replace('\\', '/', $this->getTarget());
-    return $base_path . self::getDirectoryPath() . '/' . drupal_encode_path($path);
+    return $GLOBALS['base_url'] . '/' . self::getDirectoryPath() . '/' . drupal_encode_path($path);
   }
 }
 
@@ -810,7 +804,7 @@ class DrupalPrivateStreamWrapper extends DrupalLocalStreamWrapper {
    */
   function getExternalUrl() {
     $path = str_replace('\\', '/', $this->getTarget());
-    return url('system/files/' . $path, array('external' => TRUE));
+    return url('system/files/' . $path, array('absolute' => TRUE));
   }
 }
 
@@ -835,6 +829,6 @@ class DrupalTemporaryStreamWrapper extends DrupalLocalStreamWrapper {
    */
   public function getExternalUrl() {
     $path = str_replace('\\', '/', $this->getTarget());
-    return url('system/temporary/' . $path, array('external' => TRUE));
+    return url('system/temporary/' . $path, array('absolute' => TRUE));
   }
 }
