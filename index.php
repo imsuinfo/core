@@ -94,7 +94,6 @@ elseif ($arguments_count > 5 && $arguments[0] == 'files' && $arguments[1] == 'st
     if ($arguments[4] == MCNEESE_FILE_DB_FILE_PATH && ($arguments[5] == MCNEESE_FILE_DB_PATH_BY_HASH || $arguments[5] == MCNEESE_FILE_DB_PATH_BY_ID || $arguments[5] == MCNEESE_FILE_DB_PATH_BY_FID)) {
       $filename = mcneese_file_db_get_filename($arguments[6], $association, $arguments[5]);
       if (isset($filename[0])) {
-
         if (!empty($filename[0]->extension)) {
           $filename = $filename[0]->filename . '.' . $filename[0]->extension;
         }
@@ -102,27 +101,30 @@ elseif ($arguments_count > 5 && $arguments[0] == 'files' && $arguments[1] == 'st
           $filename = $filename[0]->filename;
         }
 
-        $argument_7 = rawurldecode($arguments[7]);
-        if (strcasecmp($filename, $argument_7) !== 0) {
-          // the filenames don't match, try checking drupals database for a match.
-          try {
-            $query = db_select('file_managed', 'fm');
-            $query->fields('fm');
-            $query->condition('fm.filename', db_like($argument_7), 'ILIKE');
-            $found = (array) $query->execute()->fetchAssoc();
-          }
-          catch (Exception $ex) {
-            drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
-            watchdog('File DB', "Failed to select on file_managed to match the internal name :name to the requested name :argument_7", array(':name' => $filename, ':argument_7' => $argument_7), WATCHDOG_ERROR);
-            drupal_not_found();
-            drupal_exit();
-          }
+        if (array_key_exists(7, $arguments) && !empty($arguments[7])) {
+          $argument_7 = rawurldecode($arguments[7]);
 
-          if (empty($found['uri'])) {
-            $filename = FALSE;
+          if (strcasecmp($filename, $argument_7) !== 0) {
+            // the filenames don't match, try checking drupals database for a match.
+            try {
+              $query = db_select('file_managed', 'fm');
+              $query->fields('fm');
+              $query->condition('fm.filename', db_like($argument_7), 'ILIKE');
+              $found = (array) $query->execute()->fetchAssoc();
+            }
+            catch (Exception $ex) {
+              drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
+              watchdog('File DB', "Failed to select on file_managed to match the internal name :name to the requested name :argument_7", array(':name' => $filename, ':argument_7' => $argument_7), WATCHDOG_ERROR);
+              drupal_not_found();
+              drupal_exit();
+            }
+
+            if (empty($found['uri'])) {
+              $filename = FALSE;
+            }
           }
+          unset($argument_7);
         }
-        unset($argument_7);
       }
       else {
         $filename = FALSE;
