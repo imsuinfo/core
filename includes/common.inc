@@ -678,8 +678,10 @@ function drupal_goto($path = '', array $options = array(), $http_response_code =
   }
 
   // In some cases modules call drupal_goto(current_path()). We need to ensure
-  // that such a redirect is not to an external URL.
-  if ($path === current_path() && empty($options['external']) && url_is_external($path)) {
+  // that such a redirect is not to an external URL. Check $_GET['q'] rather
+  // than current_path() in case this function is called early in the
+  // bootstrap.
+  if ($path === $_GET['q'] && empty($options['external']) && url_is_external($path)) {
     // Force url() to generate a non-external URL.
     $options['external'] = FALSE;
   }
