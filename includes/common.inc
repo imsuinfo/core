@@ -2692,7 +2692,7 @@ function drupal_deliver_html_page($page_callback_result) {
           if (is_array($messages) && !empty($messages)) {
             $renderred_messages = theme('status_messages', array('messages' => $messages));
             $renderred_messages = preg_replace('|<header class="html_tag-header messages-header">|is', '<header class="html_tag-header messages-header element-invisible">', $renderred_messages);
-            $page = preg_replace('|<!--\(begin-page-main\)-->|is', '<!--(begin-page-main)-->' . "\n" . print_r($renderred_messages, TRUE), $page);
+            $page = preg_replace('|<!--\(begin-page-main\)-->|is', '<!--(begin-page-main)-->' . print_r($renderred_messages, TRUE), $page);
             unset($renderred_messages);
           }
           unset($messages);
@@ -2719,7 +2719,7 @@ function drupal_deliver_html_page($page_callback_result) {
                 $toolbar_view['#pre_render'][] = 'shortcut_toolbar_pre_render';
               }
               $toolbar = drupal_render($toolbar_view);
-              $page = str_replace('<!--(begin-page_top)-->', "<!--(begin-page_top)-->\n" . $toolbar, $page);
+              $page = str_replace('<!--(begin-page_top)-->', "<!--(begin-page_top)-->" . $toolbar, $page);
               unset($toolbar);
               unset($toolbar_view);
             }
@@ -2746,7 +2746,7 @@ function drupal_deliver_html_page($page_callback_result) {
 
           if (!empty($block)) {
             $page = str_replace('class="mcneese-content full', 'class="mcneese-content split', $page);
-            $page = str_replace('<div id="mcneese-content-main', '<div class="column-1 relative expanded html_tag-div" id="mcneese-page-side">' . $block . "</div>\n" . '<div id="mcneese-content-main"', $page);
+            $page = str_replace('<div id="mcneese-content-main', '<div class="column-1 relative expanded html_tag-div" id="mcneese-page-side">' . $block . "</div>" . '<div id="mcneese-content-main"', $page);
           }
           unset($block);
 
@@ -2824,7 +2824,7 @@ function drupal_deliver_html_page($page_callback_result) {
           if (is_array($messages) && !empty($messages)) {
             $renderred_messages = theme('status_messages', array('messages' => $messages));
             $renderred_messages = preg_replace('|<header class="html_tag-header messages-header">|is', '<header class="html_tag-header messages-header element-invisible">', $renderred_messages);
-            $page = preg_replace('|<!--\(begin-page-main\)-->|is', '<!--(begin-page-main)-->' . "\n" . print_r($renderred_messages, TRUE), $page);
+            $page = preg_replace('|<!--\(begin-page-main\)-->|is', '<!--(begin-page-main)-->' . print_r($renderred_messages, TRUE), $page);
             unset($renderred_messages);
           }
           unset($messages);
@@ -2851,7 +2851,7 @@ function drupal_deliver_html_page($page_callback_result) {
                 $toolbar_view['#pre_render'][] = 'shortcut_toolbar_pre_render';
               }
               $toolbar = drupal_render($toolbar_view);
-              $page = str_replace('<!--(begin-page_top)-->', "<!--(begin-page_top)-->\n" . $toolbar, $page);
+              $page = str_replace('<!--(begin-page_top)-->', "<!--(begin-page_top)-->" . $toolbar, $page);
               unset($toolbar);
               unset($toolbar_view);
             }
@@ -2878,7 +2878,7 @@ function drupal_deliver_html_page($page_callback_result) {
 
           if (!empty($block)) {
             $page = str_replace('class="mcneese-content full', 'class="mcneese-content split', $page);
-            $page = str_replace('<div id="mcneese-content-main', '<div class="column-1 relative expanded html_tag-div" id="mcneese-page-side">' . $block . "</div>\n" . '<div id="mcneese-content-main', $page);
+            $page = str_replace('<div id="mcneese-content-main', '<div class="column-1 relative expanded html_tag-div" id="mcneese-page-side">' . $block . "</div>" . '<div id="mcneese-content-main', $page);
           }
           unset($block);
 
@@ -2890,7 +2890,7 @@ function drupal_deliver_html_page($page_callback_result) {
             if (!empty($content['user_login'])) {
               $login = drupal_render($content);
               if (!empty($login)) {
-                $page = str_replace('<!--(replace-login-form)-->', "<br>\n" . $login, $page);
+                $page = str_replace('<!--(replace-login-form)-->', "<br>" . $login, $page);
 
                 if (isset($conf['default_headers-form']) && is_array($conf['default_headers-form'])) {
                   foreach ($conf['default_headers-form'] as $header_name => $header_value) {
@@ -2959,7 +2959,7 @@ function drupal_deliver_html_page($page_callback_result) {
           if (is_array($messages) && !empty($messages)) {
             $renderred_messages = theme('status_messages', array('messages' => $messages));
             $renderred_messages = preg_replace('|<header class="html_tag-header messages-header">|is', '<header class="html_tag-header messages-header element-invisible">', $renderred_messages);
-            $page = preg_replace('|<!--\(begin-page-main\)-->|is', '<!--(begin-page-main)-->' . "\n" . print_r($renderred_messages, TRUE), $page);
+            $page = preg_replace('|<!--\(begin-page-main\)-->|is', '<!--(begin-page-main)-->' . print_r($renderred_messages, TRUE), $page);
             unset($renderred_messages);
           }
           unset($messages);
