@@ -2981,7 +2981,7 @@ function theme_fieldset($variables) {
       $output .= $element['#value'];
     }
     $output .= '</div>';
-    $output .= "</div>\n";
+    $output .= "</div>";
   }
   else {
     $output = '<fieldset' . drupal_attributes($element['#attributes']) . '>';
@@ -2998,7 +2998,7 @@ function theme_fieldset($variables) {
       $output .= $element['#value'];
     }
     $output .= '</div>';
-    $output .= "</fieldset>\n";
+    $output .= "</fieldset>";
   }
 
   return $output;
@@ -4219,7 +4219,7 @@ function theme_hidden($variables) {
   $element = $variables['element'];
   $element['#attributes']['type'] = 'hidden';
   element_set_attributes($element, array('name', 'value'));
-  return '<input' . drupal_attributes($element['#attributes']) . ">\n";
+  return '<input' . drupal_attributes($element['#attributes']) . ">";
 }
 
 /**
@@ -4529,10 +4529,10 @@ function theme_form_element($variables) {
 
   if ($wrap_with_fieldset) {
     $element['#fieldset'] = FALSE;
-    $output = '<fieldset' . drupal_attributes($attributes) . '>' . "\n" . $legend . "\n";
+    $output = '<fieldset' . drupal_attributes($attributes) . '>' . $legend;
   }
   else {
-    $output = '<div' . drupal_attributes($attributes) . '>' . "\n";
+    $output = '<div' . drupal_attributes($attributes) . '>';
   }
 
   $prefix = isset($element['#field_prefix']) ? '<span class="field-prefix">' . $element['#field_prefix'] . '</span> ' : '';
@@ -4544,43 +4544,43 @@ function theme_form_element($variables) {
       $output .= ' ' . theme('form_element_label', $variables);
 
       if (!empty($element['#description_before'])) {
-        $output .= '<div class="description">' . $element['#description_before'] . "</div>\n";
+        $output .= '<div class="description">' . $element['#description_before'] . "</div>";
       }
 
-      $output .= ' ' . $prefix . $element['#children'] . $suffix . "\n";
+      $output .= ' ' . $prefix . $element['#children'] . $suffix;
       break;
 
     case 'after':
 
       if (!empty($element['#description_before'])) {
-        $output .= '<div class="description">' . $element['#description_before'] . "</div>\n";
+        $output .= '<div class="description">' . $element['#description_before'] . "</div>";
       }
 
       $output .= ' ' . $prefix . $element['#children'] . $suffix;
-      $output .= ' ' . theme('form_element_label', $variables) . "\n";
+      $output .= ' ' . theme('form_element_label', $variables);
       break;
 
     case 'none':
     case 'attribute':
 
       if (!empty($element['#description_before'])) {
-        $output .= '<div class="description">' . $element['#description_before'] . "</div>\n";
+        $output .= '<div class="description">' . $element['#description_before'] . "</div>";
       }
 
       // Output no label and no required marker, only the children.
-      $output .= ' ' . $prefix . $element['#children'] . $suffix . "\n";
+      $output .= ' ' . $prefix . $element['#children'] . $suffix;
       break;
   }
 
   if (!empty($element['#description'])) {
-    $output .= '<div class="description">' . $element['#description'] . "</div>\n";
+    $output .= '<div class="description">' . $element['#description'] . "</div>";
   }
 
   if ($wrap_with_fieldset) {
-    $output .= "</fieldset>\n";
+    $output .= "</fieldset>";
   }
   else {
-    $output .= "</div>\n";
+    $output .= "</div>";
   }
 
   return $output;
@@ -4671,7 +4671,7 @@ function theme_form_element_label($variables) {
   }
 
   // The leading whitespace helps visually separate fields from inline labels.
-  return ' <label' . drupal_attributes($attributes) . '>' . $t('!title !required', array('!title' => $title, '!required' => $required)) . "</label>\n";
+  return ' <label' . drupal_attributes($attributes) . '>' . $t('!title !required', array('!title' => $title, '!required' => $required)) . "</label>";
 }
 
 /**
