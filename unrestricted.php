@@ -169,6 +169,25 @@ function unrestricted_precondition_failed() {
 }
 
 /**
+ * Attempt to re-connect if the connection is lost.
+ *
+ * Persistent conenctions may be lost (resulting in 'pg_query(): Cannot set connection to blocking mode in ' errors.
+ * to help avoid that, check connection and attempt to reconnect 1 time.
+ *
+ * @param object $connection
+ *   The postgresql connection object.
+ * @param string $connection_string
+ *   The connection string used for the original connection.
+ *
+ * @see: pg_pconnect()
+ */
+function unrestricted_reconnect_on_bad(&$connection, $connection_string) {
+  if (pg_connection_status($connection) == PGSQL_CONNECTION_BAD) {
+    $connection = pg_pconnect($connection_string, PGSQL_CONNECT_FORCE_NEW);
+  }
+}
+
+/**
  * Parses the request uri.
  *
  * @param int $uri_unshift
@@ -431,6 +450,10 @@ function unrestricted_get_file_information($uri, $settings) {
       $drupal_connection = pg_pconnect($connect_string, $settings['database_drupal']['connect_type']);
     }
 
+    if ($drupal_connection !== FALSE) {
+      unrestricted_reconnect_on_bad($drupal_connection, $connect_string);
+    }
+
     if ($drupal_connection === FALSE) {
       unrestricted_service_unavailable();
     }
@@ -493,6 +516,10 @@ function unrestricted_get_file_information($uri, $settings) {
   }
   else {
     $information['connection'] = pg_pconnect($connect_string, $settings['database']['connect_type']);
+  }
+
+  if ($information['connection'] !== FALSE) {
+    unrestricted_reconnect_on_bad($information['connection'], $connect_string);
   }
 
   if ($information['connection'] === FALSE) {
