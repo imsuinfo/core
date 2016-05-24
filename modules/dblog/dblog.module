@@ -100,7 +100,14 @@ function dblog_init() {
  */
 function dblog_cron() {
   // Cleanup the watchdog table.
-  $row_limit = variable_get('dblog_row_limit', 1000);
+  $row_limit = variable_get('dblog_row_limit', 10000);
+
+  if (!is_numeric($row_limit)) {
+    $row_limit = 10000;
+  }
+  else {
+    $row_limit = (int) $row_limit;
+  }
 
   // For row limit n, get the wid of the nth row in descending wid order.
   // Counting the most recent n rows avoids issues with wid number sequences,
@@ -168,10 +175,9 @@ function dblog_watchdog(array $log_entry) {
  */
 function dblog_form_system_logging_settings_alter(&$form, $form_state) {
   $form['dblog_row_limit'] = array(
-    '#type' => 'select',
+    '#type' => 'textfield',
     '#title' => t('Database log messages to keep'),
-    '#default_value' => variable_get('dblog_row_limit', 1000),
-    '#options' => array(0 => t('All')) + drupal_map_assoc(array(100, 1000, 10000, 100000, 1000000)),
+    '#default_value' => variable_get('dblog_row_limit', 10000),
     '#description' => t('The maximum number of messages to keep in the database log. Requires a <a href="@cron">cron maintenance task</a>.', array('@cron' => url('admin/reports/status')))
   );
   $form['actions']['#weight'] = 1;
