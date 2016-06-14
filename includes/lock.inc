@@ -131,6 +131,7 @@ function lock_acquire($name, $timeout = 30.0) {
             'value' => _lock_id(),
             'expire' => $expire,
           ))
+          ->onConflictDo(Database::CONFLICT_DO_NOTHING, array('name'))
           ->execute();
         // We track all acquired locks in the global variable.
         $locks[$name] = TRUE;
