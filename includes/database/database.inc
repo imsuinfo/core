@@ -1348,6 +1348,13 @@ abstract class Database {
   const RETURN_INSERT_ID = 3;
 
   /**
+   * Define how to handle on update commands (requires postgresql 9.5 or newer).
+   */
+  const CONFLICT_NOT_USED = 0;
+  const CONFLICT_DO_NOTHING = 1;
+  const CONFLICT_DO_UPDATE = 2;
+
+  /**
    * An nested array of all active connections. It is keyed by database name
    * and target.
    *
