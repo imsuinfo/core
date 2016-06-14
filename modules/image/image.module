@@ -583,8 +583,10 @@ function image_styles() {
           $style['storage'] = IMAGE_STORAGE_DEFAULT;
           foreach ($style['effects'] as $key => $effect) {
             $definition = image_effect_definition_load($effect['name']);
-            $effect = array_merge($definition, $effect);
-            $style['effects'][$key] = $effect;
+            if (is_array($definition)) {
+              $effect = array_merge($definition, $effect);
+              $style['effects'][$key] = $effect;
+            }
           }
           $styles[$style_name] = $style;
         }
@@ -1447,4 +1449,22 @@ function image_filter_keyword($value, $current_pixels, $new_pixels) {
  */
 function _image_effect_definitions_sort($a, $b) {
   return strcasecmp($a['name'], $b['name']);
+}
+
+/**
+ * Converts a 24 bit RGB or 32 bit ARGB value to an RGBA array.
+ *
+ * @param int $argb
+ *   The color code to convert.
+ *
+ * @return array
+ *   An array containing the values for 'red', 'green', 'blue', 'alpha'.
+ */
+function _image_dec_to_rgba($argb) {
+  return array(
+    'red' => $argb >> 16 & 0xFF,
+    'green' => $argb >> 8 & 0xFF,
+    'blue' => $argb & 0xFF,
+    'alpha' => $argb >> 24 & 0xFF,
+  );
 }
