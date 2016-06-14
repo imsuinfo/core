@@ -161,11 +161,26 @@ function cache_clear_all($cid = NULL, $bin = NULL, $wildcard = FALSE) {
     // not end up in the page cache.
     if (module_exists('block')) {
       cache_clear_all(NULL, 'cache_block');
+
+      // perform postgresql analyze.
+      if (db_driver() == 'pgsql') {
+        db_query('analyze cache_block');
+      }
     }
     cache_clear_all(NULL, 'cache_page');
+
+    // perform postgresql analyze.
+    if (db_driver() == 'pgsql') {
+      db_query('analyze cache_page');
+    }
     return;
   }
-  return _cache_get_object($bin)->clear($cid, $wildcard);
+  $result = _cache_get_object($bin)->clear($cid, $wildcard);
+
+  // perform postgresql analyze.
+  if (db_driver() == 'pgsql') {
+    db_query('analyze cache');
+  }
 }
 
 /**
