@@ -498,6 +498,15 @@ class InsertQuery extends Query {
   protected $fromQuery;
 
   /**
+   * Fields associated with 'on conflict' actions (upsert) (postgresql 9.5 or newer).
+   */
+  protected $on_conflict = Database::CONFLICT_NOT_USED;
+  protected $on_conflict_target = array();
+  protected $on_conflict_action = array();
+  protected $on_conflict_constraint = FALSE;
+  protected $on_conflict_returning = FALSE;
+
+  /**
    * Constructs an InsertQuery object.
    *
    * @param DatabaseConnection $connection
@@ -513,6 +522,41 @@ class InsertQuery extends Query {
     }
     parent::__construct($connection, $options);
     $this->table = $table;
+    $this->on_conflict = Database::CONFLICT_NOT_USED;
+    $this->on_conflict_target = array();
+    $this->on_conflict_action = array();
+    $this->on_conflict_constraint = FALSE;
+  }
+
+  /**
+   * Assigns on conflict action.
+   *
+   * Postgresql 9.5+.
+   *
+   * @todo: Add a where() clause in the query to assign the update action.
+   *
+   * @param int $conflict
+   *   An integer defining the on conflict do action for update queries.
+   * @param array $conflict_target
+   *   (optional) The field names or the index name in which the insert.
+   *   This is optional for "do nothing", but is required for "do update".
+   * @param array $conflict_action
+   *   (optional) The field names of the fields to apply the update action against.
+   *   This is optional for "do nothing", but is required for "do update".
+   * @param bool $constraint
+   *   (optional) When TRUE, the $conflict_target represents the constraint name.
+   *   When FALSE, the $conflict_target represents the field names.
+   * @param bool $returning
+   *   (optional) When TRUE, the updated results are returned.
+   *   When FALSE, no updated results are returned.
+   *   This only applies to "do update".
+   *
+   * @return InsertQuery
+   *   The called object.
+   */
+  public function onConflictDo(int $conflict, $conflict_target = array(), $conflict_action = array(), $constraint = FALSE, $returning = FALSE) {
+    // nothing is performed here, the postgresql class will override this.
+    return $this;
   }
 
   /**
@@ -690,8 +734,41 @@ class InsertQuery extends Query {
     // Default fields are always placed first for consistency.
     $insert_fields = array_merge($this->defaultFields, $this->insertFields);
 
+    $on_conflict_target = '';
+    if ($this->on_conflict_constraint) {
+      $on_conflict_target = ' ON CONSTRAINT (' . reset($this->on_conflict_target) . ')';
+    }
+    else {
+      $on_conflict_target = ' (' . implode(', ', $this->on_conflict_target) . ')';
+    }
+
+    $on_conflict = '';
+    if ($this->on_conflict === Database::CONFLICT_DO_NOTHING) {
+      $on_conflict = "\nON CONFLICT" . $on_conflict_target . ' DO NOTHING';
+    }
+    elseif ($this->on_conflict === Database::CONFLICT_DO_UPDATE) {
+      $on_conflict_fields = NULL;
+      foreach ($this->on_conflict_action as $field_name) {
+        if (is_null($on_conflict_fields)) {
+          $on_conflict_fields  = $field_name . ' = EXCLUDED.' . $field_name;
+        }
+        else {
+          $on_conflict_fields  .= ', ' . $field_name . ' = EXCLUDED.' . $field_name;
+        }
+      }
+      unset($field_name);
+
+      $on_conflict = "\nON CONFLICT" . $on_conflict_target . ' DO UPDATE SET ' . $on_conflict_fields;
+
+      if ($this->on_conflict_returning) {
+        $on_conflict .= ' RETURNING *';
+      }
+
+      unset($on_conflict_fields);
+    }
+
     if (!empty($this->fromQuery)) {
-      return $comments . 'INSERT INTO {' . $this->table . '} (' . implode(', ', $insert_fields) . ') ' . $this->fromQuery;
+      return $comments . 'INSERT INTO {' . $this->table . '} (' . implode(', ', $insert_fields) . ') ' . $this->fromQuery . $on_conflict;
     }
 
     // For simplicity, we will use the $placeholders array to inject
@@ -701,7 +778,7 @@ class InsertQuery extends Query {
     $placeholders = array_pad($placeholders, count($this->defaultFields), 'default');
     $placeholders = array_pad($placeholders, count($this->insertFields), '?');
 
-    return $comments . 'INSERT INTO {' . $this->table . '} (' . implode(', ', $insert_fields) . ') VALUES (' . implode(', ', $placeholders) . ')';
+    return $comments . 'INSERT INTO {' . $this->table . '} (' . implode(', ', $insert_fields) . ') VALUES (' . implode(', ', $placeholders) . ')' . $on_conflict;
   }
 
   /**
@@ -1397,6 +1474,14 @@ class MergeQuery extends Query implements QueryConditionInterface {
   protected $not = FALSE;
 
   /**
+   * Fields associated with 'on conflict' actions (upsert) (postgresql 9.5 or newer).
+   */
+  protected $on_conflict = Database::CONFLICT_NOT_USED;
+  protected $on_conflict_target = array();
+  protected $on_conflict_action = array();
+  protected $on_conflict_constraint = FALSE;
+
+  /**
   * Constructs a MergeQuery object.
   *
   * @param DatabaseConnection $connection
@@ -1412,6 +1497,10 @@ class MergeQuery extends Query implements QueryConditionInterface {
     $this->table = $table;
     $this->conditionTable = $table;
     $this->condition = new DatabaseCondition('AND');
+    $this->on_conflict = Database::CONFLICT_NOT_USED;
+    $this->on_conflict_target = array();
+    $this->on_conflict_action = array();
+    $this->on_conflict_constraint = FALSE;
   }
 
   /**
@@ -1442,6 +1531,65 @@ class MergeQuery extends Query implements QueryConditionInterface {
   public function updateFields(array $fields) {
     $this->updateFields = $fields;
     $this->needsUpdate = TRUE;
+    return $this;
+  }
+
+  /**
+   * Assigns on conflict action.
+   *
+   * Postgresql 9.5+.
+   *
+   * @todo: Add a where() clause in the query to assign the update action.
+   *
+   * @param int $conflict
+   *   An integer defining the on conflict do action for update queries.
+   * @param array $conflict_target
+   *   (optional) The field names or the index name in which the insert.
+   *   This is optional for "do nothing", but is required for "do update".
+   * @param array $conflict_action
+   *   (optional) The field names of the fields to apply the update action against.
+   *   This is optional for "do nothing", but is required for "do update".
+   * @param bool $constraint
+   *   (optional) When TRUE, the $conflict_target represents the constraint name.
+   *   When FALSE, the $conflict_target represents the field names.
+   * @param bool $returning
+   *   (optional) When TRUE, the updated results are returned.
+   *   When FALSE, no updated results are returned.
+   *   This only applies to "do update".
+   *
+   * @return MergeQuery
+   *   The called object.
+   */
+  public function onConflictDo(int $conflict, $conflict_target = array(), $conflict_action = array(), $constraint = FALSE, $returning = FALSE) {
+    $this->on_conflict = $conflict;
+    $this->on_conflict_target = array();
+    $this->on_conflict_action = array();
+    $this->on_conflict_constraint = (bool) $constraint;
+    $this->on_conflict_returning = (bool) $returning;
+
+    if (is_array($conflict_target)) {
+      foreach ($conflict_target as $value) {
+        $this->on_conflict_target[] = $this->connection->escapeField($value);
+      }
+      unset($value);
+    }
+
+    if (is_array($conflict_action)) {
+      foreach ($conflict_action as $value) {
+        $this->on_conflict_action[] = $this->connection->escapeField($value);
+      }
+      unset($value);
+    }
+
+    if ($conflict == Database::CONFLICT_DO_NOTHING) {
+      if (empty($conflict_target)) {
+        $this->on_conflict = Database::CONFLICT_NOT_USED;
+      }
+    }
+    elseif (empty($conflict_target) || empty($conflict_action)) {
+      $this->on_conflict = Database::CONFLICT_NOT_USED;
+    }
+
     return $this;
   }
 
@@ -1687,9 +1835,28 @@ class MergeQuery extends Query implements QueryConditionInterface {
   }
 
   public function execute() {
+    // @fixme: currently this behavior is postgresql-specific, but I currently see no merit in wasting time making this portable.
+    if ($this->on_conflict === Database::CONFLICT_DO_NOTHING || $this->on_conflict === Database::CONFLICT_DO_UPDATE) {
+      try {
+        $insert = $this->connection->insert($this->table)->fields($this->insertFields);
+        if ($this->defaultFields) {
+          $insert->useDefaults($this->defaultFields);
+        }
+        $insert->onConflictDo($this->on_conflict, $this->on_conflict_target, $this->on_conflict_action, $this->on_conflict_constraint);
+        $insert->execute();
+        return self::STATUS_INSERT;
+      }
+      catch (Exception $e) {
+        throw $e;
+      }
+
+      return FALSE;
+    }
+
     if (!count($this->condition)) {
       throw new InvalidMergeQueryException(t('Invalid merge query: no conditions'));
     }
+
     $select = $this->connection->select($this->conditionTable)
       ->condition($this->condition);
     $select->addExpression('1');

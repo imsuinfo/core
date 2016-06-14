@@ -467,6 +467,7 @@ class DrupalDatabaseCache implements DrupalCacheInterface {
    */
   function set($cid, $data, $expire = CACHE_PERMANENT) {
     $fields = array(
+      'cid' => $cid,
       'serialized' => 0,
       'created' => REQUEST_TIME,
       'expire' => $expire,
@@ -481,16 +482,26 @@ class DrupalDatabaseCache implements DrupalCacheInterface {
     }
 
     try {
-      db_merge($this->bin)
-        ->key(array('cid' => $cid))
+      $transaction = db_transaction();
+      $table = preg_replace('/[^A-Za-z0-9_.]+/', '', $this->bin);
+      db_query('LOCK TABLE {' . $table . '} IN SHARE ROW EXCLUSIVE MODE');
+
+      db_insert($this->bin)
         ->fields($fields)
+        ->onConflictDo(Database::CONFLICT_DO_UPDATE, array('cid'), array('cid', 'data', 'expire', 'created', 'serialized'), array_keys($fields))
         ->execute();
+
+      unset($transaction);
     }
     catch (Throwable $e) {
       // The database may not be available, so we'll ignore cache_set requests.
     }
     catch (Exception $e) {
       // The database may not be available, so we'll ignore cache_set requests.
+      if (isset($transaction) && is_object($transaction)) {
+        $transaction->rollback();
+      }
+      unset($transaction);
     }
   }
 
