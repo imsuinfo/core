@@ -439,6 +439,10 @@ abstract class DatabaseTasks {
       Database::getConnection();
       $this->pass('Drupal can CONNECT to the database ok.');
     }
+    catch (Throwable $e) {
+      $this->fail(st('Failed to connect to your database server. The server reports the following message: %error.<ul><li>Is the database server running?</li><li>Does the database exist, and have you entered the correct database name?</li><li>Have you entered the correct username and password?</li><li>Have you entered the correct database hostname?</li></ul>', array('%error' => $e->getMessage())));
+      return FALSE;
+    }
     catch (Exception $e) {
       $this->fail(st('Failed to connect to your database server. The server reports the following message: %error.<ul><li>Is the database server running?</li><li>Does the database exist, and have you entered the correct database name?</li><li>Have you entered the correct username and password?</li><li>Have you entered the correct database hostname?</li></ul>', array('%error' => $e->getMessage())));
       return FALSE;
@@ -453,6 +457,10 @@ abstract class DatabaseTasks {
     try {
       db_query($query);
       $this->pass(st($pass));
+    }
+    catch (Throwable $e) {
+      $this->fail(st($fail, array('%query' => $query, '%error' => $e->getMessage(), '%name' => $this->name())));
+      return !$fatal;
     }
     catch (Exception $e) {
       $this->fail(st($fail, array('%query' => $query, '%error' => $e->getMessage(), '%name' => $this->name())));
@@ -824,6 +832,11 @@ function drupal_uninstall_modules($module_list = array(), $uninstall_dependents 
     }
 
     unset($transaction);
+  }
+  catch (Throwable $ex) {
+    $transaction->rollback();
+    watchdog_exception('system', $ex, "Failed to uninstall the modules: %modules, reason: %ex.", array('%modules' => print_r($module_list, TRUE), '%ex' => $ex->getMessage()), WATCHDOG_ERROR);
+    return FALSE;
   }
   catch (Exception $ex) {
     $transaction->rollback();

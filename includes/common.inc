@@ -2984,6 +2984,9 @@ function drupal_deliver_html_page($page_callback_result) {
               $markup_css = str_replace(' is-collapsed ', ' ', $markup_css);
               $page = str_replace('<body id="mcneese-body" class="mcneese ', '<body id="mcneese-body" class="mcneese ' . $markup_css . ' ', $page);
             }
+            catch (Throwable $ex) {
+              // if the code is currently being modified, then errors could occur, so attempt to silently ignore them.
+            }
             catch (Exception $ex) {
               // if the code is currently being modified, then errors could occur, so attempt to silently ignore them.
             }
@@ -3308,6 +3311,12 @@ function drupal_add_html_head_link($attributes, $header = FALSE) {
  */
 function drupal_add_css($data = NULL, $options = NULL) {
   $css = &drupal_static(__FUNCTION__, array());
+  $count = &drupal_static(__FUNCTION__ . '_count', 0);
+
+  // Reset the order counter every time the number of entries in $css is 0.
+  if (count($css) === 0) {
+    $count = 0;
+  }
 
   // Construct the options, taking the defaults into consideration.
   if (isset($options)) {
@@ -3343,7 +3352,8 @@ function drupal_add_css($data = NULL, $options = NULL) {
     }
 
     // Always add a tiny value to the weight, to conserve the insertion order.
-    $options['weight'] += count($css) / 1000;
+    $options['weight'] += $count / 1000;
+    $count++;
 
     // Add the data to the CSS array depending on the type.
     switch ($options['type']) {
@@ -5654,6 +5664,9 @@ function drupal_cron_run() {
       try {
         module_invoke($module, 'cron');
       }
+      catch (Throwable $e) {
+        watchdog_exception('cron', $e);
+      }
       catch (Exception $e) {
         watchdog_exception('cron', $e);
       }
@@ -5681,6 +5694,11 @@ function drupal_cron_run() {
       try {
         call_user_func($callback, $item->data);
         $queue->deleteItem($item);
+      }
+      catch (Throwable $e) {
+        // In case of exception log it and leave the item in the queue
+        // to be processed again later.
+        watchdog_exception('cron', $e);
       }
       catch (Exception $e) {
         // In case of exception log it and leave the item in the queue

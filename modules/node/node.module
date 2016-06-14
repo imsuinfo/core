@@ -1195,6 +1195,11 @@ function node_save($node) {
     // saved node to be propagated to the slave.
     db_ignore_slave();
   }
+  catch (Throwable $e) {
+    $transaction->rollback();
+    watchdog_exception('node', $e);
+    throw $e;
+  }
   catch (Exception $e) {
     $transaction->rollback();
     watchdog_exception('node', $e);
@@ -1278,6 +1283,11 @@ function node_delete_multiple($nids) {
       db_delete('node_access')
        ->condition('nid', $nids, 'IN')
        ->execute();
+    }
+    catch (Throwable $e) {
+      $transaction->rollback();
+      watchdog_exception('node', $e);
+      throw $e;
     }
     catch (Exception $e) {
       $transaction->rollback();

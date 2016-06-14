@@ -2830,6 +2830,10 @@ function menu_rebuild() {
       variable_del('menu_rebuild_needed');
     }
   }
+  catch (Throwable $e) {
+    $transaction->rollback();
+    watchdog_exception('menu', $e);
+  }
   catch (Exception $e) {
     $transaction->rollback();
     watchdog_exception('menu', $e);

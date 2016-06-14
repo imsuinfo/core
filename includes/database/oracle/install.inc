@@ -47,6 +47,11 @@ class DatabaseTasks_oracle extends DatabaseTasks {
           Database::getConnection('default')->makePrimary();
 
     }
+    catch (Throwable $e)
+    {
+      syslog(LOG_ERR,$e->getMessage());
+      $this->fail(st('Drupal could not be correctly setup with the existing database. Revise any errors.'));
+    }
     catch (Exception $e)
     {
       syslog(LOG_ERR,$e->getMessage());
@@ -71,6 +76,8 @@ class DatabaseTasks_oracle extends DatabaseTasks {
             $ok= true;
             break;
           }
+          catch (Throwable $ex)
+          {}
           catch (Exception $ex)
           {}
 
@@ -133,6 +140,10 @@ class DatabaseTasks_oracle extends DatabaseTasks {
          try
          {
             $this->oracle_query($this->get_php_contents($file_path));
+         }
+         catch (Throwable $ex)
+         {
+             syslog(LOG_ERR,"object $file_path created with errors");
          }
          catch (Exception $ex)
          {

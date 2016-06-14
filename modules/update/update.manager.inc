@@ -706,6 +706,10 @@ function update_manager_batch_project_get($project, $url, &$context) {
   try {
     update_manager_archive_extract($local_cache, $extract_directory);
   }
+  catch (Throwable $e) {
+    $context['results']['errors'][$project] = $e->getMessage();
+    return;
+  }
   catch (Exception $e) {
     $context['results']['errors'][$project] = $e->getMessage();
     return;

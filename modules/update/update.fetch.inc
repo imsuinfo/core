@@ -262,6 +262,9 @@ function _update_create_fetch_task($project) {
         ))
         ->execute();
     }
+    catch (Throwable $e) {
+      // The exception can be ignored safely.
+    }
     catch (Exception $e) {
       // The exception can be ignored safely.
     }
@@ -388,6 +391,12 @@ function _update_cron_notify() {
 function update_parse_xml($raw_xml) {
   try {
     $xml = new SimpleXMLElement($raw_xml);
+  }
+  catch (Throwable $e) {
+    // SimpleXMLElement::__construct produces an E_WARNING error message for
+    // each error found in the XML data and throws an exception if errors
+    // were detected. Catch any exception and return failure (NULL).
+    return;
   }
   catch (Exception $e) {
     // SimpleXMLElement::__construct produces an E_WARNING error message for

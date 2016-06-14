@@ -968,6 +968,14 @@ function update_do_one($module, $number, $dependency_map, &$context) {
     // @TODO We may want to do different error handling for different
     // exception types, but for now we'll just log the exception and
     // return the message for printing.
+    catch (Throwable $e) {
+      watchdog_exception('update', $e);
+
+      require_once DRUPAL_ROOT . '/includes/errors.inc';
+      $variables = _drupal_decode_exception($e);
+      // The exception message is run through check_plain() by _drupal_decode_exception().
+      $ret['#abort'] = array('success' => FALSE, 'query' => t('%type: !message in %function (line %line of %file).', $variables));
+    }
     catch (Exception $e) {
       watchdog_exception('update', $e);
 

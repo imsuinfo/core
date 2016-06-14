@@ -559,6 +559,10 @@ class DatabaseSchema_oracle extends DatabaseSchema {
       $this->rebuildDefaultsTrigger($table);
         return true;
     }
+    catch (Throwable $ex)
+    {
+        return false;
+    }
     catch (Exception $ex)
     {
         return false;
@@ -987,6 +991,8 @@ class DatabaseSchema_oracle extends DatabaseSchema {
      {
         db_query($ddl);
      }
+     catch (Throwable $ex)
+     { /* ignore */ }
      catch (Exception $ex)
      { /* ignore */ }
   }

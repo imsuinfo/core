@@ -187,6 +187,11 @@ function block_admin_display_form_submit($form, &$form_state) {
         ->execute();
     }
   }
+  catch (Throwable $e) {
+    $transaction->rollback();
+    watchdog_exception('block', $e);
+    throw $e;
+  }
   catch (Exception $e) {
     $transaction->rollback();
     watchdog_exception('block', $e);
@@ -505,6 +510,11 @@ function block_admin_configure_submit($form, &$form_state) {
       }
 
       module_invoke($form_state['values']['module'], 'block_save', $form_state['values']['delta'], $form_state['values']);
+    }
+    catch (Throwable $e) {
+      $transaction->rollback();
+      watchdog_exception('block', $e);
+      throw $e;
     }
     catch (Exception $e) {
       $transaction->rollback();

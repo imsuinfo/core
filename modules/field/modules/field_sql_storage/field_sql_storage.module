@@ -306,6 +306,21 @@ function field_sql_storage_field_storage_update_field($field, $prior_field, $has
         db_create_table($name, $table);
       }
     }
+    catch (Throwable $e) {
+      if (Database::getConnection()->supportsTransactionalDDL()) {
+        $transaction->rollback();
+      }
+      else {
+        // Recreate tables.
+        $prior_schema = _field_sql_storage_schema($prior_field);
+        foreach ($prior_schema as $name => $table) {
+          if (!db_table_exists($name)) {
+            db_create_table($name, $table);
+          }
+        }
+      }
+      throw $e;
+    }
     catch (Exception $e) {
       if (Database::getConnection()->supportsTransactionalDDL()) {
         $transaction->rollback();

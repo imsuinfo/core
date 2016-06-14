@@ -516,6 +516,11 @@ function taxonomy_vocabulary_delete($vid) {
 
     return SAVED_DELETED;
   }
+  catch (Throwable $e) {
+    $transaction->rollback();
+    watchdog_exception('taxonomy', $e);
+    throw $e;
+  }
   catch (Exception $e) {
     $transaction->rollback();
     watchdog_exception('taxonomy', $e);
@@ -739,6 +744,11 @@ function taxonomy_term_delete($tid) {
       $tids = $orphans;
     }
     return SAVED_DELETED;
+  }
+  catch (Throwable $e) {
+    $transaction->rollback();
+    watchdog_exception('taxonomy', $e);
+    throw $e;
   }
   catch (Exception $e) {
     $transaction->rollback();

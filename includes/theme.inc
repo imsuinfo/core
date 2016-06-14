@@ -792,6 +792,10 @@ function list_themes($refresh = FALSE) {
       try {
         $themes = system_list('theme');
       }
+      catch (Throwable $e) {
+        // If the database is not available, rebuild the theme data.
+        $themes = _system_rebuild_theme_data();
+      }
       catch (Exception $e) {
         // If the database is not available, rebuild the theme data.
         $themes = _system_rebuild_theme_data();
@@ -2504,6 +2508,12 @@ function _template_preprocess_default_variables() {
   // drupal_is_front_page() might throw an exception.
   try {
     $variables['is_front'] = drupal_is_front_page();
+  }
+  catch (Throwable $e) {
+    // If the database is not yet available, set default values for these
+    // variables.
+    $variables['is_front'] = FALSE;
+    $variables['db_is_active'] = FALSE;
   }
   catch (Exception $e) {
     // If the database is not yet available, set default values for these

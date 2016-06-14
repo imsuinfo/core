@@ -426,8 +426,9 @@ function module_enable($module_list, $enable_dependencies = TRUE) {
       return TRUE;
     }
 
-    // Sort the module list by pre-calculated weights.
-    arsort($module_list);
+    // Sort the module list by pre-calculated weights using a stable sort.
+    $order = range(1, count($module_list));
+    array_multisort($module_list, SORT_DESC, $order, SORT_DESC);
     $module_list = array_keys($module_list);
   }
 
@@ -517,6 +518,12 @@ function module_enable($module_list, $enable_dependencies = TRUE) {
     }
 
     unset($transaction);
+  }
+  catch (Throwable $ex) {
+    $transaction->rollback();
+    drupal_set_message(t('The selected modules have failed to install.'), 'error');
+    watchdog_exception('system', $ex, "Failed to install and enable the modules: %modules, reason: %ex.", array('%modules' => print_r($module_list, TRUE), '%ex' => $ex->getMessage()), WATCHDOG_ERROR);
+    return FALSE;
   }
   catch (Exception $ex) {
     $transaction->rollback();
