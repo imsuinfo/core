@@ -827,9 +827,6 @@ function field_ui_field_overview_form_submit($form, &$form_state) {
       // Store new field information for any additional submit handlers.
       $form_state['fields_added']['_add_new_field'] = $field['field_name'];
     }
-    catch (Throwable $e) {
-      drupal_set_message(t('There was a problem creating field %label: !message', array('%label' => $instance['label'], '!message' => $e->getMessage())), 'error');
-    }
     catch (Exception $e) {
       drupal_set_message(t('There was a problem creating field %label: !message', array('%label' => $instance['label'], '!message' => $e->getMessage())), 'error');
     }
@@ -859,9 +856,6 @@ function field_ui_field_overview_form_submit($form, &$form_state) {
         $destinations[] = $admin_path . '/fields/' . $instance['field_name'] . '/edit';
         // Store new field information for any additional submit handlers.
         $form_state['fields_added']['_add_existing_field'] = $instance['field_name'];
-      }
-      catch (Throwable $e) {
-        drupal_set_message(t('There was a problem creating field instance %label: @message.', array('%label' => $instance['label'], '@message' => $e->getMessage())), 'error');
       }
       catch (Exception $e) {
         drupal_set_message(t('There was a problem creating field instance %label: @message.', array('%label' => $instance['label'], '@message' => $e->getMessage())), 'error');
@@ -1640,9 +1634,6 @@ function field_ui_field_settings_form_submit($form, &$form_state) {
     drupal_set_message(t('Updated field %label field settings.', array('%label' => $instance['label'])));
     $form_state['redirect'] = field_ui_next_destination($entity_type, $bundle);
   }
-  catch (Throwable $e) {
-    drupal_set_message(t('Attempt to update field %label failed: %message.', array('%label' => $instance['label'], '%message' => $e->getMessage())), 'error');
-  }
   catch (Exception $e) {
     drupal_set_message(t('Attempt to update field %label failed: %message.', array('%label' => $instance['label'], '%message' => $e->getMessage())), 'error');
   }
@@ -1722,9 +1713,6 @@ function field_ui_widget_type_form_submit($form, &$form_state) {
   try {
     field_update_instance($instance);
     drupal_set_message(t('Changed the widget for field %label.', array('%label' => $instance['label'])));
-  }
-  catch (Throwable $e) {
-    drupal_set_message(t('There was a problem changing the widget for field %label.', array('%label' => $instance['label'])), 'error');
   }
   catch (Exception $e) {
     drupal_set_message(t('There was a problem changing the widget for field %label.', array('%label' => $instance['label'])), 'error');
@@ -1871,28 +1859,6 @@ function field_ui_field_edit_form($form, &$form_state, $instance) {
     '#required' => TRUE,
     '#weight' => -20,
   );
-
-  $form['instance']['alternate_label_fieldset'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Alternate Label Settings'),
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-    '#tree' => TRUE,
-    '#weight' => -19,
-  );
-
-  $form['instance']['alternate_label_fieldset']['alternate_label'] = array(
-    '#type' => 'text_format',
-    '#title' => t('Alternate Label'),
-    '#description' => t("Provide an alternative label. This is usually used for longer labels or labels that contain HTML markup."),
-    '#default_value' => empty($instance['alternate_label']['value']) ? NULL : $instance['alternate_label']['value'],
-    '#format' => empty($instance['alternate_label']['format']) ? NULL : $instance['alternate_label']['format'],
-    '#rows' => 15,
-    '#resizable' => TRUE,
-    '#wysiwyg' => TRUE,
-    '#parents' => array('instance', 'alternate_label'),
-  );
-
   $form['instance']['required'] = array(
     '#type' => 'checkbox',
     '#title' => t('Required field'),
@@ -1905,7 +1871,7 @@ function field_ui_field_edit_form($form, &$form_state, $instance) {
     '#title' => t('Help text'),
     '#default_value' => !empty($instance['description']) ? $instance['description'] : '',
     '#rows' => 5,
-    '#description' => t('Instructions to present to the user below this field on the editing form.<br>Allowed HTML tags: @tags', array('@tags' => _field_filter_xss_display_allowed_tags())),
+    '#description' => t('Instructions to present to the user below this field on the editing form.<br />Allowed HTML tags: @tags', array('@tags' => _field_filter_xss_display_allowed_tags())),
     '#weight' => -5,
   );
 
@@ -1960,7 +1926,7 @@ function field_ui_field_edit_form($form, &$form_state, $instance) {
   // Build the configurable field values.
   $description = t('Maximum number of values users can enter for this field.');
   if (field_behaviors_widget('multiple values', $instance) == FIELD_BEHAVIOR_DEFAULT) {
-    $description .= '<br>' . t("'Unlimited' will provide an 'Add more' button so the users can add as many values as they like.");
+    $description .= '<br/>' . t("'Unlimited' will provide an 'Add more' button so the users can add as many values as they like.");
   }
   $form['field']['cardinality'] = array(
     '#type' => 'select',
@@ -2090,10 +2056,6 @@ function field_ui_field_edit_form_submit($form, &$form_state) {
   $field = array_merge($field_source, $field);
   try {
     field_update_field($field);
-  }
-  catch (Throwable $e) {
-    drupal_set_message(t('Attempt to update field %label failed: %message.', array('%label' => $instance['label'], '%message' => $e->getMessage())), 'error');
-    return;
   }
   catch (Exception $e) {
     drupal_set_message(t('Attempt to update field %label failed: %message.', array('%label' => $instance['label'], '%message' => $e->getMessage())), 'error');

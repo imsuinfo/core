@@ -11,7 +11,7 @@
  * @see update_menu()
  */
 function update_status() {
-  if ($available = update_get_available(FALSE)) {
+  if ($available = update_get_available(TRUE)) {
     module_load_include('inc', 'update', 'update.compare');
     $data = update_calculate_project_data($available);
     return theme('update_report', array('data' => $data));

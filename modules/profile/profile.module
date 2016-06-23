@@ -617,7 +617,7 @@ function _profile_get_fields($category, $register = FALSE) {
     $query->condition('register', 1);
   }
   else {
-    $query->condition('category', db_like($category), 'ILIKE');
+    $query->condition('category', db_like($category), 'LIKE');
   }
   if (!user_access('administer users')) {
     $query->condition('visibility', PROFILE_HIDDEN, '<>');
