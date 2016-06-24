@@ -37,7 +37,12 @@ function taxonomy_term_page($term) {
 
   // Set the term path as the canonical URL to prevent duplicate content.
   $uri = entity_uri('taxonomy_term', $term);
-  drupal_add_html_head_link(array('rel' => 'canonical', 'href' => url($uri['path'], $uri['options'])), TRUE);
+
+  // according to the standard, canonical urls must be absolute paths.
+  $options = $uri['options'];
+  $options['absolute'] = TRUE;
+
+  drupal_add_html_head_link(array('rel' => 'canonical', 'href' => url($uri['path'], $options)), TRUE);
   // Set the non-aliased path as a default shortlink.
   drupal_add_html_head_link(array('rel' => 'shortlink', 'href' => url($uri['path'], array_merge($uri['options'], array('alias' => TRUE)))), TRUE);
 
