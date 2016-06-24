@@ -644,6 +644,8 @@ function unrestricted_get_file_information($uri, $settings) {
  * @see: unrestricted_get_file_information()
  */
 function unrestricted_get_file_data(&$information, $settings) {
+  global $base_url;
+
   if ($information['connection'] === FALSE) {
     unrestricted_service_unavailable();
   }
@@ -734,7 +736,7 @@ function unrestricted_get_file_data(&$information, $settings) {
   $headers['Last-Modified'] = array('value' => gmdate(DATE_RFC1123, $information['file']['timestamp']));
   $headers['Content-Transfer-Encoding'] = array('value' => 'binary');
   $headers['Cache-Control'] = 'Public';
-  $headers['Link'] = array('value' => '<' . mime_header_encode($settings['base_path'] . MCNEESE_FILE_DB_FILE_PATH . '/' . MCNEESE_FILE_DB_PATH_BY_HASH . '/' . $information['file']['shortsum']) . '>; rel="shortlink", <' . $headers['Content-Location']['value'] . '>; rel="canonical"');
+  $headers['Link'] = array('value' => '<' . mime_header_encode($settings['base_path'] . MCNEESE_FILE_DB_FILE_PATH . '/' . MCNEESE_FILE_DB_PATH_BY_HASH . '/' . $information['file']['shortsum']) . '>; rel="shortlink", <' . $base_url . $headers['Content-Location']['value'] . '>; rel="canonical"');
   unrestricted_send_headers($headers);
 
   // when there are no changes, there is no reason to transmit the file (this is a client-side caching optimization).
