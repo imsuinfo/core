@@ -177,6 +177,11 @@ function error_displayable($error = NULL) {
  *   TRUE if the error is fatal.
  */
 function _drupal_log_error($error, $fatal = FALSE) {
+  if ($fatal && !drupal_is_cli() && $error['%type'] == 'Recoverable fatal error') {
+    // do not let this be considered fatal.
+    $fatal = FALSE;
+  }
+
   if ($fatal && !drupal_is_cli()) {
     drupal_add_http_header('Status', '500 Service Unavailable');
 
