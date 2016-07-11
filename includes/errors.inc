@@ -180,6 +180,11 @@ function _drupal_log_error($error, $fatal = FALSE) {
   if ($fatal && !drupal_is_cli()) {
     drupal_add_http_header('Status', '500 Service Unavailable');
 
+    // if possible, record any fatal errors (reporting them as critical) in the watchdog log.
+    if (function_exists('watchdog')) {
+      watchdog('php', '%type: !message in %function (line %line of %file).', $error, WATCHDOG_CRITICAL);
+    }
+
     $error_document_file_500 = variable_get('error_document_file_500', '/var/www/error_documents/5xx/500.html');
     if (is_string($error_document_file_500) && file_exists($error_document_file_500)) {
       $page = file_get_contents($error_document_file_500);
