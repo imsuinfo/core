@@ -888,6 +888,11 @@ function drupal_get_filename($type, $name, $filename = NULL, $trigger_error = TR
         $database_unavailable = FALSE;
       }
     }
+    catch (Error $e) {
+      // The database table may not exist because Drupal is not yet installed,
+      // or the database might be down. We have a fallback for this case so we
+      // hide the error completely.
+    }
     catch (Exception $e) {
       // The database table may not exist because Drupal is not yet installed,
       // the database might be down, or we may have done a non-database cache
@@ -2603,6 +2608,15 @@ function _drupal_exception_handler($exception) {
     // Log the message to the watchdog and return an error page to the user.
     _drupal_log_error(_drupal_decode_exception($exception), TRUE);
   }
+  catch (Error $exception2) {
+    // Another uncaught exception was thrown while handling the first one.
+    // If we are displaying errors, then do so with no possibility of a further uncaught exception being thrown.
+    if (error_displayable()) {
+      print '<h1>Additional uncaught exception thrown while handling exception.</h1>';
+      print '<h2>Original</h2><p>' . _drupal_render_exception_safe($exception) . '</p>';
+      print '<h2>Additional</h2><p>' . _drupal_render_exception_safe($exception2) . '</p><hr>';
+    }
+  }
   catch (Exception $exception2) {
     // Another uncaught exception was thrown while handling the first one.
     // If we are displaying errors, then do so with no possibility of a further uncaught exception being thrown.
@@ -3773,6 +3787,14 @@ function _drupal_shutdown_function() {
   try {
     while (list($key, $callback) = each($callbacks)) {
       call_user_func_array($callback['callback'], $callback['arguments']);
+    }
+  }
+  catch (Error $exception) {
+    // If we are displaying errors, then do so with no possibility of a further uncaught exception being thrown.
+   require_once DRUPAL_ROOT . '/includes/errors.inc';
+   if (error_displayable()) {
+      print '<h1>Uncaught exception thrown in shutdown function.</h1>';
+      print '<p>' . _drupal_render_exception_safe($exception) . '</p><hr>';
     }
   }
   catch (Exception $exception) {
