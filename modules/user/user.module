@@ -616,6 +616,11 @@ function user_save($account, $edit = array(), $category = 'account') {
 
     return $account;
   }
+  catch (Error $e) {
+    $transaction->rollback();
+    watchdog_exception('user', $e);
+    throw $e;
+  }
   catch (Exception $e) {
     $transaction->rollback();
     watchdog_exception('user', $e);
@@ -2589,6 +2594,11 @@ function user_delete_multiple(array $uids) {
       db_delete('authmap')
         ->condition('uid', $uids, 'IN')
         ->execute();
+    }
+    catch (Error $e) {
+      $transaction->rollback();
+      watchdog_exception('user', $e);
+      throw $e;
     }
     catch (Exception $e) {
       $transaction->rollback();
