@@ -180,6 +180,11 @@ function _drupal_log_error($error, $fatal = FALSE) {
   // Initialize a maintenance theme if the bootstrap was not complete.
   // Do it early because drupal_set_message() triggers a drupal_theme_initialize().
   if ($fatal && (drupal_get_bootstrap_phase() != DRUPAL_BOOTSTRAP_FULL)) {
+    // if possible, record any fatal errors (reporting them as critical) in the watchdog log.
+    if (function_exists('watchdog')) {
+      watchdog('php', '%type: !message in %function (line %line of %file).', $error, WATCHDOG_CRITICAL);
+    }
+
     unset($GLOBALS['theme']);
     if (!defined('MAINTENANCE_MODE')) {
       define('MAINTENANCE_MODE', 'error');
