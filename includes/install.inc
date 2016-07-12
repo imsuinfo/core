@@ -436,6 +436,10 @@ abstract class DatabaseTasks {
       Database::getConnection();
       $this->pass('Drupal can CONNECT to the database ok.');
     }
+    catch (Error $e) {
+      $this->fail(st('Failed to connect to your database server. The server reports the following message: %error.<ul><li>Is the database server running?</li><li>Does the database exist, and have you entered the correct database name?</li><li>Have you entered the correct username and password?</li><li>Have you entered the correct database hostname?</li></ul>', array('%error' => $e->getMessage())));
+      return FALSE;
+    }
     catch (Exception $e) {
       $this->fail(st('Failed to connect to your database server. The server reports the following message: %error.<ul><li>Is the database server running?</li><li>Does the database exist, and have you entered the correct database name?</li><li>Have you entered the correct username and password?</li><li>Have you entered the correct database hostname?</li></ul>', array('%error' => $e->getMessage())));
       return FALSE;
@@ -450,6 +454,10 @@ abstract class DatabaseTasks {
     try {
       db_query($query);
       $this->pass(st($pass));
+    }
+    catch (Error $e) {
+      $this->fail(st($fail, array('%query' => $query, '%error' => $e->getMessage(), '%name' => $this->name())));
+      return !$fatal;
     }
     catch (Exception $e) {
       $this->fail(st($fail, array('%query' => $query, '%error' => $e->getMessage(), '%name' => $this->name())));
