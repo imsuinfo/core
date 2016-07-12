@@ -135,10 +135,6 @@ class DatabaseConnection_sqlite extends DatabaseConnection {
             unlink($this->connectionOptions['database'] . '-' . $prefix);
           }
         }
-        catch (Error $e) {
-          // Ignore the exception and continue. There is nothing we can do here
-          // to report the error or fail safe.
-        }
         catch (Exception $e) {
           // Ignore the exception and continue. There is nothing we can do here
           // to report the error or fail safe.
@@ -380,6 +376,14 @@ class DatabaseConnection_sqlite extends DatabaseConnection {
         break;
       }
     }
+  }
+
+  public function utf8mb4IsActive() {
+    return TRUE;
+  }
+
+  public function utf8mb4IsSupported() {
+    return TRUE;
   }
 
 }

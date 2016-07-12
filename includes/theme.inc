@@ -381,11 +381,7 @@ class ThemeRegistry Extends DrupalCacheArray {
   function __construct($cid, $bin) {
     $this->cid = $cid;
     $this->bin = $bin;
-    $this->persistable = FALSE;
-
-    if (isset($_SERVER['REQUEST_METHOD'])) {
-      $this->persistable = module_load_all(NULL) && $_SERVER['REQUEST_METHOD'] == 'GET';
-    }
+    $this->persistable = module_load_all(NULL) && $_SERVER['REQUEST_METHOD'] == 'GET';
 
     $data = array();
     if ($this->persistable && $cached = cache_get($this->cid, $this->bin)) {
@@ -792,10 +788,6 @@ function list_themes($refresh = FALSE) {
       try {
         $themes = system_list('theme');
       }
-      catch (Error $e) {
-        // If the database is not available, rebuild the theme data.
-        $themes = _system_rebuild_theme_data();
-      }
       catch (Exception $e) {
         // If the database is not available, rebuild the theme data.
         $themes = _system_rebuild_theme_data();
@@ -1072,10 +1064,6 @@ function theme($hook, $variables = array()) {
     foreach ($info['includes'] as $include_file) {
       include_once DRUPAL_ROOT . '/' . $include_file;
     }
-  }
-
-  if (!isset($variables)) {
-    $variables = array();
   }
 
   // If a renderable array is passed as $variables, then set $variables to
@@ -1896,7 +1884,7 @@ function theme_image($variables) {
     }
   }
 
-  return '<img' . drupal_attributes($attributes) . '>';
+  return '<img' . drupal_attributes($attributes) . ' />';
 }
 
 /**
@@ -2044,12 +2032,12 @@ function theme_table($variables) {
         $output .= ' <colgroup' . drupal_attributes($attributes) . '>';
         $i = 0;
         foreach ($cols as $col) {
-          $output .= ' <col' . drupal_attributes($col) . '>';
+          $output .= ' <col' . drupal_attributes($col) . ' />';
         }
         $output .= " </colgroup>\n";
       }
       else {
-        $output .= ' <colgroup' . drupal_attributes($attributes) . ">\n";
+        $output .= ' <colgroup' . drupal_attributes($attributes) . " />\n";
       }
     }
   }
@@ -2290,7 +2278,7 @@ function theme_html_tag($variables) {
   $element = $variables['element'];
   $attributes = isset($element['#attributes']) ? drupal_attributes($element['#attributes']) : '';
   if (!isset($element['#value'])) {
-    return '<' . $element['#tag'] . $attributes . ">\n";
+    return '<' . $element['#tag'] . $attributes . " />\n";
   }
   else {
     $output = '<' . $element['#tag'] . $attributes . '>';
@@ -2509,12 +2497,6 @@ function _template_preprocess_default_variables() {
   try {
     $variables['is_front'] = drupal_is_front_page();
   }
-  catch (Error $e) {
-    // If the database is not yet available, set default values for these
-    // variables.
-    $variables['is_front'] = FALSE;
-    $variables['db_is_active'] = FALSE;
-  }
   catch (Exception $e) {
     // If the database is not yet available, set default values for these
     // variables.
@@ -2654,7 +2636,7 @@ function template_preprocess_html(&$variables) {
  */
 function template_preprocess_page(&$variables) {
   // Move some variables to the top level for themer convenience and template cleanliness.
-  $variables['show_messages'] = isset($variables['page']['#show_messages']) ? $variables['page']['#show_messages'] : TRUE;
+  $variables['show_messages'] = $variables['page']['#show_messages'];
 
   foreach (system_region_list($GLOBALS['theme']) as $region_key => $region_name) {
     if (!isset($variables['page'][$region_key])) {

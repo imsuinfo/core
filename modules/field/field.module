@@ -317,6 +317,21 @@ function field_help($path, $arg) {
 }
 
 /**
+ * Implements hook_permission().
+ */
+function field_permission() {
+  return array(
+    'administer fields' => array(
+      'title' => t('Administer fields'),
+      'description' => t('Additional permissions are required based on what the fields are attached to (for example, <a href="@url">administer content types</a> to manage fields attached to content).', array(
+        '@url' => '#module-node',
+      )),
+      'restrict access' => TRUE,
+    ),
+  );
+}
+
+/**
  * Implements hook_theme().
  */
 function field_theme() {
@@ -1059,6 +1074,11 @@ function template_preprocess_field(&$variables, $hook) {
     'field-type-' . $variables['field_type_css'],
     'field-label-' . $element['#label_display'],
   );
+  // Add a "clearfix" class to the wrapper since we float the label and the
+  // field items in field.css if the label is inline.
+  if ($element['#label_display'] == 'inline') {
+    $variables['classes_array'][] = 'clearfix';
+  }
 
   // Add specific suggestions that can override the default implementation.
   $variables['theme_hook_suggestions'] = array(

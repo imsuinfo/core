@@ -1531,7 +1531,7 @@ function comment_save($comment) {
         // Strip the "/" from the end of the parent thread.
         $parent->thread = (string) rtrim((string) $parent->thread, '/');
         // Get the max value in *this* thread.
-        $max = db_query("SELECT MAX(thread) FROM {comment} WHERE thread ILIKE :thread AND nid = :nid", array(
+        $max = db_query("SELECT MAX(thread) FROM {comment} WHERE thread LIKE :thread AND nid = :nid", array(
           ':thread' => $parent->thread . '.%',
           ':nid' => $comment->nid,
         ))->fetchField();
@@ -1593,11 +1593,6 @@ function comment_save($comment) {
     }
     unset($comment->original);
   }
-  catch (Error $e) {
-    $transaction->rollback('comment');
-    watchdog_exception('comment', $e);
-    throw $e;
-  }
   catch (Exception $e) {
     $transaction->rollback('comment');
     watchdog_exception('comment', $e);
@@ -1641,11 +1636,6 @@ function comment_delete_multiple($cids) {
         comment_delete_multiple($child_cids);
         _comment_update_node_statistics($comment->nid);
       }
-    }
-    catch (Error $e) {
-      $transaction->rollback();
-      watchdog_exception('comment', $e);
-      throw $e;
     }
     catch (Exception $e) {
       $transaction->rollback();
@@ -2156,7 +2146,7 @@ function comment_form_validate($form, &$form_state) {
       $query = db_select('users', 'u');
       $query->addField('u', 'uid', 'uid');
       $taken = $query
-        ->condition('name', db_like($form_state['values']['name']), 'ILIKE')
+        ->condition('name', db_like($form_state['values']['name']), 'LIKE')
         ->countQuery()
         ->execute()
         ->fetchField();

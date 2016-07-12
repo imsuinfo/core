@@ -674,7 +674,7 @@ class DatabaseSchema_sqlite extends DatabaseSchema {
 
     // Can't use query placeholders for the schema because the query would have
     // to be :prefixsqlite_master, which does not work.
-    $result = db_query("SELECT name FROM " . $info['schema'] . ".sqlite_master WHERE type = :type AND name ILIKE :table_name", array(
+    $result = db_query("SELECT name FROM " . $info['schema'] . ".sqlite_master WHERE type = :type AND name LIKE :table_name", array(
       ':type' => 'table',
       ':table_name' => $info['table'],
     ));

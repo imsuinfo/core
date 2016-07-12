@@ -795,6 +795,14 @@ function update_fix_d7_requirements() {
 function update_fix_d7_install_profile() {
   $profile = drupal_get_profile();
 
+  // 'Default' profile has been renamed to 'Standard' in D7.
+  // We change the profile here to prevent a broken record in the system table.
+  // See system_update_7049().
+  if ($profile == 'default') {
+    $profile = 'standard';
+    variable_set('install_profile', $profile);
+  }
+
   $results = db_select('system', 's')
     ->fields('s', array('name', 'schema_version'))
     ->condition('name', $profile)
@@ -968,14 +976,6 @@ function update_do_one($module, $number, $dependency_map, &$context) {
     // @TODO We may want to do different error handling for different
     // exception types, but for now we'll just log the exception and
     // return the message for printing.
-    catch (Error $e) {
-      watchdog_exception('update', $e);
-
-      require_once DRUPAL_ROOT . '/includes/errors.inc';
-      $variables = _drupal_decode_exception($e);
-      // The exception message is run through check_plain() by _drupal_decode_exception().
-      $ret['#abort'] = array('success' => FALSE, 'query' => t('%type: !message in %function (line %line of %file).', $variables));
-    }
     catch (Exception $e) {
       watchdog_exception('update', $e);
 

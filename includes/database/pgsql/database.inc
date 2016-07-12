@@ -74,6 +74,17 @@ class DatabaseConnection_pgsql extends DatabaseConnection {
     }
   }
 
+  public function prepareQuery($query) {
+    // mapConditionOperator converts LIKE operations to ILIKE for consistency
+    // with MySQL. However, Postgres does not support ILIKE on bytea (blobs)
+    // fields.
+    // To make the ILIKE operator work, we type-cast bytea fields into text.
+    // @todo This workaround only affects bytea fields, but the involved field
+    //   types involved in the query are unknown, so there is no way to
+    //   conditionally execute this for affected queries only.
+    return parent::prepareQuery(preg_replace('/ ([^ ]+) +(I*LIKE|NOT +I*LIKE) /i', ' ${1}::text ${2} ', $query));
+  }
+
   public function query($query, array $args = array(), $options = array()) {
 
     $options += $this->defaultOptions();
@@ -148,8 +159,19 @@ class DatabaseConnection_pgsql extends DatabaseConnection {
   }
 
   public function mapConditionOperator($operator) {
-    // We don't want to override any of the defaults.
-    return NULL;
+    static $specials;
+
+    // Function calls not allowed in static declarations, thus this method.
+    if (!isset($specials)) {
+      $specials = array(
+        // In PostgreSQL, 'LIKE' is case-sensitive. For case-insensitive LIKE
+        // statements, we need to use ILIKE instead.
+        'LIKE' => array('operator' => 'ILIKE'),
+        'NOT LIKE' => array('operator' => 'NOT ILIKE'),
+      );
+    }
+
+    return isset($specials[$operator]) ? $specials[$operator] : NULL;
   }
 
   /**
@@ -193,6 +215,14 @@ class DatabaseConnection_pgsql extends DatabaseConnection {
     $this->query("SELECT pg_advisory_unlock(" . POSTGRESQL_NEXTID_LOCK . ")");
 
     return $id;
+  }
+
+  public function utf8mb4IsActive() {
+    return TRUE;
+  }
+
+  public function utf8mb4IsSupported() {
+    return TRUE;
   }
 }
 

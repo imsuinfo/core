@@ -227,6 +227,10 @@ function system_list_reset() {
   drupal_static_reset('list_themes');
   cache_clear_all('bootstrap_modules', 'cache_bootstrap');
   cache_clear_all('system_list', 'cache_bootstrap');
+
+  // Clean up the bootstrap file scan cache.
+  drupal_static_reset('_drupal_file_scan_cache');
+  cache_clear_all('_drupal_file_scan_cache', 'cache_bootstrap');
 }
 
 /**
@@ -426,9 +430,8 @@ function module_enable($module_list, $enable_dependencies = TRUE) {
       return TRUE;
     }
 
-    // Sort the module list by pre-calculated weights using a stable sort.
-    $order = range(1, count($module_list));
-    array_multisort($module_list, SORT_DESC, $order, SORT_DESC);
+    // Sort the module list by pre-calculated weights.
+    arsort($module_list);
     $module_list = array_keys($module_list);
   }
 
@@ -437,18 +440,13 @@ function module_enable($module_list, $enable_dependencies = TRUE) {
 
   $modules_installed = array();
   $modules_enabled = array();
-
-  $transaction = db_transaction();
-  try {
-    foreach ($module_list as $module) {
-      // Only process modules that are not already enabled.
-      $existing = db_query("SELECT status FROM {system} WHERE type = :type AND name = :name", array(
-        ':type' => 'module',
-        ':name' => $module))
-        ->fetchObject();
-      if ($existing->status != 0) {
-        continue;
-      }
+  foreach ($module_list as $module) {
+    // Only process modules that are not already enabled.
+    $existing = db_query("SELECT status FROM {system} WHERE type = :type AND name = :name", array(
+      ':type' => 'module',
+      ':name' => $module))
+      ->fetchObject();
+    if ($existing->status == 0) {
       // Load the module's code.
       drupal_load('module', $module);
       module_load_install($module);
@@ -506,30 +504,16 @@ function module_enable($module_list, $enable_dependencies = TRUE) {
       $modules_enabled[] = $module;
       watchdog('system', '%module module enabled.', array('%module' => $module), WATCHDOG_INFO);
     }
-
-    // If any modules were newly installed, invoke hook_modules_installed().
-    if (!empty($modules_installed)) {
-      module_invoke_all('modules_installed', $modules_installed);
-    }
-
-    // If any modules were newly enabled, invoke hook_modules_enabled().
-    if (!empty($modules_enabled)) {
-      module_invoke_all('modules_enabled', $modules_enabled);
-    }
-
-    unset($transaction);
   }
-  catch (Error $e) {
-    $transaction->rollback();
-    drupal_set_message(t('The selected modules have failed to install.'), 'error');
-    watchdog_exception('system', $e, "Failed to install and enable the modules: %modules, reason: %ex.", array('%modules' => print_r($module_list, TRUE), '%ex' => $e->getMessage()), WATCHDOG_ERROR);
-    return FALSE;
+
+  // If any modules were newly installed, invoke hook_modules_installed().
+  if (!empty($modules_installed)) {
+    module_invoke_all('modules_installed', $modules_installed);
   }
-  catch (Exception $e) {
-    $transaction->rollback();
-    drupal_set_message(t('The selected modules have failed to install.'), 'error');
-    watchdog_exception('system', $e, "Failed to install and enable the modules: %modules, reason: %ex.", array('%modules' => print_r($module_list, TRUE), '%ex' => $e->getMessage()), WATCHDOG_ERROR);
-    return FALSE;
+
+  // If any modules were newly enabled, invoke hook_modules_enabled().
+  if (!empty($modules_enabled)) {
+    module_invoke_all('modules_enabled', $modules_enabled);
   }
 
   return TRUE;
@@ -956,7 +940,9 @@ function module_invoke($module, $hook) {
  *
  * @return
  *   An array of return values of the hook implementations. If modules return
- *   arrays from their implementations, those are merged into one array.
+ *   arrays from their implementations, those are merged into one array
+ *   recursively. Note: integer keys in arrays will be lost, as the merge is
+ *   done using array_merge_recursive().
  *
  * @see drupal_alter()
  */

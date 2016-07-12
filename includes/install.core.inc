@@ -76,16 +76,6 @@ function install_drupal($settings = array()) {
     // request, and collect any output.
     $output = install_run_tasks($install_state);
   }
-  catch (Error $e) {
-    // When an installation error occurs, either send the error to the web
-    // browser or pass on the exception so the calling script can use it.
-    if ($install_state['interactive']) {
-      install_display_output($e->getMessage(), $install_state);
-    }
-    else {
-      throw $e;
-    }
-  }
   catch (Exception $e) {
     // When an installation error occurs, either send the error to the web
     // browser or pass on the exception so the calling script can use it.
@@ -252,7 +242,7 @@ function install_begin_request(&$install_state) {
   require_once DRUPAL_ROOT . '/includes/common.inc';
   require_once DRUPAL_ROOT . '/includes/file.inc';
   require_once DRUPAL_ROOT . '/includes/install.inc';
-  require_once DRUPAL_ROOT . '/includes/path.inc';
+  require_once DRUPAL_ROOT . '/' . variable_get('path_inc', 'includes/path.inc');
 
   // Load module basics (needed for hook invokes).
   include_once DRUPAL_ROOT . '/includes/module.inc';
@@ -819,6 +809,13 @@ function install_system_module(&$install_state) {
 
   variable_set('install_profile_modules', array_diff($modules, array('system')));
   $install_state['database_tables_exist'] = TRUE;
+
+  // Prevent the hook_requirements() check from telling us to convert the
+  // database to utf8mb4.
+  $connection = Database::getConnection();
+  if ($connection->utf8mb4IsConfigurable() && $connection->utf8mb4IsActive()) {
+    variable_set('drupal_all_databases_are_utf8mb4', TRUE);
+  }
 }
 
 /**
@@ -836,14 +833,6 @@ function install_verify_completed_task() {
   }
   // Do not trigger an error if the database query fails, since the database
   // might not be set up yet.
-  catch (Error $e) {
-  }
-  if (isset($task)) {
-    if ($task == 'done') {
-      throw new Exception(install_already_done_error());
-    }
-    return $task;
-  }
   catch (Exception $e) {
   }
   if (isset($task)) {
