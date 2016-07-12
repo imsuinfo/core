@@ -700,6 +700,12 @@ class InsertQuery extends Query {
         $last_insert_id = $this->connection->query($sql, $insert_values, $this->queryOptions);
       }
     }
+    catch (Error $e) {
+      // One of the INSERTs failed, rollback the whole batch.
+      $transaction->rollback();
+      // Rethrow the exception for the calling code.
+      throw $e;
+    }
     catch (Exception $e) {
       // One of the INSERTs failed, rollback the whole batch.
       $transaction->rollback();
@@ -1864,6 +1870,15 @@ class MergeQuery extends Query implements QueryConditionInterface {
         }
         $insert->execute();
         return self::STATUS_INSERT;
+      }
+      catch (Error $e) {
+        // The insert query failed, maybe it's because a racing insert query
+        // beat us in inserting the same row. Retry the select query, if it
+        // returns a row, ignore the error and continue with the update
+        // query below.
+        if (!$select->execute()->fetchField()) {
+          throw $e;
+        }
       }
       catch (Exception $e) {
         // The insert query failed, maybe it's because a racing insert query
