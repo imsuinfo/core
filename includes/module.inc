@@ -559,7 +559,6 @@ function module_disable($module_list, $disable_dependents = TRUE) {
     // Create an associative array with weights as values.
     $module_list = array_flip(array_values($module_list));
 
-    $profile = drupal_get_profile();
     while (list($module) = each($module_list)) {
       if (!isset($module_data[$module]) || !$module_data[$module]->status) {
         // This module doesn't exist or is already disabled, skip it.
@@ -571,7 +570,7 @@ function module_disable($module_list, $disable_dependents = TRUE) {
       // Add dependent modules to the list, with a placeholder weight.
       // The new modules will be processed as the while loop continues.
       foreach ($module_data[$module]->required_by as $dependent => $dependent_data) {
-        if (!isset($module_list[$dependent]) && $dependent != $profile) {
+        if (!isset($module_list[$dependent])) {
           $module_list[$dependent] = 0;
         }
       }
@@ -997,9 +996,6 @@ function module_invoke_all($hook) {
 function drupal_required_modules() {
   $files = drupal_system_listing('/^' . DRUPAL_PHP_FUNCTION_PATTERN . '\.info$/', 'modules', 'name', 0);
   $required = array();
-
-  // An installation profile is required and one must always be loaded.
-  $required[] = drupal_get_profile();
 
   foreach ($files as $name => $file) {
     $info = drupal_parse_info_file($file->uri);
