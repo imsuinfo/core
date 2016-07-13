@@ -68,6 +68,9 @@ class DatabaseConnection_pgsql extends DatabaseConnection {
     // Force PostgreSQL to use the UTF-8 character set by default.
     $this->exec("SET NAMES 'UTF8'");
 
+    // Force PostgreSQL to use the 'escape' bytea format set by default.
+    $this->exec("SET bytea_output TO 'escape'");
+
     // Execute PostgreSQL init_commands.
     if (isset($connection_options['init_commands'])) {
       $this->exec(implode('; ', $connection_options['init_commands']));
