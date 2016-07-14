@@ -200,10 +200,14 @@ function _drupal_log_error($error, $fatal = FALSE) {
       }
       unset($messages);
 
+      // if possible, record any fatal errors (reporting them as critical) in the watchdog log.
+      if (function_exists('watchdog')) {
+        watchdog('php', '%type: !message in %function (line %line of %file).', $error, WATCHDOG_CRITICAL);
+      }
 
       if (function_exists('cf_theme_get_variables')) {
         $cf = & drupal_static('cf_theme_get_variables', array());
-        cf_theme_get_variables($cf);
+        cf_theme_get_variables($cf, TRUE);
 
         $page = str_replace(' is-using_database ', ' ', $page);
         $page = str_replace(' is-anonymous ', ' ', $page);
