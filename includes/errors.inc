@@ -183,9 +183,27 @@ function _drupal_log_error($error, $fatal = FALSE) {
   }
 
   if ($fatal && !drupal_is_cli()) {
+    try {
+      $database = Database::getConnection('default', 'default');
+      $database_connected = TRUE;
+    }
+    catch (Error $e) {
+      $database_connected = FALSE;
+    }
+    catch (Exception $e) {
+      $database_connected = FALSE;
+    }
+    unset($database);
+
     drupal_add_http_header('Status', '500 Service Unavailable');
 
-    $error_document_file_500 = variable_get('error_document_file_500', '/var/www/error_documents/5xx/500.html');
+    if ($database_connected) {
+      $error_document_file_500 = variable_get('error_document_file_500', '/var/www/error_documents/5xx/500.html');
+    }
+    else {
+      $error_document_file_500 = variable_get('error_document_file_500-no_database', '/var/www/error_documents/5xx/500-no_database.html');
+    }
+
     if (is_string($error_document_file_500) && file_exists($error_document_file_500)) {
       $page = file_get_contents($error_document_file_500);
 
