@@ -183,21 +183,25 @@ function _drupal_log_error($error, $fatal = FALSE) {
   }
 
   if ($fatal && !drupal_is_cli()) {
-    try {
-      $database = Database::getConnection('default', 'default');
-      $database_connected = TRUE;
+    global $database_connect_check;
+
+    if (!isset($database_connect_check)) {
+      try {
+        $database = Database::getConnection('default', 'default');
+        $database_connect_check = TRUE;
+      }
+      catch (Error $e) {
+        $database_connect_check = FALSE;
+      }
+      catch (Exception $e) {
+        $database_connect_check = FALSE;
+      }
+      unset($database);
     }
-    catch (Error $e) {
-      $database_connected = FALSE;
-    }
-    catch (Exception $e) {
-      $database_connected = FALSE;
-    }
-    unset($database);
 
     drupal_add_http_header('Status', '500 Service Unavailable');
 
-    if ($database_connected) {
+    if ($database_connect_check) {
       $error_document_file_500 = variable_get('error_document_file_500', '/var/www/error_documents/5xx/500.html');
     }
     else {

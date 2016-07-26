@@ -2753,6 +2753,8 @@ function _drupal_bootstrap_page_cache() {
  * Initializes the database system and registers autoload functions.
  */
 function _drupal_bootstrap_database() {
+  global $database_connect_check;
+
   // The user agent header is used to pass a database prefix in the request when
   // running tests. However, for security reasons, it is imperative that we
   // validate we ourselves made the request.
@@ -2794,6 +2796,22 @@ function _drupal_bootstrap_database() {
   if (version_compare(PHP_VERSION, '5.4') >= 0) {
     spl_autoload_register('drupal_autoload_trait');
   }
+
+  // check the database access now help speed up the database unavailable error situation.
+  // otherwise multiple calls to the database will be performed long before the error situation gets fully handled resulting in unecessary delays.
+  try {
+    $database = Database::getConnection('default', 'default');
+    $database_connect_check = TRUE;
+  }
+  catch (Error $e) {
+    $database_connect_check = FALSE;
+    throw $e;
+  }
+  catch (Exception $e) {
+    $database_connect_check = FALSE;
+    throw $e;
+  }
+  unset($database);
 }
 
 /**
