@@ -455,11 +455,7 @@ function file_prepare_directory(&$directory, $options = FILE_MODIFY_PERMISSIONS)
  * Creates a .htaccess file in each Drupal files directory if it is missing.
  */
 function file_ensure_htaccess() {
-  file_create_htaccess('public://', FALSE);
-  if (variable_get('file_private_path', FALSE)) {
-    file_create_htaccess('private://', TRUE);
-  }
-  file_create_htaccess('temporary://', TRUE);
+  return;
 }
 
 /**
@@ -475,29 +471,7 @@ function file_ensure_htaccess() {
  *   already present. Defaults to FALSE.
  */
 function file_create_htaccess($directory, $private = TRUE, $force_overwrite = FALSE) {
-  if (file_uri_scheme($directory)) {
-    $directory = file_stream_wrapper_uri_normalize($directory);
-  }
-  else {
-    $directory = rtrim($directory, '/\\');
-  }
-  $htaccess_path =  $directory . '/.htaccess';
-
-  if (file_exists($htaccess_path) && !$force_overwrite) {
-    // Short circuit if the .htaccess file already exists.
-    return;
-  }
-
-  $htaccess_lines = file_htaccess_lines($private);
-
-  // Write the .htaccess file.
-  if (file_put_contents($htaccess_path, $htaccess_lines)) {
-    drupal_chmod($htaccess_path, 0444);
-  }
-  else {
-    $variables = array('%directory' => $directory, '!htaccess' => '<br>' . nl2br(check_plain($htaccess_lines)));
-    watchdog('security', "Security warning: Couldn't write .htaccess file. Please create a .htaccess file in your %directory directory which contains the following lines: <code>!htaccess</code>", $variables, WATCHDOG_ERROR);
-  }
+  return;
 }
 
 /**
@@ -952,8 +926,6 @@ function file_unmanaged_copy($source, $destination = NULL, $replace = FILE_EXIST
     watchdog('file', 'File %file could not be copied because it would overwrite itself.', array('%file' => $source));
     return FALSE;
   }
-  // Make sure the .htaccess files are present.
-  file_ensure_htaccess();
   // Perform the copy operation.
   if (!@copy($source, $destination)) {
     // If the copy failed and realpaths exist, retry the operation using them
