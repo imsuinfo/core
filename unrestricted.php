@@ -462,7 +462,16 @@ function unrestricted_get_file_information($uri, $settings) {
     $query .= ' where fm.fid = ' . pg_escape_literal($uri[1]);
     $query .= ' and uri like ' . pg_escape_literal('dbu://c/%');
     $query .= ' and not status = 0';
-    $results = pg_query($drupal_connection, $query);
+
+    try {
+      $results = pg_query($drupal_connection, $query);
+    }
+    catch (Error $e) {
+      $results = FALSE;
+    }
+    catch (Exception $e) {
+      $results = FALSE;
+    }
 
     if ($results === FALSE) {
       $error_message = pg_last_error($drupal_connection);
@@ -531,7 +540,16 @@ function unrestricted_get_file_information($uri, $settings) {
   $query .= ' inner join mcneese_file_db_unrestricted mfdu on mfdf.id = mfdu.file_id';
   $query .= ' where mfdu.server_id = ' . pg_escape_literal($settings['server_id']);
   $query .= ' and ' . $condition . pg_escape_literal($literal);
-  $results = pg_query($information['connection'], $query);
+
+  try {
+    $results = pg_query($information['connection'], $query);
+  }
+  catch (Error $e) {
+    $results = FALSE;
+  }
+  catch (Exception $e) {
+    $results = FALSE;
+  }
 
   if ($results === FALSE) {
     $error_message = pg_last_error($information['connection']);
@@ -643,7 +661,15 @@ function unrestricted_get_file_data(&$information, $settings) {
     $query = "select data from mcneese_file_db_file_data";
     $query .= " where file_id = " . pg_escape_literal($information['connection'], $information['file']['id']);
     $query .= " order by block asc";
-    $results = pg_query($information['connection'], $query);
+    try {
+      $results = pg_query($information['connection'], $query);
+    }
+    catch (Error $e) {
+      $results = FALSE;
+    }
+    catch (Exception $e) {
+      $results = FALSE;
+    }
 
     if ($results === FALSE) {
       $error_message = pg_last_error($information['connection']);
