@@ -2638,12 +2638,22 @@ function drupal_deliver_page($page_callback_result, $default_delivery_callback =
  *   - An integer menu status constant: to indicate an error condition.
  *   - A string of HTML content.
  *   - A renderable array of content.
+ * @param bool $dont_print
+ *   (optional) When TRUE output is returned instead of printed,
+ *   HTTP headers are not sent, and exit is not called.
  *
  * @see drupal_deliver_page()
  */
-function drupal_deliver_html_page($page_callback_result) {
+function drupal_deliver_html_page($page_callback_result, $dont_print = FALSE) {
   global $user;
   global $conf;
+
+  if (!is_bool($dont_print)) {
+    $dont_print = FALSE;
+  }
+
+  $dont_print_static = &drupal_static('drupal_deliver_html_page-dont_print', NULL);
+  $dont_print_static = $dont_print;
 
   // Emit the correct charset HTTP header, but not if the page callback
   // result is NULL, since that likely indicates that it printed something
@@ -2706,12 +2716,14 @@ function drupal_deliver_html_page($page_callback_result) {
 
 
           // get all drupal messages and present them to the user.
-          $messages = drupal_get_messages();
-          if (is_array($messages) && !empty($messages)) {
-            $renderred_messages = theme('status_messages', array('messages' => $messages));
-            $renderred_messages = preg_replace('|<header class="html_tag-header messages-header">|is', '<header class="html_tag-header messages-header element-invisible">', $renderred_messages);
-            $page = preg_replace('|<!--\(begin-page-main\)-->|is', '<!--(begin-page-main)-->' . "\n" . print_r($renderred_messages, TRUE), $page);
-            unset($renderred_messages);
+          if (!$dont_print) {
+            $messages = drupal_get_messages();
+            if (is_array($messages) && !empty($messages)) {
+              $renderred_messages = theme('status_messages', array('messages' => $messages));
+              $renderred_messages = preg_replace('|<header class="html_tag-header messages-header">|is', '<header class="html_tag-header messages-header element-invisible">', $renderred_messages);
+              $page = preg_replace('|<!--\(begin-page-main\)-->|is', '<!--(begin-page-main)-->' . "\n" . print_r($renderred_messages, TRUE), $page);
+              unset($renderred_messages);
+            }
           }
           unset($messages);
 
@@ -2768,19 +2780,26 @@ function drupal_deliver_html_page($page_callback_result) {
           }
           unset($block);
 
+          if ($dont_print) {
+            $dont_print_static = NULL;
+            return $page;
+          }
+
           drupal_send_headers();
           print($page);
           break;
         }
 
         // get all drupal messages and present them to the user.
-        $messages = drupal_get_messages();
-        $renderred_messages = NULL;
-        if (is_array($messages) && !empty($messages)) {
-          $renderred_messages = theme('status_messages', array('messages' => $messages));
-          $renderred_messages = preg_replace('|<header class="html_tag-header messages-header">|is', '<header class="html_tag-header messages-header element-invisible">', $renderred_messages);
+        if (!$dont_print) {
+          $messages = drupal_get_messages();
+          $renderred_messages = NULL;
+          if (is_array($messages) && !empty($messages)) {
+            $renderred_messages = theme('status_messages', array('messages' => $messages));
+            $renderred_messages = preg_replace('|<header class="html_tag-header messages-header">|is', '<header class="html_tag-header messages-header element-invisible">', $renderred_messages);
+          }
+          unset($messages);
         }
-        unset($messages);
 
         // Custom 404 handler.
         drupal_set_title('Page Not Found', PASS_THROUGH);
@@ -2798,6 +2817,12 @@ function drupal_deliver_html_page($page_callback_result) {
         $return .= '  If you think this is in error, then please use the contact information provided in the page footer.<br>';
         $return .= '</div>';
         $return .= '<br>';
+
+        if ($dont_print) {
+          $renderred = drupal_render_page($return);
+          $dont_print_static = NULL;
+          return $renderred;
+        }
 
         print drupal_render_page($return);
         break;
@@ -2838,14 +2863,16 @@ function drupal_deliver_html_page($page_callback_result) {
 
 
           // get all drupal messages and present them to the user.
-          $messages = drupal_get_messages();
-          if (is_array($messages) && !empty($messages)) {
-            $renderred_messages = theme('status_messages', array('messages' => $messages));
-            $renderred_messages = preg_replace('|<header class="html_tag-header messages-header">|is', '<header class="html_tag-header messages-header element-invisible">', $renderred_messages);
-            $page = preg_replace('|<!--\(begin-page-main\)-->|is', '<!--(begin-page-main)-->' . "\n" . print_r($renderred_messages, TRUE), $page);
-            unset($renderred_messages);
+          if (!$dont_print) {
+            $messages = drupal_get_messages();
+            if (is_array($messages) && !empty($messages)) {
+              $renderred_messages = theme('status_messages', array('messages' => $messages));
+              $renderred_messages = preg_replace('|<header class="html_tag-header messages-header">|is', '<header class="html_tag-header messages-header element-invisible">', $renderred_messages);
+              $page = preg_replace('|<!--\(begin-page-main\)-->|is', '<!--(begin-page-main)-->' . "\n" . print_r($renderred_messages, TRUE), $page);
+              unset($renderred_messages);
+            }
+            unset($messages);
           }
-          unset($messages);
 
 
           if ($user->uid > 0) {
@@ -2924,19 +2951,26 @@ function drupal_deliver_html_page($page_callback_result) {
             unset($content);
           }
 
+          if ($dont_print) {
+            $dont_print_static = NULL;
+            return $page;
+          }
+
           drupal_send_headers();
           print($page);
           break;
         }
 
         // get all drupal messages and present them to the user.
-        $messages = drupal_get_messages();
-        $renderred_messages = NULL;
-        if (is_array($messages) && !empty($messages)) {
-          $renderred_messages = theme('status_messages', array('messages' => $messages));
-          $renderred_messages = preg_replace('|<header class="html_tag-header messages-header">|is', '<header class="html_tag-header messages-header element-invisible">', $renderred_messages);
+        if (!$dont_print) {
+          $messages = drupal_get_messages();
+          $renderred_messages = NULL;
+          if (is_array($messages) && !empty($messages)) {
+            $renderred_messages = theme('status_messages', array('messages' => $messages));
+            $renderred_messages = preg_replace('|<header class="html_tag-header messages-header">|is', '<header class="html_tag-header messages-header element-invisible">', $renderred_messages);
+          }
+          unset($messages);
         }
-        unset($messages);
 
         // Custom 403 handler.
         drupal_set_title('Access Denied', PASS_THROUGH);
@@ -2957,6 +2991,12 @@ function drupal_deliver_html_page($page_callback_result) {
         $return .= '</div>';
         $return .= '<br>';
 
+        if ($dont_print) {
+          $renderred = drupal_render_page($return);
+          $dont_print_static = NULL;
+          return $renderred;
+        }
+
         drupal_send_headers();
         print drupal_render_page($return);
         break;
@@ -2973,14 +3013,16 @@ function drupal_deliver_html_page($page_callback_result) {
 
 
           // get all drupal messages and present them to the user.
-          $messages = drupal_get_messages();
-          if (is_array($messages) && !empty($messages)) {
-            $renderred_messages = theme('status_messages', array('messages' => $messages));
-            $renderred_messages = preg_replace('|<header class="html_tag-header messages-header">|is', '<header class="html_tag-header messages-header element-invisible">', $renderred_messages);
-            $page = preg_replace('|<!--\(begin-page-main\)-->|is', '<!--(begin-page-main)-->' . "\n" . print_r($renderred_messages, TRUE), $page);
-            unset($renderred_messages);
+          if (!$dont_print) {
+            $messages = drupal_get_messages();
+            if (is_array($messages) && !empty($messages)) {
+              $renderred_messages = theme('status_messages', array('messages' => $messages));
+              $renderred_messages = preg_replace('|<header class="html_tag-header messages-header">|is', '<header class="html_tag-header messages-header element-invisible">', $renderred_messages);
+              $page = preg_replace('|<!--\(begin-page-main\)-->|is', '<!--(begin-page-main)-->' . "\n" . print_r($renderred_messages, TRUE), $page);
+              unset($renderred_messages);
+            }
+            unset($messages);
           }
-          unset($messages);
 
 
           if (function_exists('cf_theme_get_variables')) {
@@ -3010,6 +3052,11 @@ function drupal_deliver_html_page($page_callback_result) {
             }
           }
 
+          if ($dont_print) {
+            $dont_print_static = NULL;
+            return $page;
+          }
+
           drupal_send_headers();
           print($page);
           break;
@@ -3018,6 +3065,13 @@ function drupal_deliver_html_page($page_callback_result) {
         drupal_maintenance_theme();
         drupal_add_http_header('Status', '503 Service Unavailable', FALSE, 503);
         drupal_set_title(t('Website Currently Unavailable'));
+
+        if ($dont_print) {
+          $dont_print_static = NULL;
+          return theme('maintenance_page', array('content' => filter_xss_admin(variable_get('maintenance_mode_message',
+          t('@site is currently under maintenance. We should be back shortly. Thank you for your patience.', array('@site' => variable_get('site_name', 'Drupal')))))));
+        }
+
         drupal_send_headers();
         print theme('maintenance_page', array('content' => filter_xss_admin(variable_get('maintenance_mode_message',
           t('@site is currently under maintenance. We should be back shortly. Thank you for your patience.', array('@site' => variable_get('site_name', 'Drupal')))))));
@@ -3029,6 +3083,12 @@ function drupal_deliver_html_page($page_callback_result) {
     // Print anything besides a menu constant, assuming it's not NULL or
     // undefined.
     $drupal_page =  drupal_render_page($page_callback_result);
+
+    if ($dont_print) {
+      $dont_print_static = NULL;
+      return $drupal_page;
+    }
+
     drupal_send_headers();
     print($drupal_page);
     unset($drupal_page);
@@ -3036,6 +3096,7 @@ function drupal_deliver_html_page($page_callback_result) {
 
   // Perform end-of-request tasks.
   drupal_page_footer();
+  $dont_print_static = NULL;
 }
 
 /**

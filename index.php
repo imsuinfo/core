@@ -49,6 +49,357 @@ function _drupal_root_exception_watchdog($ex, $severity = WATCHDOG_NOTICE) {
 }
 
 /**
+ * Build a string of css class names based on agent information.
+ */
+function _drupal_root_determine_user_agent_classes() {
+  if (empty($_SERVER['HTTP_USER_AGENT'])) {
+    return FALSE;
+  }
+
+  $raw = $_SERVER['HTTP_USER_AGENT'];
+
+  $agent_matches = array();
+  $agent_matched = preg_match('/^[^(]*\(([^)]*)\)(.*)$/i', $raw, $agent_matches);
+
+  $engine = NULL;
+  $engine_version = NULL;
+  $machine_name = NULL;
+  $major_version = NULL;
+  $is_ie_edge = NULL;
+  $ie_compatibility = FALSE;
+
+  if (isset($agent_matches[1])) {
+    $agent_pieces = explode(';', $agent_matches[1]);
+
+    if (!empty($agent_pieces)) {
+      foreach ($agent_pieces as $agent_piece) {
+        $pieces = explode('/', $agent_piece);
+
+        // ignore unknown structure.
+        if (count($pieces) > 2) {
+          continue;
+        }
+
+        if (isset($pieces[1])) {
+          $lower_piece_1 = trim(strtolower($pieces[0]));
+          $lower_piece_2 = trim(strtolower($pieces[1]));
+
+          if ($lower_piece_1 == 'trident') {
+            $engine = 'trident';
+            $engine_version = (int) preg_replace('/\..*$/i', '', $lower_piece_2);
+
+            $machine_name = 'ie';
+          }
+          elseif ($lower_piece_1 == 'gecko') {
+            $engine = 'gecko';
+            $engine_version = (int) preg_replace('/\..*$/i', '', $lower_piece_2);
+          }
+          elseif ($lower_piece_1 == 'presto') {
+            $engine = 'presto';
+            $engine_version = (int) preg_replace('/\..*$/i', '', $lower_piece_2);
+          }
+        }
+        elseif (isset($pieces[0])) {
+          $lower_piece_1 = trim(strtolower($pieces[0]));
+
+          if (!empty($lower_piece_1)) {
+            if (preg_match('/^msie \d/i', $lower_piece_1)) {
+              $lower_piece_2 = preg_replace('/^msie /i', '', $lower_piece_1);
+
+              $machine_name = 'ie';
+              $major_version = (int) preg_replace('/\..*$/i', '', $lower_piece_2);
+            }
+            elseif (strpos($lower_piece_1, 'midori')) {
+              $machine_name = 'midori';
+              $engine = 'webkit';
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (isset($agent_matches[2])) {
+    $agent_pieces = explode(' ', $agent_matches[2]);
+
+    if (!empty($agent_pieces)) {
+      foreach ($agent_pieces as $agent_piece) {
+        $pieces = explode('/', $agent_piece);
+
+        // ignore unknown structure.
+        if (count($pieces) > 3) {
+          continue;
+        }
+
+        if (isset($pieces[1])) {
+          $lower_piece_1 = trim(strtolower($pieces[0]));
+          $lower_piece_2 = trim(strtolower($pieces[1]));
+
+          if ($lower_piece_1 == 'applewebkit') {
+            $engine = 'webkit';
+            $engine_version = $lower_piece_2;
+            $major_version = (int) preg_replace('/\..*$/i', '', $lower_piece_2);
+          }
+          elseif ($lower_piece_1 == 'safari') {
+            // safari is used in a lot of places that is not safari, so use safari only if it is the only agent detected.
+            if ($machine_name == 'unknown') {
+              $machine_name = 'safari';
+              $major_version = (int) preg_replace('/\..*$/i', '', $lower_piece_2);
+
+              if ($engine == 'unknown') {
+                $engine = 'webkit';
+              }
+            }
+          }
+          elseif ($lower_piece_1 == 'firefox') {
+            $machine_name = 'firefox';
+            $major_version = (int) preg_replace('/\..*$/i', '', $lower_piece_2);
+            $engine = 'gecko';
+          }
+          elseif ($lower_piece_1 == 'seamonkey') {
+            $machine_name = 'seamonkey';
+            $major_version = (int) preg_replace('/\..*$/i', '', $lower_piece_2);
+            $engine = 'gecko';
+          }
+          elseif ($lower_piece_1 == 'chrome') {
+            // the newer internet explorer uses safari/webkit based agent names, assign chrome conditionally.
+            if ($machine_name == 'unknown' || $machine_name == 'safari') {
+              $machine_name = 'chrome';
+              $major_version = (int) preg_replace('/\..*$/i', '', $lower_piece_2);
+            }
+          }
+          elseif ($lower_piece_1 == 'chromium') {
+            $machine_name = 'chrome';
+            $major_version = (int) preg_replace('/\..*$/i', '', $lower_piece_2);
+          }
+          elseif ($lower_piece_1 == 'epiphany') {
+            $machine_name = 'epiphany';
+            $major_version = (int) preg_replace('/\..*$/i', '', $lower_piece_2);
+
+            if ($engine == 'unknown') {
+              $engine = 'gecko';
+            }
+          }
+          elseif ($lower_piece_1 == 'konqueror') {
+            $machine_name = 'konqueror';
+            $major_version = (int) preg_replace('/\..*$/i', '', $lower_piece_2);
+
+            if ($engine == 'unknown') {
+              $engine = 'gecko';
+            }
+          }
+          elseif ($lower_piece_1 == 'khtml') {
+            $machine_name = 'konqueror';
+            $major_version = (int) preg_replace('/\..*$/i', '', $lower_piece_2);
+          }
+          elseif ($lower_piece_1 == 'opr') {
+            $machine_name = 'opera';
+            $major_version = (int) preg_replace('/\..*$/i', '', $lower_piece_2);
+
+            if ($engine == 'unknown') {
+              $engine = 'presto';
+            }
+          }
+          elseif ($lower_piece_1 == 'edge') {
+            $machine_name = 'ie';
+            $major_version = (int) preg_replace('/\..*$/i', '', $lower_piece_2);
+            $is_ie_edge = TRUE;
+          }
+          elseif ($lower_piece_1 == 'midori') {
+            $machine_name = 'midori';
+            $major_version = (int) preg_replace('/\..*$/i', '', $lower_piece_2);
+          }
+        }
+        elseif (isset($pieces[0])) {
+          $lower_piece_1 = trim(strtolower($pieces[0]));
+
+          if ($lower_piece_1 == 'opera') {
+            $machine_name = 'opera';
+
+            if ($engine == 'unknown') {
+              $engine = 'presto';
+            }
+          }
+          elseif ($lower_piece_1 == '(khtml,') {
+            // khtml is used in a lot of places that is not safari, so use only when necessary.
+            if ($engine == 'unknown' || $machine_name == 'epiphany' || $machine_name == 'konqueror') {
+              $engine = 'webkit';
+            }
+
+            if ($machine_name == 'unknown') {
+              $machine_name = 'safari';
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // attempt to determine internet explorer versions if not already found.
+  if ($engine == 'trident' && ($machine_name == 'unknown' || ($machine_name == 'ie' && $major_version == 'unknown'))) {
+    $machine_name = 'ie';
+
+    if (isset($is_ie_edge)) {
+      $major_version = 12;
+    }
+    elseif ($engine_version == 7) {
+      $major_version = 11;
+    }
+    elseif ($engine_version == 6) {
+      $major_version = 10;
+    }
+    elseif ($engine_version == 5) {
+      $major_version = 9;
+    }
+    elseif ($engine_version == 4) {
+      $major_version = 8;
+    }
+  }
+
+  // detect internet explorers compatibility mode (for old versions) where possible to allow clients to better handle.
+  if ($machine_name == 'ie') {
+    $ie_compatibility = FALSE;
+
+    if ($major_version <= 8) {
+      if ($major_version == 7) {
+        if ($engine == 'trident') {
+          $ie_compatibility = TRUE;
+        }
+      }
+    }
+
+    // alter the (faked) agent version to properly reflect the current browser.
+    if ($ie_compatibility && isset($engine_version)) {
+      if (isset($is_ie_edge)) {
+        $major_version = 12;
+      }
+      elseif ($engine_version == 7) {
+        $major_version = 11;
+      }
+      elseif ($engine_version == 6) {
+        $major_version = 10;
+      }
+      elseif ($engine_version == 5) {
+        $major_version = 9;
+      }
+      elseif ($engine_version == 4) {
+        $major_version = 8;
+      }
+      elseif (preg_match("/; EIE10;/i", $raw) > 0) {
+        $major_version = 10;
+      }
+    }
+
+    // added later on to allow for compatibility mode tests to be properly processed.
+    $engine = 'trident';
+  }
+
+  $classes = '';
+
+  if (!is_null($machine_name)) {
+    $classes .= ' agent-name-' . $machine_name;
+  }
+
+  if (!is_null($engine)) {
+    $classes .= ' agent-engine-' . $engine;
+  }
+
+  if (!is_null($major_version)) {
+    $classes .= ' agent-major_version-' . $major_version;
+  }
+
+  if ($ie_compatibility) {
+    $classes .= ' is-in_ie_compatibility_mode';
+  }
+
+  return $classes;
+}
+
+/**
+ * Builds/Populates the static front page file.
+ */
+function _drupal_root_build_static_front_page($file_name) {
+  drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
+
+  $router_item = menu_get_item();
+  if (empty($router_item)) {
+    return FALSE;
+  }
+  else {
+    if ($router_item['access']) {
+      if ($router_item['include_file']) {
+        require_once DRUPAL_ROOT . '/' . $router_item['include_file'];
+      }
+      $page_callback_result = call_user_func_array($router_item['page_callback'], $router_item['page_arguments']);
+      if (is_int($page_callback_result) || is_null($page_callback_result)) {
+        return FALSE;
+      }
+    }
+    else {
+      return FALSE;
+    }
+  }
+
+  $renderred = drupal_deliver_html_page($page_callback_result, TRUE);
+
+  $matches = array();
+  $matched = preg_match('/<body id="mcneese-body" class="([^"]*)"/i', $renderred, $matches);
+
+  if ($matched && isset($matches[1])) {
+    $fixed_css = preg_replace('/ agent-name-\w+\b/i', '', $matches[1]);
+    $fixed_css = preg_replace('/ agent-engine-\w+\b/i', '', $fixed_css);
+    $fixed_css = preg_replace('/ agent-major_version-\w+\b/i', '', $fixed_css);
+    $fixed_css = preg_replace('/ date-year-\d+\b/i', '', $fixed_css);
+    $fixed_css = preg_replace('/ date-month-\d+\b/i', '', $fixed_css);
+    $fixed_css = preg_replace('/ date-week-\d+\b/i', '', $fixed_css);
+    $fixed_css = preg_replace('/ date-day-\d+\b/i', '', $fixed_css);
+    $fixed_css = preg_replace('/ date-hour-\d+\b/i', '', $fixed_css);
+    $fixed_css = preg_replace('/ date-minute-\d+\b/i', '', $fixed_css);
+
+    $renderred = preg_replace('/<body id="mcneese-body" class="([^"]*)"/i', '<body id="mcneese-body" class="' . $fixed_css . '"', $renderred);
+  }
+
+  $directory_name = dirname($file_name);
+  if (!is_dir($directory_name) && !file_exists($directory_name)) {
+    mkdir($directory_name, 0775, TRUE);
+    chmod($directory_name, 0775);
+  }
+
+  $file = fopen($file_name, 'c');
+  if (!is_resource($file)) {
+    return FALSE;
+  }
+
+  $locked = flock($file, LOCK_EX);
+  if (!$locked) {
+    fclose($file);
+    return FALSE;
+  }
+
+  if (!ftruncate($file, 0)) {
+    flock($file, LOCK_UN);
+    fclose($file);
+    return FALSE;
+  }
+
+  if (!fwrite($file, $renderred)) {
+    flock($file, LOCK_UN);
+    fclose($file);
+
+    // file was truncated, so delete it because it is empty on error.
+    unlink($file);
+    return FALSE;
+  }
+
+  chmod($file_name, 0664);
+
+  flock($file, LOCK_UN);
+  fclose($file);
+
+  return TRUE;
+}
+
+/**
  * Wrap the main drupal execution function inside of try..catch statements to handle errors.
  *
  * @todo: it should be possible to load a static page or a fallback page at this point as a failsafe that looks better than Internal Server Error.
@@ -89,7 +440,7 @@ function _drupal_root_execute_handler($not_found = FALSE) {
   }
 }
 
-drupal_bootstrap(DRUPAL_BOOTSTRAP_CONFIGURATION);
+drupal_bootstrap(DRUPAL_BOOTSTRAP_SESSION);
 
 $uri = _drupal_root_get_uri();
 $arguments = (array) explode('/', $uri);
@@ -285,8 +636,90 @@ elseif (isset($arguments[0]) && $arguments[0] == 'files' || isset($arguments[3])
   }
 }
 else {
+  drupal_bootstrap(DRUPAL_BOOTSTRAP_SESSION);
+
+  // conditionally load the front page from a static file.
+  global $user;
+  if (isset($user->uid) && $user->uid == 0 && strlen($uri) == 0) {
+    // do not cache maintenance mode pages.
+    $maintenance_mode = 0;
+    $maintenance_mode = variable_get('maintenance_mode', 0);
+
+    $static_file_frontpage = variable_get('mcneese_static_file_frontpage', FALSE);
+    if ($maintenance_mode == 0 && !defined('MAINTENANCE_MODE') && is_string($static_file_frontpage) && !empty($static_file_frontpage)) {
+      $timezone = date_default_timezone_get();
+      date_default_timezone_set('UTC');
+      if (defined('REQUEST_TIME')) {
+        $instance = REQUEST_TIME;
+      }
+      else {
+        $instance = microtime();
+      }
+
+      $render_static_frontpage = FALSE;
+      $static_file_frontpage_expires = variable_get('mcneese_static_file_frontpage-expires', NULL);
+      if ($static_file_frontpage_expires !== FALSE && (!is_string($static_file_frontpage_expires) || empty($static_file_frontpage_expires))) {
+        $static_file_frontpage_expires = '+3 hours';
+      }
+
+      if (file_exists($static_file_frontpage)) {
+        if ($static_file_frontpage_expires !== FALSE) {
+          $file_modified = filemtime($static_file_frontpage);
+          $file_modified_expires = strtotime($static_file_frontpage_expires, $file_modified);
+
+          if ($file_modified_expires < $instance) {
+            $render_static_frontpage = _drupal_root_build_static_front_page($static_file_frontpage);
+          }
+          else {
+            $render_static_frontpage = TRUE;
+          }
+
+          unset($file_modified);
+          unset($file_modified_expires);
+        }
+      }
+      else {
+        $render_static_frontpage = _drupal_root_build_static_front_page($static_file_frontpage);
+      }
+
+      if ($render_static_frontpage) {
+        $css_body = '';
+        $css_body .= _drupal_root_determine_user_agent_classes();
+        $css_body .= ' date-year-' . date('Y', $instance);
+        $css_body .= ' date-month-' . date('m', $instance);
+        $css_body .= ' date-day-' . date('d', $instance);
+        $css_body .= ' date-week-' . date('W', $instance);
+        $css_body .= ' date-hour-' . date('H', $instance);
+        $css_body .= ' date-minute-' . date('i', $instance);
+        unset($instance);
+
+        date_default_timezone_set($timezone);
+        unset($timezone);
+
+        $static_frontpage = file_get_contents($static_file_frontpage);
+
+        $matches = array();
+        $matched = preg_match('/<body id="mcneese-body" class="([^"]*)"/i', $static_frontpage, $matches);
+        if ($matched && isset($matches[1])) {
+          $static_frontpage = preg_replace('/<body id="mcneese-body" class="([^"]*)"/i', '<body id="mcneese-body" class="' . $matches[1] . $css_body . '"', $static_frontpage);
+        }
+        unset($css_body);
+
+        drupal_send_headers();
+        print($static_frontpage);
+        // drupal_exit() is not called because it is causing static error pages to be renderred following the normal output.
+        drupal_session_commit();
+        exit();
+      }
+      unset($maintenance_mode);
+      unset($instance);
+      unset($render_static_frontpage);
+      unset($static_file_frontpage_expires);
+    }
+  }
   unset($uri);
   unset($arguments);
+
   drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
   _drupal_root_execute_handler();
 }

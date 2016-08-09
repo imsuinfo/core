@@ -173,6 +173,12 @@ function cache_clear_all($cid = NULL, $bin = NULL, $wildcard = FALSE) {
     if (db_driver() == 'pgsql') {
       db_query('analyze cache_page');
     }
+
+    // delete the custom mcneese static page content.
+    $static_file_frontpage = variable_get('mcneese_static_file_frontpage', FALSE);
+    if (is_string($static_file_frontpage) && !empty($static_file_frontpage) && file_exists($static_file_frontpage)) {
+      unlink($static_file_frontpage);
+    }
     return;
   }
   $result = _cache_get_object($bin)->clear($cid, $wildcard);
