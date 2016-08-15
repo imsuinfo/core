@@ -62,7 +62,7 @@ class InsertQuery_pgsql extends InsertQuery {
 
     if ($conflict == Database::CONFLICT_DO_NOTHING) {
       if (empty($conflict_target)) {
-        $this->on_conflict = Database::CONFLICT_NOT_USED;
+        $this->on_conflict = Database::CONFLICT_DO_NOTHING;
       }
     }
     elseif (empty($conflict_target) || empty($conflict_action)) {
@@ -169,11 +169,13 @@ class InsertQuery_pgsql extends InsertQuery {
     $insert_fields = array_merge($this->defaultFields, $this->insertFields);
 
     $on_conflict_target = '';
-    if ($this->on_conflict_constraint) {
-      $on_conflict_target = ' ON CONSTRAINT (' . reset($this->on_conflict_target) . ')';
-    }
-    else {
-      $on_conflict_target = ' (' . implode(', ', $this->on_conflict_target) . ')';
+    if (!empty($this->on_conflict_target)) {
+      if ($this->on_conflict_constraint) {
+        $on_conflict_target = ' ON CONSTRAINT (' . reset($this->on_conflict_target) . ')';
+      }
+      else {
+        $on_conflict_target = ' (' . implode(', ', $this->on_conflict_target) . ')';
+      }
     }
 
     $on_conflict = '';

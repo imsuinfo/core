@@ -735,11 +735,13 @@ class InsertQuery extends Query {
     $insert_fields = array_merge($this->defaultFields, $this->insertFields);
 
     $on_conflict_target = '';
-    if ($this->on_conflict_constraint) {
-      $on_conflict_target = ' ON CONSTRAINT (' . reset($this->on_conflict_target) . ')';
-    }
-    else {
-      $on_conflict_target = ' (' . implode(', ', $this->on_conflict_target) . ')';
+    if (!empty($this->on_conflict_target)) {
+      if ($this->on_conflict_constraint) {
+        $on_conflict_target = ' ON CONSTRAINT (' . reset($this->on_conflict_target) . ')';
+      }
+      else {
+        $on_conflict_target = ' (' . implode(', ', $this->on_conflict_target) . ')';
+      }
     }
 
     $on_conflict = '';
