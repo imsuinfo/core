@@ -453,11 +453,6 @@ function menu_set_item($path, $router_item) {
  *   be filled in based on the database values and the objects loaded.
  */
 function menu_get_item($path = NULL, $router_item = NULL) {
-  $router_items_not_found = &drupal_static(__FUNCTION__ . '-not_found');
-  if (!isset($router_items_not_found)) {
-    $router_items_not_found = array('paths' => array());
-  }
-
   $router_items = &drupal_static(__FUNCTION__);
   if (!isset($path)) {
     $path = $_GET['q'];
@@ -479,58 +474,25 @@ function menu_get_item($path = NULL, $router_item = NULL) {
     $ancestors = menu_get_ancestors($parts);
     $router_item = db_query_range('SELECT * FROM {menu_router} WHERE path IN (:ancestors) ORDER BY fit DESC', 0, 1, array(':ancestors' => $ancestors))->fetchAssoc();
 
-    if (!$router_item) {
-      $router_item = array();
-      $router_item['path'] = $path;
-      $router_item['load_functions'] = array();
-      $router_item['to_arg_functions'] = array();
-      $router_item['access_callback'] = '';
-      $router_item['access_arguments'] = array();
-      $router_item['page_callback'] = '';
-      $router_item['page_arguments'] = array();
-      $router_item['delivery_callback'] = '';
-      $router_item['fit'] = 0;
-      $router_item['number_parts'] = 0;
-      $router_item['context'] = 0;
-      $router_item['tab_parent'] = '';
-      $router_item['tab_root'] = '';
-      $router_item['title'] = '';
-      $router_item['title_callback'] = '';
-      $router_item['title_arguments'] = '';
-      $router_item['theme_callback'] = '';
-      $router_item['theme_arguments'] = '';
-      $router_item['type'] = 0;
-      $router_item['description'] = '';
-      $router_item['position'] = '';
-      $router_item['weight'] = 0;
-      $router_item['include_file'] = '';
+    if ($router_item) {
+      // Allow modules to alter the router item before it is translated and
+      // checked for access.
+      drupal_alter('menu_get_item', $router_item, $path, $original_map);
 
-      if (is_null($path)) {
-        $router_items_not_found['null'] = &$router_item;
+      $map = _menu_translate($router_item, $original_map);
+      $router_item['original_map'] = $original_map;
+      if ($map === FALSE) {
+        $router_items[$path] = FALSE;
+        return FALSE;
       }
-      else {
-        $router_items_not_found['paths'][$path] = &$router_item;
+      if ($router_item['access']) {
+        $router_item['map'] = $map;
+        $router_item['page_arguments'] = array_merge(menu_unserialize($router_item['page_arguments'], $map), array_slice($map, $router_item['number_parts']));
+        $router_item['theme_arguments'] = array_merge(menu_unserialize($router_item['theme_arguments'], $map), array_slice($map, $router_item['number_parts']));
       }
-    }
-
-    // Allow modules to alter the router item before it is translated and
-    // checked for access.
-    drupal_alter('menu_get_item', $router_item, $path, $original_map);
-
-    $map = _menu_translate($router_item, $original_map);
-    $router_item['original_map'] = $original_map;
-    if ($map === FALSE) {
-      $router_items[$path] = FALSE;
-      return FALSE;
-    }
-    if ($router_item['access']) {
-      $router_item['map'] = $map;
-      $router_item['page_arguments'] = array_merge(menu_unserialize($router_item['page_arguments'], $map), array_slice($map, $router_item['number_parts']));
-      $router_item['theme_arguments'] = array_merge(menu_unserialize($router_item['theme_arguments'], $map), array_slice($map, $router_item['number_parts']));
     }
     $router_items[$path] = $router_item;
   }
-
   return $router_items[$path];
 }
 
@@ -555,16 +517,9 @@ function menu_execute_active_handler($path = NULL, $deliver = TRUE) {
   $read_only_path = !empty($path) ? $path : $_GET['q'];
   drupal_alter('menu_site_status', $page_callback_result, $read_only_path);
 
-  $router_items_not_found = &drupal_static('menu_get_item-not_found');
-
   // Only continue if the site status is not set.
   if ($page_callback_result == MENU_SITE_ONLINE) {
-    $router_item = menu_get_item($path);
-
-    if (empty($router_item) || (is_null($read_only_path) && $router_items_not_found['null']) || isset($router_items_not_found['paths'][$read_only_path])) {
-      $page_callback_result = MENU_NOT_FOUND;
-    }
-    else {
+    if ($router_item = menu_get_item($path)) {
       if ($router_item['access']) {
         if ($router_item['include_file']) {
           require_once DRUPAL_ROOT . '/' . $router_item['include_file'];
@@ -574,6 +529,9 @@ function menu_execute_active_handler($path = NULL, $deliver = TRUE) {
       else {
         $page_callback_result = MENU_ACCESS_DENIED;
       }
+    }
+    else {
+      $page_callback_result = MENU_NOT_FOUND;
     }
   }
 
@@ -1544,7 +1502,6 @@ function menu_tree_check_access(&$tree, $node_links = array()) {
     $select->condition('n.status', 1);
     $select->condition('n.nid', $nids, 'IN');
     $select->addTag('node_access');
-    $select->addTag('menu_tree_check_access');
     $nids = $select->execute()->fetchCol();
     foreach ($nids as $nid) {
       foreach ($node_links[$nid] as $mlid => $link) {
@@ -2653,7 +2610,6 @@ function menu_get_active_breadcrumb() {
     }
 
     foreach ($active_trail as $parent) {
-      if (!is_string($parent['title']) || !is_string($parent['href'])) continue;
       $breadcrumb[] = l($parent['title'], $parent['href'], $parent['localized_options']);
     }
   }
@@ -2829,10 +2785,6 @@ function menu_rebuild() {
     else {
       variable_del('menu_rebuild_needed');
     }
-  }
-  catch (Error $e) {
-    $transaction->rollback();
-    watchdog_exception('menu', $e);
   }
   catch (Exception $e) {
     $transaction->rollback();
@@ -3974,7 +3926,20 @@ function _menu_router_save($menu, $masks) {
 function _menu_site_is_offline($check_only = FALSE) {
   // Check if site is in maintenance mode.
   if (variable_get('maintenance_mode', 0)) {
-    if (!user_access('access site in maintenance mode')) {
+    if (user_access('access site in maintenance mode')) {
+      // Ensure that the maintenance mode message is displayed only once
+      // (allowing for page redirects) and specifically suppress its display on
+      // the maintenance mode settings page.
+      if (!$check_only && $_GET['q'] != 'admin/config/development/maintenance') {
+        if (user_access('administer site configuration')) {
+          drupal_set_message(t('Operating in maintenance mode. <a href="@url">Go online.</a>', array('@url' => url('admin/config/development/maintenance'))), 'status', FALSE);
+        }
+        else {
+          drupal_set_message(t('Operating in maintenance mode.'), 'status', FALSE);
+        }
+      }
+    }
+    else {
       return TRUE;
     }
   }

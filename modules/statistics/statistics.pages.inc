@@ -29,7 +29,7 @@ function statistics_node_tracker() {
       ->fields('u', array('name'))
       ->condition(db_or()
         ->condition('a.path', 'node/' . $node->nid)
-        ->condition('a.path', 'node/' . $node->nid . '/%', 'ILIKE'))
+        ->condition('a.path', 'node/' . $node->nid . '/%', 'LIKE'))
       ->limit(30)
       ->orderByHeader($header);
 

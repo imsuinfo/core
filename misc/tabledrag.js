@@ -83,17 +83,13 @@ Drupal.tableDrag = function (table, tableSettings) {
   $('> tr.draggable, > tbody > tr.draggable', table).each(function () { self.makeDraggable(this); });
 
   // Add a link before the table for users to show or hide weight columns.
-  $(table).before($('<a href="#" class="tabledrag-toggle-weight tabledrag-toggled-hidden"></a>')
+  $(table).before($('<a href="#" class="tabledrag-toggle-weight"></a>')
     .attr('title', Drupal.t('Re-order rows by numerical weight instead of dragging.'))
     .click(function () {
-      if ($(this).hasClass('tabledrag-toggled-visible')) {
-        $(this).removeClass('tabledrag-toggled-visible');
-        $(this).addClass('tabledrag-toggled-hidden');
+      if ($.cookie('Drupal.tableDrag.showWeight') == 1) {
         self.hideColumns();
       }
       else {
-        $(this).removeClass('tabledrag-toggled-hidden');
-        $(this).addClass('tabledrag-toggled-visible');
         self.showColumns();
       }
       return false;
@@ -110,8 +106,10 @@ Drupal.tableDrag = function (table, tableSettings) {
 
   // Add mouse bindings to the document. The self variable is passed along
   // as event handlers do not have direct access to the tableDrag object.
-  $(document).bind('mousemove', function (event) { return self.dragRow(event, self); });
-  $(document).bind('mouseup', function (event) { return self.dropRow(event, self); });
+  $(document).bind('mousemove pointermove', function (event) { return self.dragRow(event, self); });
+  $(document).bind('mouseup pointerup', function (event) { return self.dropRow(event, self); });
+  $(document).bind('touchmove', function (event) { return self.dragRow(event.originalEvent.touches[0], self); });
+  $(document).bind('touchend', function (event) { return self.dropRow(event.originalEvent.touches[0], self); });
 };
 
 /**
@@ -163,8 +161,25 @@ Drupal.tableDrag.prototype.initColumns = function () {
     }
   }
 
-  // Now hide cells and reduce colspans.
-  this.hideColumns();
+  // Now hide cells and reduce colspans unless cookie indicates previous choice.
+  // Set a cookie if it is not already present.
+  if ($.cookie('Drupal.tableDrag.showWeight') === null) {
+    $.cookie('Drupal.tableDrag.showWeight', 0, {
+      path: Drupal.settings.basePath,
+      // The cookie expires in one year.
+      expires: 365
+    });
+    this.hideColumns();
+  }
+  // Check cookie value and show/hide weight columns accordingly.
+  else {
+    if ($.cookie('Drupal.tableDrag.showWeight') == 1) {
+      this.showColumns();
+    }
+    else {
+      this.hideColumns();
+    }
+  }
 };
 
 /**
@@ -182,6 +197,12 @@ Drupal.tableDrag.prototype.hideColumns = function () {
   });
   // Change link text.
   $('.tabledrag-toggle-weight').text(Drupal.t('Show row weights'));
+  // Change cookie.
+  $.cookie('Drupal.tableDrag.showWeight', 0, {
+    path: Drupal.settings.basePath,
+    // The cookie expires in one year.
+    expires: 365
+  });
   // Trigger an event to allow other scripts to react to this display change.
   $('table.tabledrag-processed').trigger('columnschange', 'hide');
 };
@@ -201,6 +222,12 @@ Drupal.tableDrag.prototype.showColumns = function () {
   });
   // Change link text.
   $('.tabledrag-toggle-weight').text(Drupal.t('Hide row weights'));
+  // Change cookie.
+  $.cookie('Drupal.tableDrag.showWeight', 1, {
+    path: Drupal.settings.basePath,
+    // The cookie expires in one year.
+    expires: 365
+  });
   // Trigger an event to allow other scripts to react to this display change.
   $('table.tabledrag-processed').trigger('columnschange', 'show');
 };
@@ -249,7 +276,10 @@ Drupal.tableDrag.prototype.makeDraggable = function (item) {
   });
 
   // Add the mousedown action for the handle.
-  handle.mousedown(function (event) {
+  handle.bind('mousedown touchstart pointerdown', function (event) {
+    if (event.originalEvent.type == "touchstart") {
+      event = event.originalEvent.touches[0];
+    }
     // Create a new dragObject recording the event information.
     self.dragObject = {};
     self.dragObject.initMouseOffset = self.getMouseOffset(item, event);

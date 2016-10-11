@@ -296,6 +296,20 @@ abstract class DatabaseConnection extends PDO {
    */
   protected $prefixReplace = array();
 
+  /**
+   * List of escaped database, table, and field names, keyed by unescaped names.
+   *
+   * @var array
+   */
+  protected $escapedNames = array();
+
+  /**
+   * List of escaped aliases names, keyed by unescaped aliases.
+   *
+   * @var array
+   */
+  protected $escapedAliases = array();
+
   function __construct($dsn, $username, $password, $driver_options = array()) {
     // Initialize and prepare the connection prefix.
     $this->setPrefix(isset($this->connectionOptions['prefix']) ? $this->connectionOptions['prefix'] : '');
@@ -919,11 +933,14 @@ abstract class DatabaseConnection extends PDO {
    * For some database drivers, it may also wrap the table name in
    * database-specific escape characters.
    *
-   * @return
+   * @return string
    *   The sanitized table name string.
    */
   public function escapeTable($table) {
-    return preg_replace('/[^A-Za-z0-9_.]+/', '', $table);
+    if (!isset($this->escapedNames[$table])) {
+      $this->escapedNames[$table] = preg_replace('/[^A-Za-z0-9_.]+/', '', $table);
+    }
+    return $this->escapedNames[$table];
   }
 
   /**
@@ -933,11 +950,14 @@ abstract class DatabaseConnection extends PDO {
    * For some database drivers, it may also wrap the field name in
    * database-specific escape characters.
    *
-   * @return
+   * @return string
    *   The sanitized field name string.
    */
   public function escapeField($field) {
-    return preg_replace('/[^A-Za-z0-9_.]+/', '', $field);
+    if (!isset($this->escapedNames[$field])) {
+      $this->escapedNames[$field] = preg_replace('/[^A-Za-z0-9_.]+/', '', $field);
+    }
+    return $this->escapedNames[$field];
   }
 
   /**
@@ -948,11 +968,14 @@ abstract class DatabaseConnection extends PDO {
    * DatabaseConnection::escapeTable(), this doesn't allow the period (".")
    * because that is not allowed in aliases.
    *
-   * @return
+   * @return string
    *   The sanitized field name string.
    */
   public function escapeAlias($field) {
-    return preg_replace('/[^A-Za-z0-9_]+/', '', $field);
+    if (!isset($this->escapedAliases[$field])) {
+      $this->escapedAliases[$field] = preg_replace('/[^A-Za-z0-9_]+/', '', $field);
+    }
+    return $this->escapedAliases[$field];
   }
 
   /**
@@ -1379,13 +1402,6 @@ abstract class Database {
    * Flag to indicate a query call should return the "last insert id".
    */
   const RETURN_INSERT_ID = 3;
-
-  /**
-   * Define how to handle on update commands (requires postgresql 9.5 or newer).
-   */
-  const CONFLICT_NOT_USED = 0;
-  const CONFLICT_DO_NOTHING = 1;
-  const CONFLICT_DO_UPDATE = 2;
 
   /**
    * An nested array of all active connections. It is keyed by database name

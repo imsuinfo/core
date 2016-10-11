@@ -179,14 +179,6 @@ function field_create_field($field) {
     // drupal_write_record() sets the field id.
     module_invoke($storage_type['module'], 'field_storage_create_field', $field);
   }
-  catch (Error $e) {
-    // If storage creation failed, remove the field_config record before
-    // rethrowing the exception.
-    db_delete('field_config')
-      ->condition('id', $field['id'])
-      ->execute();
-    throw $e;
-  }
   catch (Exception $e) {
     // If storage creation failed, remove the field_config record before
     // rethrowing the exception.
@@ -197,7 +189,7 @@ function field_create_field($field) {
   }
 
   // Clear caches
-  field_cache_clear(TRUE);
+  field_cache_clear();
 
   // Invoke external hooks after the cache is cleared for API consistency.
   module_invoke_all('field_create_field', $field);
@@ -296,7 +288,7 @@ function field_update_field($field) {
   drupal_write_record('field_config', $field, $primary_key);
 
   // Clear caches
-  field_cache_clear(TRUE);
+  field_cache_clear();
 
   // Invoke external hooks after the cache is cleared for API consistency.
   module_invoke_all('field_update_field', $field, $prior_field, $has_data);
@@ -438,7 +430,7 @@ function field_delete_field($field_name) {
     ->execute();
 
   // Clear the cache.
-  field_cache_clear(TRUE);
+  field_cache_clear();
 
   module_invoke_all('field_delete_field', $field);
 }

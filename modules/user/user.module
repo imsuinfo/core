@@ -363,7 +363,6 @@ class UserController extends DrupalDefaultEntityController {
  * @see user_load_multiple()
  */
 function user_load($uid, $reset = FALSE) {
-  if (!is_numeric($uid) || (float) $uid !== round($uid)) return FALSE;
   $users = user_load_multiple(array($uid), array(), $reset);
   return reset($users);
 }
@@ -419,8 +418,6 @@ function user_load_by_name($name) {
  *
  * @return
  *   A fully-loaded $user object upon successful save or FALSE if the save failed.
- *
- * @todo D8: Drop $edit and fix user_save() to be consistent with others.
  */
 function user_save($account, $edit = array(), $category = 'account') {
   $transaction = db_transaction();
@@ -558,6 +555,7 @@ function user_save($account, $edit = array(), $category = 'account') {
       if ($account->status != $account->original->status) {
         // The user's status is changing; conditionally send notification email.
         $op = $account->status == 1 ? 'status_activated' : 'status_blocked';
+        _user_mail_notify($op, $account);
       }
 
       // Update $edit with any interim changes to $account.
@@ -615,11 +613,6 @@ function user_save($account, $edit = array(), $category = 'account') {
     entity_get_controller('user')->resetCache(array($account->uid));
 
     return $account;
-  }
-  catch (Error $e) {
-    $transaction->rollback();
-    watchdog_exception('user', $e);
-    throw $e;
   }
   catch (Exception $e) {
     $transaction->rollback();
@@ -807,15 +800,6 @@ function user_access($string, $account = NULL) {
 
   if (!isset($account)) {
     $account = $user;
-
-    if (!is_object($user)){
-      $account = user_load();
-    }
-  }
-
-  if (!is_object($account)){
-    watchdog('user', "user_access() called with an invalid account, passed string is '%string'", array('%string' => check_plain($string)), WATCHDOG_ERROR);
-    return FALSE;
   }
 
   // User #1 has all privileges:
@@ -857,7 +841,7 @@ function user_access($string, $account = NULL) {
 function user_is_blocked($name) {
   return db_select('users')
     ->fields('users', array('name'))
-    ->condition('name', db_like($name), 'ILIKE')
+    ->condition('name', db_like($name), 'LIKE')
     ->condition('status', 0)
     ->execute()->fetchObject();
 }
@@ -983,13 +967,13 @@ function user_search_execute($keys = NULL, $conditions = NULL) {
     // and they don't need to be restricted to only active users.
     $query->fields('users', array('mail'));
     $query->condition(db_or()->
-      condition('name', '%' . $keys . '%', 'ILIKE')->
-      condition('mail', '%' . $keys . '%', 'ILIKE'));
+      condition('name', '%' . $keys . '%', 'LIKE')->
+      condition('mail', '%' . $keys . '%', 'LIKE'));
   }
   else {
     // Regular users can only search via usernames, and we do not show them
     // blocked accounts.
-    $query->condition('name', '%' . $keys . '%', 'ILIKE')
+    $query->condition('name', '%' . $keys . '%', 'LIKE')
       ->condition('status', 1);
   }
   $uids = $query
@@ -1270,7 +1254,7 @@ function user_account_form_validate($form, &$form_state) {
       if ($error = user_validate_name($form_state['values']['name'])) {
         form_set_error('name', $error);
       }
-      elseif ((bool) db_select('users')->fields('users', array('uid'))->condition('uid', $account->uid, '<>')->condition('name', db_like($form_state['values']['name']), 'ILIKE')->range(0, 1)->execute()->fetchField()) {
+      elseif ((bool) db_select('users')->fields('users', array('uid'))->condition('uid', $account->uid, '<>')->condition('name', db_like($form_state['values']['name']), 'LIKE')->range(0, 1)->execute()->fetchField()) {
         form_set_error('name', t('The name %name is already taken.', array('%name' => $form_state['values']['name'])));
       }
     }
@@ -1283,6 +1267,15 @@ function user_account_form_validate($form, &$form_state) {
     // Validate the e-mail address, and check if it is taken by an existing user.
     if ($error = user_validate_mail($form_state['values']['mail'])) {
       form_set_error('mail', $error);
+    }
+    elseif ((bool) db_select('users')->fields('users', array('uid'))->condition('uid', $account->uid, '<>')->condition('mail', db_like($form_state['values']['mail']), 'LIKE')->range(0, 1)->execute()->fetchField()) {
+      // Format error message dependent on whether the user is logged in or not.
+      if ($GLOBALS['user']->uid) {
+        form_set_error('mail', t('The e-mail address %email is already taken.', array('%email' => $form_state['values']['mail'])));
+      }
+      else {
+        form_set_error('mail', t('The e-mail address %email is already registered. <a href="@password">Have you forgotten your password?</a>', array('%email' => $form_state['values']['mail'], '@password' => url('user/password'))));
+      }
     }
 
     // Make sure the signature isn't longer than the size of the database field.
@@ -1444,17 +1437,6 @@ function user_block_view($delta = '') {
     case 'login':
       // For usability's sake, avoid showing two login forms on one page.
       if (!$user->uid && !(arg(0) == 'user' && !is_numeric(arg(1)))) {
-        // use different cache-control settings when a form is in use.
-        global $conf;
-
-        if (isset($conf['default_headers-form']) && is_array($conf['default_headers-form'])) {
-          foreach ($conf['default_headers-form'] as $header_name => $header_value) {
-            drupal_add_http_header($header_name, $header_value);
-          }
-        }
-        elseif (!isset($conf['default_headers-cache_control']) || $conf['default_headers-cache_control'] === TRUE) {
-          drupal_add_http_header('Cache-Control', 'private, must-revalidate');
-        }
 
         $block['subject'] = t('User login');
         $block['content'] = drupal_get_form('user_login_block');
@@ -2247,9 +2229,12 @@ function user_login_final_validate($form, &$form_state) {
       }
     }
     else {
-      form_set_error('name', 'Sorry, unrecognized username or password.');
-      $user_name = isset($form_state['input']['name']) ? $form_state['input']['name'] : NULL;
-      watchdog('user', 'Login attempt failed for %user.', array('%user' => $user_name));
+      // Use $form_state['input']['name'] here to guarantee that we send
+      // exactly what the user typed in. $form_state['values']['name'] may have
+      // been modified by validation handlers that ran earlier than this one.
+      $query = isset($form_state['input']['name']) ? array('name' => $form_state['input']['name']) : array();
+      form_set_error('name', t('Sorry, unrecognized username or password. <a href="@password">Have you forgotten your password?</a>', array('@password' => url('user/password', array('query' => $query)))));
+      watchdog('user', 'Login attempt failed for %user.', array('%user' => $form_state['values']['name']));
     }
   }
   elseif (isset($form_state['flood_control_user_identifier'])) {
@@ -2611,11 +2596,6 @@ function user_delete_multiple(array $uids) {
       db_delete('authmap')
         ->condition('uid', $uids, 'IN')
         ->execute();
-    }
-    catch (Error $e) {
-      $transaction->rollback();
-      watchdog_exception('user', $e);
-      throw $e;
     }
     catch (Exception $e) {
       $transaction->rollback();
@@ -3955,6 +3935,7 @@ function user_register_submit($form, &$form_state) {
   }
   // No e-mail verification required; log in user immediately.
   elseif (!$admin && !variable_get('user_email_verification', TRUE) && $account->status) {
+    _user_mail_notify('register_no_approval_required', $account);
     $form_state['uid'] = $account->uid;
     user_login_submit(array(), $form_state);
     drupal_set_message(t('Registration successful. You are now logged in.'));
@@ -3975,7 +3956,7 @@ function user_register_submit($form, &$form_state) {
   // Administrator approval required.
   else {
     _user_mail_notify('register_pending_approval', $account);
-    drupal_set_message(t('Thank you for applying for an account. Your account is currently pending approval by the site administrator.<br>In the meantime, a welcome message with further instructions has been sent to your e-mail address.'));
+    drupal_set_message(t('Thank you for applying for an account. Your account is currently pending approval by the site administrator.<br />In the meantime, a welcome message with further instructions has been sent to your e-mail address.'));
     $form_state['redirect'] = '';
   }
 }
