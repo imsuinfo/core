@@ -427,5 +427,6 @@ function dblog_clear_log_form($form) {
 function dblog_clear_log_submit() {
   $_SESSION['dblog_overview_filter'] = array();
   db_delete('watchdog')->execute();
+  db_query('alter sequence watchdog_wid_seq restart');
   drupal_set_message(t('Database log cleared.'));
 }
