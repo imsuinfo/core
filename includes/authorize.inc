@@ -71,7 +71,7 @@ function authorize_filetransfer_form($form, &$form_state) {
    * leads to the actual operation).
    */
   $form['submit_connection'] = array(
-    '#prefix' => "<br style='clear:both'>",
+    '#prefix' => "<br style='clear:both'/>",
     '#name' => 'enter_connection_settings',
     '#type' => 'submit',
     '#value' => t('Enter connection settings'),
@@ -103,6 +103,11 @@ function authorize_filetransfer_form($form, &$form_state) {
 
     // Start non-JS code.
     if (isset($form_state['values']['connection_settings']['authorize_filetransfer_default']) && $form_state['values']['connection_settings']['authorize_filetransfer_default'] == $name) {
+
+      // If the user switches from JS to non-JS, Drupal (and Batch API) will
+      // barf. This is a known bug: http://drupal.org/node/229825.
+      setcookie('has_js', '', time() - 3600, '/');
+      unset($_COOKIE['has_js']);
 
       // Change the submit button to the submit_process one.
       $form['submit_process']['#attributes'] = array();
@@ -207,14 +212,6 @@ function authorize_filetransfer_form_validate($form, &$form_state) {
       }
       $filetransfer->connect();
     }
-    catch (Error $e) {
-      // The format of this error message is similar to that used on the
-      // database connection form in the installer.
-      form_set_error('connection_settings', t('Failed to connect to the server. The server reports the following message: !message For more help installing or updating code on your server, see the <a href="@handbook_url">handbook</a>.', array(
-        '!message' => '<p class="error">' . $e->getMessage()  . '</p>',
-        '@handbook_url' => 'http://drupal.org/documentation/install/modules-themes',
-      )));
-    }
     catch (Exception $e) {
       // The format of this error message is similar to that used on the
       // database connection form in the installer.
@@ -270,10 +267,6 @@ function authorize_filetransfer_form_submit($form, &$form_state) {
 
         // Now run the operation.
         authorize_run_operation($filetransfer);
-      }
-      catch (Error $e) {
-        // If there is no database available, we don't care and just skip
-        // this part entirely.
       }
       catch (Exception $e) {
         // If there is no database available, we don't care and just skip

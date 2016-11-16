@@ -430,9 +430,8 @@ function module_enable($module_list, $enable_dependencies = TRUE) {
       return TRUE;
     }
 
-    // Sort the module list by pre-calculated weights using a stable sort.
-    $order = range(1, count($module_list));
-    array_multisort($module_list, SORT_DESC, $order, SORT_DESC);
+    // Sort the module list by pre-calculated weights.
+    arsort($module_list);
     $module_list = array_keys($module_list);
   }
 
@@ -441,18 +440,13 @@ function module_enable($module_list, $enable_dependencies = TRUE) {
 
   $modules_installed = array();
   $modules_enabled = array();
-
-  $transaction = db_transaction();
-  try {
-    foreach ($module_list as $module) {
-      // Only process modules that are not already enabled.
-      $existing = db_query("SELECT status FROM {system} WHERE type = :type AND name = :name", array(
-        ':type' => 'module',
-        ':name' => $module))
-        ->fetchObject();
-      if ($existing->status != 0) {
-        continue;
-      }
+  foreach ($module_list as $module) {
+    // Only process modules that are not already enabled.
+    $existing = db_query("SELECT status FROM {system} WHERE type = :type AND name = :name", array(
+      ':type' => 'module',
+      ':name' => $module))
+      ->fetchObject();
+    if ($existing->status == 0) {
       // Load the module's code.
       drupal_load('module', $module);
       module_load_install($module);
@@ -510,30 +504,16 @@ function module_enable($module_list, $enable_dependencies = TRUE) {
       $modules_enabled[] = $module;
       watchdog('system', '%module module enabled.', array('%module' => $module), WATCHDOG_INFO);
     }
-
-    // If any modules were newly installed, invoke hook_modules_installed().
-    if (!empty($modules_installed)) {
-      module_invoke_all('modules_installed', $modules_installed);
-    }
-
-    // If any modules were newly enabled, invoke hook_modules_enabled().
-    if (!empty($modules_enabled)) {
-      module_invoke_all('modules_enabled', $modules_enabled);
-    }
-
-    unset($transaction);
   }
-  catch (Error $e) {
-    $transaction->rollback();
-    drupal_set_message(t('The selected modules have failed to install.'), 'error');
-    watchdog_exception('system', $e, "Failed to install and enable the modules: %modules, reason: %ex.", array('%modules' => print_r($module_list, TRUE), '%ex' => $e->getMessage()), WATCHDOG_ERROR);
-    return FALSE;
+
+  // If any modules were newly installed, invoke hook_modules_installed().
+  if (!empty($modules_installed)) {
+    module_invoke_all('modules_installed', $modules_installed);
   }
-  catch (Exception $e) {
-    $transaction->rollback();
-    drupal_set_message(t('The selected modules have failed to install.'), 'error');
-    watchdog_exception('system', $e, "Failed to install and enable the modules: %modules, reason: %ex.", array('%modules' => print_r($module_list, TRUE), '%ex' => $e->getMessage()), WATCHDOG_ERROR);
-    return FALSE;
+
+  // If any modules were newly enabled, invoke hook_modules_enabled().
+  if (!empty($modules_enabled)) {
+    module_invoke_all('modules_enabled', $modules_enabled);
   }
 
   return TRUE;
@@ -559,6 +539,7 @@ function module_disable($module_list, $disable_dependents = TRUE) {
     // Create an associative array with weights as values.
     $module_list = array_flip(array_values($module_list));
 
+    $profile = drupal_get_profile();
     while (list($module) = each($module_list)) {
       if (!isset($module_data[$module]) || !$module_data[$module]->status) {
         // This module doesn't exist or is already disabled, skip it.
@@ -570,7 +551,7 @@ function module_disable($module_list, $disable_dependents = TRUE) {
       // Add dependent modules to the list, with a placeholder weight.
       // The new modules will be processed as the while loop continues.
       foreach ($module_data[$module]->required_by as $dependent => $dependent_data) {
-        if (!isset($module_list[$dependent])) {
+        if (!isset($module_list[$dependent]) && $dependent != $profile) {
           $module_list[$dependent] = 0;
         }
       }
@@ -996,6 +977,9 @@ function module_invoke_all($hook) {
 function drupal_required_modules() {
   $files = drupal_system_listing('/^' . DRUPAL_PHP_FUNCTION_PATTERN . '\.info$/', 'modules', 'name', 0);
   $required = array();
+
+  // An installation profile is required and one must always be loaded.
+  $required[] = drupal_get_profile();
 
   foreach ($files as $name => $file) {
     $info = drupal_parse_info_file($file->uri);

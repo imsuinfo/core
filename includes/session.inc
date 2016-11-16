@@ -221,23 +221,13 @@ function _drupal_session_write($sid, $value) {
 
     return TRUE;
   }
-  catch (Error $exception) {
-    require_once DRUPAL_ROOT . '/includes/errors.inc';
-    // If we are displaying errors, then do so with no possibility of a further
-    // uncaught exception being thrown.
-    if (error_displayable()) {
-      print '<h1>Uncaught exception thrown in session handler.</h1>';
-      print '<p>' . _drupal_render_exception_safe($exception) . '</p><hr>';
-    }
-    return FALSE;
-  }
   catch (Exception $exception) {
     require_once DRUPAL_ROOT . '/includes/errors.inc';
     // If we are displaying errors, then do so with no possibility of a further
     // uncaught exception being thrown.
     if (error_displayable()) {
       print '<h1>Uncaught exception thrown in session handler.</h1>';
-      print '<p>' . _drupal_render_exception_safe($exception) . '</p><hr>';
+      print '<p>' . _drupal_render_exception_safe($exception) . '</p><hr />';
     }
     return FALSE;
   }

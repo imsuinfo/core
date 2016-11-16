@@ -167,12 +167,7 @@ function image_get_info($filepath, $toolkit = FALSE) {
  * @see image_crop()
  */
 function image_scale_and_crop(stdClass $image, $width, $height) {
-  if (isset($image->info['width']) && $image->info['width'] > 0 && isset($image->info['height']) && $image->info['height'] > 0) {
-    $scale = max($width / $image->info['width'], $height / $image->info['height']);
-  }
-  else {
-    $scale = 1.0;
-  }
+  $scale = max($width / $image->info['width'], $height / $image->info['height']);
   $x = ($image->info['width'] * $scale - $width) / 2;
   $y = ($image->info['height'] * $scale - $height) / 2;
 
@@ -206,12 +201,7 @@ function image_scale_and_crop(stdClass $image, $width, $height) {
  * @see image_scale()
  */
 function image_dimensions_scale(array &$dimensions, $width = NULL, $height = NULL, $upscale = FALSE) {
-  if (isset($dimensions['height']) && $dimensions['height'] > 0 && isset($dimensions['width']) && $dimensions['width'] > 0) {
-    $aspect = $dimensions['height'] / $dimensions['width'];
-  }
-  else {
-    $aspect = 1.0;
-  }
+  $aspect = $dimensions['height'] / $dimensions['width'];
 
   // Calculate one of the dimensions from the other target dimension,
   // ensuring the same aspect ratio as the source dimensions. If one of the
@@ -339,13 +329,7 @@ function image_rotate(stdClass $image, $degrees, $background = NULL) {
  * @see image_gd_crop()
  */
 function image_crop(stdClass $image, $x, $y, $width, $height) {
-  if (isset($image->info['width']) && $image->info['width'] > 0 && isset($image->info['height']) && $image->info['height'] > 0) {
-    $aspect = $image->info['height'] / $image->info['width'];
-  }
-  else {
-    $aspect = 1.0;
-  }
-
+  $aspect = $image->info['height'] / $image->info['width'];
   if (empty($height)) $height = $width / $aspect;
   if (empty($width)) $width = $height * $aspect;
 
