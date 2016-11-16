@@ -4498,10 +4498,15 @@ function theme_form_element($variables) {
   $prefix = isset($element['#field_prefix']) ? '<span class="field-prefix">' . $element['#field_prefix'] . '</span> ' : '';
   $suffix = isset($element['#field_suffix']) ? ' <span class="field-suffix">' . $element['#field_suffix'] . '</span>' : '';
 
+  $title_suffix = '';
+  if (isset($element['#title_suffix']) && isset($element['#title_suffix']['#type']) && $element['#title_suffix']['#type'] == 'markup') {
+    $title_suffix = drupal_render($element['#title_suffix']);
+  }
+
   switch ($element['#title_display']) {
     case 'before':
     case 'invisible':
-      $output .= ' ' . theme('form_element_label', $variables);
+      $output .= ' ' . theme('form_element_label', $variables) . $title_suffix;
 
       if (!empty($element['#description_before'])) {
         $output .= '<div class="description">' . $element['#description_before'] . "</div>\n";
@@ -4517,7 +4522,7 @@ function theme_form_element($variables) {
       }
 
       $output .= ' ' . $prefix . $element['#children'] . $suffix;
-      $output .= ' ' . theme('form_element_label', $variables) . "\n";
+      $output .= ' ' . theme('form_element_label', $variables) . $title_suffix . "\n";
       break;
 
     case 'none':
