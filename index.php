@@ -641,11 +641,19 @@ else {
   // conditionally load the front page from a static file.
   global $user;
   if (isset($user->uid) && $user->uid == 0 && strlen($uri) == 0) {
+    global $is_https;
+
     // do not cache maintenance mode pages.
     $maintenance_mode = 0;
     $maintenance_mode = variable_get('maintenance_mode', 0);
 
-    $static_file_frontpage = variable_get('mcneese_static_file_frontpage', FALSE);
+    if ($is_https) {
+      $static_file_frontpage = variable_get('mcneese_static_file_frontpage-https', FALSE);
+    }
+    else {
+      $static_file_frontpage = variable_get('mcneese_static_file_frontpage', FALSE);
+    }
+
     if ($maintenance_mode == 0 && !defined('MAINTENANCE_MODE') && is_string($static_file_frontpage) && !empty($static_file_frontpage)) {
       $timezone = date_default_timezone_get();
       date_default_timezone_set('UTC');
