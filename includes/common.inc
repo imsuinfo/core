@@ -3167,13 +3167,17 @@ function drupal_exit($destination = NULL) {
  *   An associative array.
  */
 function drupal_map_assoc($array, $function = NULL) {
-  // array_combine() fails with empty arrays:
-  // http://bugs.php.net/bug.php?id=34857.
-  $array = !empty($array) ? array_combine($array, $array) : array();
-  if (is_callable($function)) {
-    $array = array_map($function, $array);
+  if (!is_array($array)) {
+    watchdog('core', 'Invalid array passed to drupal_map_assoc(array, function), function=\'%function\', array = %array.', array('%function' => $function, '%array' => print_r($array, TRUE)), WATCHDOG_ERROR);
+    $array = array();
   }
-  return $array;
+
+  // array_combine() fails with empty arrays:
+  $combined = array_combine($array, $array);
+  if (is_callable($function)) {
+    $combined = array_map($function, $combined);
+  }
+  return $combined;
 }
 
 /**
