@@ -83,17 +83,13 @@ Drupal.tableDrag = function (table, tableSettings) {
   $('> tr.draggable, > tbody > tr.draggable', table).each(function () { self.makeDraggable(this); });
 
   // Add a link before the table for users to show or hide weight columns.
-  $(table).before($('<a href="#" class="tabledrag-toggle-weight tabledrag-toggled-hidden"></a>')
+  $(table).before($('<a href="#" class="tabledrag-toggle-weight"></a>')
     .attr('title', Drupal.t('Re-order rows by numerical weight instead of dragging.'))
     .click(function () {
-      if ($(this).hasClass('tabledrag-toggled-visible')) {
-        $(this).removeClass('tabledrag-toggled-visible');
-        $(this).addClass('tabledrag-toggled-hidden');
+      if ($.cookie('Drupal.tableDrag.showWeight') == 1) {
         self.hideColumns();
       }
       else {
-        $(this).removeClass('tabledrag-toggled-hidden');
-        $(this).addClass('tabledrag-toggled-visible');
         self.showColumns();
       }
       return false;
@@ -165,8 +161,25 @@ Drupal.tableDrag.prototype.initColumns = function () {
     }
   }
 
-  // Now hide cells and reduce colspans.
-  this.hideColumns();
+  // Now hide cells and reduce colspans unless cookie indicates previous choice.
+  // Set a cookie if it is not already present.
+  if ($.cookie('Drupal.tableDrag.showWeight') === null) {
+    $.cookie('Drupal.tableDrag.showWeight', 0, {
+      path: Drupal.settings.basePath,
+      // The cookie expires in one year.
+      expires: 365
+    });
+    this.hideColumns();
+  }
+  // Check cookie value and show/hide weight columns accordingly.
+  else {
+    if ($.cookie('Drupal.tableDrag.showWeight') == 1) {
+      this.showColumns();
+    }
+    else {
+      this.hideColumns();
+    }
+  }
 };
 
 /**
@@ -184,6 +197,12 @@ Drupal.tableDrag.prototype.hideColumns = function () {
   });
   // Change link text.
   $('.tabledrag-toggle-weight').text(Drupal.t('Show row weights'));
+  // Change cookie.
+  $.cookie('Drupal.tableDrag.showWeight', 0, {
+    path: Drupal.settings.basePath,
+    // The cookie expires in one year.
+    expires: 365
+  });
   // Trigger an event to allow other scripts to react to this display change.
   $('table.tabledrag-processed').trigger('columnschange', 'hide');
 };
@@ -203,6 +222,12 @@ Drupal.tableDrag.prototype.showColumns = function () {
   });
   // Change link text.
   $('.tabledrag-toggle-weight').text(Drupal.t('Hide row weights'));
+  // Change cookie.
+  $.cookie('Drupal.tableDrag.showWeight', 1, {
+    path: Drupal.settings.basePath,
+    // The cookie expires in one year.
+    expires: 365
+  });
   // Trigger an event to allow other scripts to react to this display change.
   $('table.tabledrag-processed').trigger('columnschange', 'show');
 };
@@ -555,12 +580,20 @@ Drupal.tableDrag.prototype.dropRow = function (event, self) {
  * Get the mouse coordinates from the event (allowing for browser differences).
  */
 Drupal.tableDrag.prototype.mouseCoords = function (event) {
+  // Complete support for pointer events was only introduced to jQuery in
+  // version 1.11.1; between versions 1.7 and 1.11.0 pointer events have the
+  // clientX and clientY properties undefined. In those cases, the properties
+  // must be retrieved from the event.originalEvent object instead.
+  var clientX = event.clientX || event.originalEvent.clientX;
+  var clientY = event.clientY || event.originalEvent.clientY;
+
   if (event.pageX || event.pageY) {
     return { x: event.pageX, y: event.pageY };
   }
+
   return {
-    x: event.clientX + document.body.scrollLeft - document.body.clientLeft,
-    y: event.clientY + document.body.scrollTop  - document.body.clientTop
+    x: clientX + document.body.scrollLeft - document.body.clientLeft,
+    y: clientY + document.body.scrollTop  - document.body.clientTop
   };
 };
 

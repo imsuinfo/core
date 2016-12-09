@@ -392,7 +392,7 @@ function file_create_url($uri) {
     else {
       // If this is not a properly formatted stream, then it is a shipped file.
       // Therefore, return the urlencoded URI with the base URL prepended.
-      return $GLOBALS['base_path'] . drupal_encode_path($uri);
+      return $GLOBALS['base_url'] . '/' . drupal_encode_path($uri);
     }
   }
   elseif ($scheme == 'http' || $scheme == 'https') {
@@ -457,7 +457,11 @@ function file_prepare_directory(&$directory, $options = FILE_MODIFY_PERMISSIONS)
  * Creates a .htaccess file in each Drupal files directory if it is missing.
  */
 function file_ensure_htaccess() {
-  return;
+  file_create_htaccess('public://', FALSE);
+  if (variable_get('file_private_path', FALSE)) {
+    file_create_htaccess('private://', TRUE);
+  }
+  file_create_htaccess('temporary://', TRUE);
 }
 
 /**
@@ -473,7 +477,29 @@ function file_ensure_htaccess() {
  *   already present. Defaults to FALSE.
  */
 function file_create_htaccess($directory, $private = TRUE, $force_overwrite = FALSE) {
-  return;
+  if (file_uri_scheme($directory)) {
+    $directory = file_stream_wrapper_uri_normalize($directory);
+  }
+  else {
+    $directory = rtrim($directory, '/\\');
+  }
+  $htaccess_path =  $directory . '/.htaccess';
+
+  if (file_exists($htaccess_path) && !$force_overwrite) {
+    // Short circuit if the .htaccess file already exists.
+    return;
+  }
+
+  $htaccess_lines = file_htaccess_lines($private);
+
+  // Write the .htaccess file.
+  if (file_put_contents($htaccess_path, $htaccess_lines)) {
+    drupal_chmod($htaccess_path, 0444);
+  }
+  else {
+    $variables = array('%directory' => $directory, '!htaccess' => '<br />' . nl2br(check_plain($htaccess_lines)));
+    watchdog('security', "Security warning: Couldn't write .htaccess file. Please create a .htaccess file in your %directory directory which contains the following lines: <code>!htaccess</code>", $variables, WATCHDOG_ERROR);
+  }
 }
 
 /**
@@ -574,11 +600,7 @@ function file_load($fid) {
  */
 function file_save(stdClass $file) {
   $file->timestamp = REQUEST_TIME;
-  $file->filesize = 0;
-
-  if (file_exists($file->uri)) {
-    $file->filesize = filesize($file->uri);
-  }
+  $file->filesize = filesize($file->uri);
 
   // Load the stored entity, if any.
   if (!empty($file->fid) && !isset($file->original)) {
@@ -887,28 +909,20 @@ function file_unmanaged_copy($source, $destination = NULL, $replace = FILE_EXIST
     $destination = file_build_uri(drupal_basename($source));
   }
 
-  $scheme = file_uri_scheme($destination);
 
-  $wrapper = FALSE;
-  if (!empty($scheme)) {
-    $wrapper = file_stream_wrapper_get_class($scheme);
+  // Prepare the destination directory.
+  if (file_prepare_directory($destination)) {
+    // The destination is already a directory, so append the source basename.
+    $destination = file_stream_wrapper_uri_normalize($destination . '/' . drupal_basename($source));
   }
-
-  if (!$wrapper || !property_exists($wrapper, 'directoryless')) {
-    // Prepare the destination directory.
-    if (file_prepare_directory($destination)) {
-      // The destination is already a directory, so append the source basename.
-      $destination = file_stream_wrapper_uri_normalize($destination . '/' . drupal_basename($source));
-    }
-    else {
-      // Perhaps $destination is a dir/file?
-      $dirname = drupal_dirname($destination);
-      if (!file_prepare_directory($dirname)) {
-        // The destination is not valid.
-        watchdog('file', 'File %file could not be copied, because the destination directory %destination is not configured correctly.', array('%file' => $original_source, '%destination' => $dirname));
-        drupal_set_message(t('The specified file %file could not be copied, because the destination directory is not properly configured. This may be caused by a problem with file or directory permissions. More information is available in the system log.', array('%file' => $original_source)), 'error');
-        return FALSE;
-      }
+  else {
+    // Perhaps $destination is a dir/file?
+    $dirname = drupal_dirname($destination);
+    if (!file_prepare_directory($dirname)) {
+      // The destination is not valid.
+      watchdog('file', 'File %file could not be copied, because the destination directory %destination is not configured correctly.', array('%file' => $original_source, '%destination' => $dirname));
+      drupal_set_message(t('The specified file %file could not be copied, because the destination directory is not properly configured. This may be caused by a problem with file or directory permissions. More information is available in the system log.', array('%file' => $original_source)), 'error');
+      return FALSE;
     }
   }
 
@@ -928,6 +942,8 @@ function file_unmanaged_copy($source, $destination = NULL, $replace = FILE_EXIST
     watchdog('file', 'File %file could not be copied because it would overwrite itself.', array('%file' => $source));
     return FALSE;
   }
+  // Make sure the .htaccess files are present.
+  file_ensure_htaccess();
   // Perform the copy operation.
   if (!@copy($source, $destination)) {
     // If the copy failed and realpaths exist, retry the operation using them
@@ -969,16 +985,6 @@ function file_build_uri($path) {
  *   and FILE_EXISTS_ERROR is specified.
  */
 function file_destination($destination, $replace) {
-  $scheme = file_uri_scheme($destination);
-
-  if ($scheme) {
-    $wrappers = (array) file_get_stream_wrappers(STREAM_WRAPPERS_REMOTE);
-
-    if (array_key_exists($scheme, $wrappers)) {
-      return $destination;
-    }
-  }
-
   if (file_exists($destination)) {
     switch ($replace) {
       case FILE_EXISTS_REPLACE:
@@ -1956,10 +1962,10 @@ function file_transfer($uri, $headers) {
   foreach ($headers as $name => $value) {
     drupal_add_http_header($name, $value);
   }
+  drupal_send_headers();
   $scheme = file_uri_scheme($uri);
   // Transfer file in 1024 byte chunks to save memory usage.
   if ($scheme && file_stream_wrapper_valid_scheme($scheme) && $fd = fopen($uri, 'rb')) {
-    drupal_send_headers();
     while (!feof($fd)) {
       print fread($fd, 1024);
     }
