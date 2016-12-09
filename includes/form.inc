@@ -559,8 +559,8 @@ function form_set_cache($form_build_id, $form, $form_state) {
   $expire = 21600;
 
   // allow forms to explicitly define their own expiration settings.
-  if (isset($form]['#cache_expires']) && is_int(($form]['#cache_expires'])) && $form]['#cache_expires'] >= 0) {
-    $expire = ($form]['#cache_expires']);
+  if (isset($form['#cache_expires']) && is_int($form['#cache_expires']) && $form['#cache_expires'] >= 0) {
+    $expire = $form['#cache_expires'];
   }
 
   // Ensure that the form build_id embedded in the form structure is the same as
