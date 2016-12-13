@@ -3002,9 +3002,28 @@ function drupal_deliver_html_page($page_callback_result, $dont_print = FALSE) {
         break;
 
       case MENU_SITE_OFFLINE:
-        // Print a 503 page.
-        $error_document_file_503 = variable_get('error_document_file_503', '/var/www/error_documents/5xx/503.html');
         $emergency_mode = variable_get('emergency_mode', FALSE);
+
+        // postgresql-specific database connection test.
+        $database_unavailable = TRUE;
+        try {
+          if (function_exists('db_query')) {
+            $file = db_query("values (TRUE)")->fetchField();
+            if ($file !== FALSE) {
+              $database_unavailable = FALSE;
+            }
+          }
+        }
+        catch (Error $e) {
+        }
+        catch (Exception $e) {
+        }
+
+        // Print a static 503 page when database is unavailable.
+        $error_document_file_503 = NULL;
+        if ($database_unavailable) {
+          $error_document_file_503 = variable_get('error_document_file_503', '/var/www/error_documents/5xx/503.html');
+        }
 
         if ($emergency_mode == 0 && is_string($error_document_file_503) && file_exists($error_document_file_503)) {
           drupal_add_http_header('Status', '503 Service Unavailable', FALSE, 503);
