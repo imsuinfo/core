@@ -1968,7 +1968,7 @@ function _locale_translate_seek() {
   foreach ($strings as $lid => $string) {
     $rows[] = array(
       $groups[$string['group']],
-      array('data' => check_plain(truncate_utf8($string['source'], 150, FALSE, TRUE)) . '<br><small>' . $string['location'] . '</small>'),
+      array('data' => check_plain(truncate_utf8($string['source'], 150, FALSE, TRUE)) . '<br /><small>' . $string['location'] . '</small>'),
       $string['context'],
       array('data' => _locale_translate_language_list($string, $limit_language), 'align' => 'center'),
       array('data' => l(t('edit'), "admin/config/regional/translate/edit/$lid", array('query' => drupal_get_destination())), 'class' => array('nowrap')),

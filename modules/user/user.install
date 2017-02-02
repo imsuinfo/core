@@ -886,7 +886,7 @@ function user_update_7017() {
 
   $result = db_select('variable', 'v')
     ->fields('v', array('name'))
-    ->condition('name', db_like('user_mail_') . '%', 'ILIKE')
+    ->condition('name', db_like('user_mail_') . '%', 'LIKE')
     ->execute();
 
   foreach ($result as $row) {

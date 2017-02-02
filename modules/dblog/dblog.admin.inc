@@ -292,13 +292,7 @@ function theme_dblog_message($variables) {
     }
     // Message to translate with injected variables.
     else {
-      $unserialized = unserialize($event->variables);
-      if (is_array($unserialized)) {
-        $output = t($event->message, $unserialized);
-      }
-      else {
-        $output = t($event->message);
-      }
+      $output = t($event->message, unserialize($event->variables));
     }
     // If the output is expected to be a link, strip all the tags and
     // special characters by using filter_xss() without any allowed tags.
@@ -426,7 +420,6 @@ function dblog_clear_log_form($form) {
  */
 function dblog_clear_log_submit() {
   $_SESSION['dblog_overview_filter'] = array();
-  db_delete('watchdog')->execute();
-  db_query('alter sequence watchdog_wid_seq restart');
+  db_truncate('watchdog')->execute();
   drupal_set_message(t('Database log cleared.'));
 }

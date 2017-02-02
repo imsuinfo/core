@@ -184,8 +184,8 @@ tr .ajax-progress .throbber {
 /**
  * Inline items.
  */
-.container-inline > div,
-.container-inline > label {
+.container-inline div,
+.container-inline label {
   display: inline;
 }
 /* Fieldset contents always need to be rendered as block. */
@@ -248,16 +248,24 @@ html.js .js-hide {
   height: auto;
 }
 
-
 /**
- * Enable clearfix hack for known problematic modules and paths, but only those.
+ * Markup free clearing.
+ *
+ * @see http://perishablepress.com/press/2009/12/06/new-clearfix-hack
  */
-#views-preview-wrapper .clearfix:after,
-#views-ui-edit-form .clearfix:after {
+.clearfix:after {
   content: ".";
   display: block;
   height: 0;
   clear: both;
   visibility: hidden;
+}
+/* IE6 */
+* html .clearfix {
+  height: 1%;
+}
+/* IE7 */
+*:first-child + html .clearfix {
+  min-height: 1%;
 }
 

@@ -122,7 +122,12 @@ function cache_get_multiple(array &$cids, $bin = 'cache') {
  *     the administrator panel.
  *   - cache_path: Stores the system paths that have an alias.
  * @param $expire
- *   (optional) One of the following values:
+ *   (optional) Controls the maximum lifetime of this cache entry. Note that
+ *   caches might be subject to clearing at any time, so this setting does not
+ *   guarantee a minimum lifetime. With this in mind, the cache should not be
+ *   used for data that must be kept during a cache clear, like sessions.
+ *
+ *   Use one of the following values:
  *   - CACHE_PERMANENT: Indicates that the item should never be removed unless
  *     explicitly told to using cache_clear_all() with a cache ID.
  *   - CACHE_TEMPORARY: Indicates that the item should be removed at the next
@@ -161,32 +166,11 @@ function cache_clear_all($cid = NULL, $bin = NULL, $wildcard = FALSE) {
     // not end up in the page cache.
     if (module_exists('block')) {
       cache_clear_all(NULL, 'cache_block');
-
-      // perform postgresql analyze.
-      if (db_driver() == 'pgsql') {
-        db_query('analyze cache_block');
-      }
     }
     cache_clear_all(NULL, 'cache_page');
-
-    // perform postgresql analyze.
-    if (db_driver() == 'pgsql') {
-      db_query('analyze cache_page');
-    }
-
-    // delete the custom mcneese static page content.
-    $static_file_frontpage = variable_get('mcneese_static_file_frontpage', FALSE);
-    if (is_string($static_file_frontpage) && !empty($static_file_frontpage) && file_exists($static_file_frontpage)) {
-      unlink($static_file_frontpage);
-    }
     return;
   }
-  $result = _cache_get_object($bin)->clear($cid, $wildcard);
-
-  // perform postgresql analyze.
-  if (db_driver() == 'pgsql') {
-    db_query('analyze cache');
-  }
+  return _cache_get_object($bin)->clear($cid, $wildcard);
 }
 
 /**
@@ -283,7 +267,12 @@ interface DrupalCacheInterface {
    *   1MB in size to be stored by default. When caching large arrays or
    *   similar, take care to ensure $data does not exceed this size.
    * @param $expire
-   *   (optional) One of the following values:
+   *   (optional) Controls the maximum lifetime of this cache entry. Note that
+   *   caches might be subject to clearing at any time, so this setting does not
+   *   guarantee a minimum lifetime. With this in mind, the cache should not be
+   *   used for data that must be kept during a cache clear, like sessions.
+   *
+   *   Use one of the following values:
    *   - CACHE_PERMANENT: Indicates that the item should never be removed unless
    *     explicitly told to using cache_clear_all() with a cache ID.
    *   - CACHE_TEMPORARY: Indicates that the item should be removed at the next
@@ -378,11 +367,6 @@ class DrupalDatabaseCache implements DrupalCacheInterface {
       $cids = array_diff($cids, array_keys($cache));
       return $cache;
     }
-    catch (Error $e) {
-      // If the database is never going to be available, cache requests should
-      // return FALSE in order to allow exception handling to occur.
-      return array();
-    }
     catch (Exception $e) {
       // If the database is never going to be available, cache requests should
       // return FALSE in order to allow exception handling to occur.
@@ -473,7 +457,6 @@ class DrupalDatabaseCache implements DrupalCacheInterface {
    */
   function set($cid, $data, $expire = CACHE_PERMANENT) {
     $fields = array(
-      'cid' => $cid,
       'serialized' => 0,
       'created' => REQUEST_TIME,
       'expire' => $expire,
@@ -488,33 +471,13 @@ class DrupalDatabaseCache implements DrupalCacheInterface {
     }
 
     try {
-      $transaction = db_transaction();
-      $table = preg_replace('/[^A-Za-z0-9_.]+/', '', $this->bin);
-      db_query('LOCK TABLE {' . $table . '} IN SHARE ROW EXCLUSIVE MODE');
-
-      db_insert($this->bin)
+      db_merge($this->bin)
+        ->key(array('cid' => $cid))
         ->fields($fields)
-        ->onConflictDo(Database::CONFLICT_DO_UPDATE, array('cid'), array('cid', 'data', 'expire', 'created', 'serialized'), array_keys($fields))
         ->execute();
-
-      unset($transaction);
-    }
-    catch (Error $e) {
-      // The database may not be available, so we'll ignore cache_set requests.
-      if (isset($transaction) && is_object($transaction)) {
-        $transaction->rollback();
-      }
-      unset($transaction);
-    }
-    catch (Error $e) {
-      // The database may not be available, so we'll ignore cache_set requests.
     }
     catch (Exception $e) {
       // The database may not be available, so we'll ignore cache_set requests.
-      if (isset($transaction) && is_object($transaction)) {
-        $transaction->rollback();
-      }
-      unset($transaction);
     }
   }
 
