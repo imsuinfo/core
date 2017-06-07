@@ -355,6 +355,8 @@ function _drupal_root_build_static_front_page($file_name) {
     $fixed_css = preg_replace('/ date-day-\d+\b/i', '', $fixed_css);
     $fixed_css = preg_replace('/ date-hour-\d+\b/i', '', $fixed_css);
     $fixed_css = preg_replace('/ date-minute-\d+\b/i', '', $fixed_css);
+    $fixed_css = preg_replace('/ is-unsupported\b/i', '', $fixed_css);
+    $fixed_css = preg_replace('/ is-legacy\b/i', '', $fixed_css);
 
     $renderred = preg_replace('/<body id="mcneese-body" class="([^"]*)"/i', '<body id="mcneese-body" class="' . $fixed_css . '"', $renderred);
   }
