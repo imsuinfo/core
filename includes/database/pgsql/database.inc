@@ -11,7 +11,7 @@
  */
 
 /**
- * The name by which to obtain a lock for retrive the next insert id.
+ * The name by which to obtain a lock for retrieving the next insert id.
  */
 define('POSTGRESQL_NEXTID_LOCK', 1000);
 
@@ -55,7 +55,7 @@ class DatabaseConnection_pgsql extends DatabaseConnection {
     $connection_options['pdo'] += array(
       // Prepared statements are most effective for performance when queries
       // are recycled (used several times). However, if they are not re-used,
-      // prepared statements become ineffecient. Since most of Drupal's
+      // prepared statements become inefficient. Since most of Drupal's
       // prepared queries are not re-used, it should be faster to emulate
       // the preparation than to actually ready statements for re-use. If in
       // doubt, reset to FALSE and measure performance.
@@ -68,13 +68,21 @@ class DatabaseConnection_pgsql extends DatabaseConnection {
     // Force PostgreSQL to use the UTF-8 character set by default.
     $this->exec("SET NAMES 'UTF8'");
 
-    // Force PostgreSQL to use the 'escape' bytea format set by default.
-    $this->exec("SET bytea_output TO 'escape'");
-
     // Execute PostgreSQL init_commands.
     if (isset($connection_options['init_commands'])) {
       $this->exec(implode('; ', $connection_options['init_commands']));
     }
+  }
+
+  public function prepareQuery($query) {
+    // mapConditionOperator converts LIKE operations to ILIKE for consistency
+    // with MySQL. However, Postgres does not support ILIKE on bytea (blobs)
+    // fields.
+    // To make the ILIKE operator work, we type-cast bytea fields into text.
+    // @todo This workaround only affects bytea fields, but the involved field
+    //   types involved in the query are unknown, so there is no way to
+    //   conditionally execute this for affected queries only.
+    return parent::prepareQuery(preg_replace('/ ([^ ]+) +(I*LIKE|NOT +I*LIKE) /i', ' ${1}::text ${2} ', $query));
   }
 
   public function query($query, array $args = array(), $options = array()) {
@@ -151,19 +159,30 @@ class DatabaseConnection_pgsql extends DatabaseConnection {
   }
 
   public function mapConditionOperator($operator) {
-    // We don't want to override any of the defaults.
-    return NULL;
+    static $specials;
+
+    // Function calls not allowed in static declarations, thus this method.
+    if (!isset($specials)) {
+      $specials = array(
+        // In PostgreSQL, 'LIKE' is case-sensitive. For case-insensitive LIKE
+        // statements, we need to use ILIKE instead.
+        'LIKE' => array('operator' => 'ILIKE'),
+        'NOT LIKE' => array('operator' => 'NOT ILIKE'),
+      );
+    }
+
+    return isset($specials[$operator]) ? $specials[$operator] : NULL;
   }
 
   /**
-   * Retrive a the next id in a sequence.
+   * Retrieve the next id in a sequence.
    *
    * PostgreSQL has built in sequences. We'll use these instead of inserting
    * and updating a sequences table.
    */
   public function nextId($existing = 0) {
 
-    // Retrive the name of the sequence. This information cannot be cached
+    // Retrieve the name of the sequence. This information cannot be cached
     // because the prefix may change, for example, like it does in simpletests.
     $sequence_name = $this->makeSequenceName('sequences', 'value');
 
@@ -175,7 +194,7 @@ class DatabaseConnection_pgsql extends DatabaseConnection {
     }
 
     // PostgreSQL advisory locks are simply locks to be used by an
-    // application such as Drupal. This will prevent other Drupal proccesses
+    // application such as Drupal. This will prevent other Drupal processes
     // from altering the sequence while we are.
     $this->query("SELECT pg_advisory_lock(" . POSTGRESQL_NEXTID_LOCK . ")");
 
@@ -190,7 +209,7 @@ class DatabaseConnection_pgsql extends DatabaseConnection {
     // Reset the sequence to a higher value than the existing id.
     $this->query("ALTER SEQUENCE " . $sequence_name . " RESTART WITH " . ($existing + 1));
 
-    // Retrive the next id. We know this will be as high as we want it.
+    // Retrieve the next id. We know this will be as high as we want it.
     $id = $this->query("SELECT nextval('" . $sequence_name . "')")->fetchField();
 
     $this->query("SELECT pg_advisory_unlock(" . POSTGRESQL_NEXTID_LOCK . ")");

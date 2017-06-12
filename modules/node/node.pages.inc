@@ -22,7 +22,14 @@ function node_page_edit($node) {
  * @see node_menu()
  */
 function node_add_page() {
-  return theme('node_add_list');
+  $item = menu_get_item();
+  $content = system_admin_menu_block($item);
+  // Bypass the node/add listing if only one content type is available.
+  if (count($content) == 1) {
+    $item = array_shift($content);
+    drupal_goto($item['href']);
+  }
+  return theme('node_add_list', array('content' => $content));
 }
 
 /**
@@ -35,29 +42,21 @@ function node_add_page() {
  * @ingroup themeable
  */
 function theme_node_add_list($variables) {
+  $content = $variables['content'];
   $output = '';
 
-  if (!isset($variables['content']) || is_null($variables['content'])) {
-    $node_types = (array) node_type_get_types();
+  if ($content) {
+    $output = '<dl class="node-type-list">';
+    foreach ($content as $item) {
+      $output .= '<dt>' . l($item['title'], $item['href'], $item['localized_options']) . '</dt>';
+      $output .= '<dd>' . filter_xss_admin($item['description']) . '</dd>';
+    }
+    $output .= '</dl>';
   }
   else {
-    $node_types = $variables['content'];
+    $output = '<p>' . t('You have not created any content types yet. Go to the <a href="@create-content">content type creation page</a> to add a new content type.', array('@create-content' => url('admin/structure/types/add'))) . '</p>';
   }
-
-  $output = '<dl class="node-type-list">';
-  $processed = FALSE;
-  foreach ($node_types as $node_type) {
-    if (!node_access('create', $node_type->type)) continue;
-    $processed = TRUE;
-    $type_url_str = 'node/add/' . $node_type->type;
-    $output .= '<dt>' . l($node_type->type, $type_url_str) . '</dt>';
-    $output .= '<dd>' . filter_xss_admin($node_type->description) . '</dd>';
-  }
-  $output .= '</dl>';
-
-  if ($processed) return $output;
-
-  return'<p>' . t('You have not created any content types yet. Go to the <a href="@create-content">content type creation page</a> to add a new content type.', array('@create-content' => url('admin/structure/types/add'))) . '</p>';
+  return $output;
 }
 
 
@@ -73,12 +72,10 @@ function theme_node_add_list($variables) {
 function node_add($type) {
   global $user;
 
-  $altered_type = str_replace('-', '_', $type);
-
   $types = node_type_get_types();
-  $node = (object) array('uid' => $user->uid, 'name' => (isset($user->name) ? $user->name : ''), 'type' => $altered_type, 'language' => LANGUAGE_NONE);
-  drupal_set_title(t('Create @name', array('@name' => $types[$altered_type]->name)), PASS_THROUGH);
-  $output = drupal_get_form($altered_type . '_node_form', $node);
+  $node = (object) array('uid' => $user->uid, 'name' => (isset($user->name) ? $user->name : ''), 'type' => $type, 'language' => LANGUAGE_NONE);
+  drupal_set_title(t('Create @name', array('@name' => $types[$type]->name)), PASS_THROUGH);
+  $output = drupal_get_form($type . '_node_form', $node);
 
   return $output;
 }
@@ -261,6 +258,7 @@ function node_form($form, &$form_state, $node) {
   // Node options for administrators
   $form['options'] = array(
     '#type' => 'fieldset',
+    '#access' => user_access('administer nodes'),
     '#title' => t('Publishing options'),
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
@@ -275,19 +273,16 @@ function node_form($form, &$form_state, $node) {
   );
   $form['options']['status'] = array(
     '#type' => 'checkbox',
-    '#access' => user_access('administer nodes'),
     '#title' => t('Published'),
     '#default_value' => $node->status,
   );
   $form['options']['promote'] = array(
     '#type' => 'checkbox',
-    '#access' => user_access('administer nodes'),
     '#title' => t('Promoted to front page'),
     '#default_value' => $node->promote,
   );
   $form['options']['sticky'] = array(
     '#type' => 'checkbox',
-    '#access' => user_access('administer nodes'),
     '#title' => t('Sticky at top of lists'),
     '#default_value' => $node->sticky,
   );

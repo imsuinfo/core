@@ -11,14 +11,12 @@ div.admin-panel .body {
   padding: 0 8px 2px 4px;
 }
 div.admin .left {
-  display: inline-block;
-  vertical-align: top;
+  float: right;
   margin-left: 0;
   margin-right: 1em;
 }
 div.admin .right {
-  display: inline-block;
-  vertical-align: top;
+  float: left;
   margin-left: 1em;
   margin-right: 0;
 }
