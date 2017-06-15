@@ -200,7 +200,6 @@ function _drupal_log_error($error, $fatal = FALSE) {
     }
 
     drupal_add_http_header('Status', '500 Service Unavailable');
-    drupal_send_headers();
 
     if ($database_connect_check) {
       $error_document_file_500 = variable_get('error_document_file_500', '/var/www/error_documents/5xx/500.html');
@@ -245,6 +244,7 @@ function _drupal_log_error($error, $fatal = FALSE) {
         $page = str_replace('<body id="mcneese-body" class="mcneese ', '<body id="mcneese-body" class="mcneese ' . $markup_css . ' ', $page);
       }
 
+      drupal_send_headers();
       print($page);
       exit();
     }
