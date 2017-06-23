@@ -535,6 +535,9 @@ Drupal.ajaxError = function (xmlhttp, uri, customMessage) {
 // Class indicating that JS is enabled; used for styling purpose.
 $('html').addClass('js');
 
+// 'js enabled' cookie.
+document.cookie = 'has_js=1; path=/';
+
 /**
  * Additions to jQuery.support.
  */
