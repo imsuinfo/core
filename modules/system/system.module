@@ -2546,6 +2546,7 @@ function _system_rebuild_theme_data() {
     'screenshot' => 'screenshot.png',
     'php' => DRUPAL_MINIMUM_PHP,
     'stylesheets' => array(),
+    'alternate_stylesheets' => array(),
     'scripts' => array(),
   );
 
@@ -2590,6 +2591,7 @@ function _system_rebuild_theme_data() {
     // Prefix stylesheets and scripts with module path.
     $path = dirname($theme->uri);
     $theme->info['stylesheets'] = _system_info_add_path($theme->info['stylesheets'], $path);
+    $theme->info['alternate_stylesheets'] = _system_info_add_path($theme->info['alternate_stylesheets'], $path);
     $theme->info['scripts'] = _system_info_add_path($theme->info['scripts'], $path);
 
     // Give the screenshot proper path information.

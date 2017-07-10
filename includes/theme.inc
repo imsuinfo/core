@@ -127,6 +127,8 @@ function drupal_theme_initialize() {
  *       the theme. (Required)
  *     stylesheet
  *       The primary stylesheet for the theme. (Optional)
+ *     alternate_stylesheet
+ *       The alternate stylesheet for the theme. (Optional)
  *     engine
  *       The name of theme engine to use. (Optional)
  * @param $base_theme
@@ -174,6 +176,44 @@ function _drupal_theme_initialize($theme, $base_theme = array(), $registry_callb
   foreach ($final_stylesheets as $media => $stylesheets) {
     foreach ($stylesheets as $stylesheet) {
       drupal_add_css($stylesheet, array('group' => CSS_THEME, 'every_page' => TRUE, 'media' => $media));
+    }
+  }
+
+  // Prepare alternate stylesheets from this theme as well as all ancestor themes.
+  // We work it this way so that we can have child themes override parent
+  // theme stylesheets easily.
+  $final_alternate_stylesheets = array();
+
+  // Grab stylesheets from base theme
+  foreach ($base_theme as $base) {
+    if (!empty($base->alternate_stylesheets)) {
+      foreach ($base->alternate_stylesheets as $theme_title => $stylesheets) {
+        foreach ($stylesheets as $media => $stylesheet) {
+          foreach ($stylesheet as $name => $stylesheet_path) {
+            $final_alternate_stylesheets[$theme_title][$media][$name] = $stylesheet_path;
+          }
+        }
+      }
+    }
+  }
+
+  // Add stylesheets used by this theme.
+  if (!empty($theme->alternate_stylesheets)) {
+    foreach ($theme->alternate_stylesheets as $theme_title => $stylesheets) {
+      foreach ($stylesheets as $media => $stylesheet) {
+        foreach ($stylesheet as $name => $stylesheet_path) {
+          $final_alternate_stylesheets[$theme_title][$media][$name] = $stylesheet_path;
+        }
+      }
+    }
+  }
+
+  // And now add the stylesheets properly
+  foreach ($final_alternate_stylesheets as $theme_title => $stylesheets) {
+    foreach ($stylesheets as $media => $stylesheet) {
+      foreach ($stylesheet as $name => $stylesheet_path) {
+        drupal_add_css($stylesheet_path, array('group' => CSS_THEME, 'every_page' => TRUE, 'media' => $media, 'theme' => $theme_title, 'alternate' => TRUE));
+      }
     }
   }
 
@@ -810,6 +850,18 @@ function list_themes($refresh = FALSE) {
       foreach ($theme->info['stylesheets'] as $media => $stylesheets) {
         foreach ($stylesheets as $stylesheet => $path) {
           $theme->stylesheets[$media][$stylesheet] = $path;
+        }
+      }
+      if (!empty($theme->info['alternate_stylesheets'])) {
+        if (!isset($theme->alternate_stylesheets)) {
+          $theme->alternate_stylesheets = array();
+        }
+        foreach ($theme->info['alternate_stylesheets'] as $theme_title => $stylesheets) {
+          foreach ($stylesheets as $media => $stylesheet) {
+            foreach ($stylesheet as $stylesheet_name => $path) {
+              $theme->alternate_stylesheets[$theme_title][$media][$stylesheet_name] = $path;
+            }
+          }
         }
       }
       foreach ($theme->info['scripts'] as $script => $path) {

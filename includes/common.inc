@@ -3439,6 +3439,11 @@ function drupal_add_html_head_link($attributes, $header = FALSE) {
  *   - 'browsers': An array containing information specifying which browsers
  *     should load the CSS item. See drupal_pre_render_conditional_comments()
  *     for details.
+ *   - 'theme': A theme title to add to a theme so that it is grouped by this
+ *     name. Set to NULL to have no title and the css file will be used for
+ *     all themes. Set the variable 'drupal_default_css_theme' for default
+ *     styles.
+ *   - 'alternate': Set to TRUE to assign this as an alternate stylesheet.
  *
  * @return
  *   An array of queued cascading stylesheets.
@@ -3463,6 +3468,14 @@ function drupal_add_css($data = NULL, $options = NULL) {
   }
   else {
     $options = array();
+  }
+
+  if (!array_key_exists('theme', $options)) {
+    $options['theme'] = variable_get('drupal_default_css_theme', NULL);
+  }
+
+  if (!array_key_exists('alternate', $options) || !is_bool($options['alternate'])) {
+    $options['alternate'] = FALSE;
   }
 
   // Create an array of CSS files for each media type first, since each type needs to be served
@@ -3710,11 +3723,11 @@ function drupal_group_css($css) {
         // Help ensure maximum reuse of aggregate files by only grouping
         // together items that share the same 'group' value and 'every_page'
         // flag. See drupal_add_css() for details about that.
-        $group_keys = $item['preprocess'] ? array($item['type'], $item['group'], $item['every_page'], $item['media'], $item['browsers']) : FALSE;
+        $group_keys = $item['preprocess'] ? array($item['type'], $item['group'], $item['every_page'], $item['theme'], $item['alternate'], $item['media'], $item['browsers']) : FALSE;
         break;
       case 'inline':
         // Always group inline items.
-        $group_keys = array($item['type'], $item['media'], $item['browsers']);
+        $group_keys = array($item['type'], $item['theme'], $item['alternate'], $item['media'], $item['browsers']);
         break;
       case 'external':
         // Do not group external items.
@@ -3905,6 +3918,15 @@ function drupal_pre_render_styles($elements) {
           $element['#attributes']['href'] = file_create_url($group['data']);
           $element['#attributes']['media'] = $group['media'];
           $element['#browsers'] = $group['browsers'];
+
+          if (isset($group['theme'])) {
+            $element['#attributes']['title'] = $group['theme'];
+          }
+
+          if (isset($group['alternate']) && $group['alternate']) {
+            $element['#attributes']['rel'] = 'alternate stylesheet';
+          }
+
           $elements[] = $element;
         }
         // The group can be aggregated, but hasn't been: combine multiple items
@@ -3943,6 +3965,15 @@ function drupal_pre_render_styles($elements) {
             // worry about style tags since they'll never match the regex.
             $element['#value'] = "\n" . implode("\n", $import_batch) . "\n";
             $element['#attributes']['media'] = $group['media'];
+
+            if (isset($group['theme'])) {
+              $element['#attributes']['title'] = $group['theme'];
+            }
+
+            if (isset($group['alternate']) && $group['alternate']) {
+              $element['#attributes']['rel'] = 'alternate stylesheet';
+            }
+
             $element['#browsers'] = $group['browsers'];
             $elements[] = $element;
           }
@@ -3966,6 +3997,15 @@ function drupal_pre_render_styles($elements) {
             $element['#attributes']['href'] = file_create_url($item['data']) . $query_string_separator . $query_string;
             $element['#attributes']['media'] = $item['media'];
             $element['#browsers'] = $group['browsers'];
+
+            if (isset($group['theme'])) {
+              $element['#attributes']['title'] = $group['theme'];
+            }
+
+            if (isset($group['alternate']) && $group['alternate']) {
+              $element['#attributes']['rel'] = 'alternate stylesheet';
+            }
+
             $elements[] = $element;
           }
         }
@@ -3981,6 +4021,11 @@ function drupal_pre_render_styles($elements) {
           $element['#value_suffix'] = $embed_suffix;
           $element['#attributes']['media'] = $group['media'];
           $element['#browsers'] = $group['browsers'];
+
+          if (isset($group['theme'])) {
+            $element['#attributes']['title'] = $group['theme'];
+          }
+
           $elements[] = $element;
         }
         else {
@@ -3991,6 +4036,15 @@ function drupal_pre_render_styles($elements) {
             $element['#value_suffix'] = $embed_suffix;
             $element['#attributes']['media'] = $item['media'];
             $element['#browsers'] = $group['browsers'];
+
+            if (isset($group['theme'])) {
+              $element['#attributes']['title'] = $group['theme'];
+            }
+
+            if (isset($group['alternate']) && $group['alternate']) {
+              $element['#attributes']['rel'] = 'alternate stylesheet';
+            }
+
             $elements[] = $element;
           }
         }
@@ -4003,6 +4057,15 @@ function drupal_pre_render_styles($elements) {
           $element['#attributes']['href'] = $item['data'];
           $element['#attributes']['media'] = $item['media'];
           $element['#browsers'] = $group['browsers'];
+
+          if (isset($group['theme'])) {
+            $element['#attributes']['title'] = $group['theme'];
+          }
+
+          if (isset($group['alternate']) && $group['alternate']) {
+            $element['#attributes']['rel'] = 'alternate stylesheet';
+          }
+
           $elements[] = $element;
         }
         break;
