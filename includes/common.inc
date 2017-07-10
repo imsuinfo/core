@@ -3843,6 +3843,15 @@ function drupal_aggregate_css(&$css_groups) {
  * this function to work correctly even if modules have implemented custom
  * logic for grouping and aggregating files.
  *
+ * New boolean variable called 'drupal_disable_at_import' can be used to disable
+ * the '@import' workaround for IE.
+ *
+ * New boolean/NULL drupal static called 'drupal_require_css_via_import' has been
+ * added. This can be used as a work-around for applications such as a PDF
+ * generator that fails to handle content appropriately. This is only meant to
+ * be used in specific situations and is only provided as a temporary/static
+ * variable. This will override 'drupal_disable_at_import'.
+ *
  * @param $element
  *   A render array containing:
  *   - '#items': The CSS items as returned by drupal_add_css() and altered by
@@ -3896,6 +3905,13 @@ function drupal_pre_render_styles($elements) {
     ),
   );
 
+  // disable the use of @import.
+  $drupal_enable_at_import = !variable_get('drupal_disable_at_import', FALSE);
+  $drupal_require_css_via_import = &drupal_static('drupal_require_css_via_import', FALSE);
+  if ($drupal_require_css_via_import) {
+    $drupal_enable_at_import = TRUE;
+  }
+
   // Loop through each group.
   foreach ($elements['#groups'] as $group) {
     switch ($group['type']) {
@@ -3931,7 +3947,7 @@ function drupal_pre_render_styles($elements) {
         }
         // The group can be aggregated, but hasn't been: combine multiple items
         // into as few STYLE tags as possible.
-        elseif ($group['preprocess']) {
+        elseif ($group['preprocess'] && $drupal_enable_at_import) {
           $import = array();
           foreach ($group['items'] as $item) {
             // A theme's .info file may have an entry for a file that doesn't
@@ -4114,6 +4130,13 @@ function drupal_build_css_cache($css) {
     $uri = $map[$key];
   }
 
+  // disable the use of @import.
+  $drupal_enable_at_import = !variable_get('drupal_disable_at_import', FALSE);
+  $drupal_require_css_via_import = &drupal_static('drupal_require_css_via_import', FALSE);
+  if ($drupal_require_css_via_import) {
+    $drupal_enable_at_import = TRUE;
+  }
+
   if (empty($uri) || !file_exists($uri)) {
     // Build aggregate CSS file.
     foreach ($css as $stylesheet) {
@@ -4139,10 +4162,12 @@ function drupal_build_css_cache($css) {
 
     // Per the W3C specification at http://www.w3.org/TR/REC-CSS2/cascade.html#at-import,
     // @import rules must proceed any other style, so we move those to the top.
-    $regexp = '/@import[^;]+;/i';
-    preg_match_all($regexp, $data, $matches);
-    $data = preg_replace($regexp, '', $data);
-    $data = implode('', $matches[0]) . $data;
+    if ($drupal_enable_at_import) {
+      $regexp = '/@import[^;]+;/i';
+      preg_match_all($regexp, $data, $matches);
+      $data = preg_replace($regexp, '', $data);
+      $data = implode('', $matches[0]) . $data;
+    }
 
     // Prefix filename to prevent blocking by firewalls which reject files
     // starting with "ad*".
@@ -4304,9 +4329,13 @@ function drupal_load_stylesheet_content($contents, $optimize = FALSE) {
     $contents .= "\n";
   }
 
+  $drupal_require_css_via_import = &drupal_static('drupal_require_css_via_import', FALSE);
+
   // Replaces @import commands with the actual stylesheet content.
   // This happens recursively but omits external files.
-  $contents = preg_replace_callback('/@import\s*(?:url\(\s*)?[\'"]?(?![a-z]+:)(?!\/\/)([^\'"\()]+)[\'"]?\s*\)?\s*;/', '_drupal_load_stylesheet', $contents);
+  if (!$drupal_require_css_via_import) {
+    $contents = preg_replace_callback('/@import\s*(?:url\(\s*)?[\'"]?(?![a-z]+:)(?!\/\/)([^\'"\()]+)[\'"]?\s*\)?\s*;/', '_drupal_load_stylesheet', $contents);
+  }
   return $contents;
 }
 

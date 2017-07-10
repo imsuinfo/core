@@ -634,3 +634,9 @@ $conf['404_fast_html'] = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML+RDFa 1.0//EN"
  * Set this to NULL to disable the default theme entirely (default behavior).
  */
 # $conf['drupal_default_css_theme'] = 'Default Theme';
+
+/**
+ * Set this to TRUE to disable drupal's use of '@import' for including multiple files.
+ * The '@import' functionality is provided primarily as a workaround for IE bugs.
+ */
+# $conf['drupal_disable_at_import'] = TRUE;
