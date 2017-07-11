@@ -3882,6 +3882,9 @@ function drupal_pre_render_styles($elements) {
   // URL changed.
   $query_string = variable_get('css_js_query_string', '0');
 
+  // provide a way to disable the 'query_string' feature.
+  $disable_query_string = variable_get('drupal_disable_query_string', FALSE);
+
   // For inline CSS to validate as XHTML, all CSS containing XHTML needs to be
   // wrapped in CDATA. To make that backwards compatible with HTML 4, we need to
   // comment out the CDATA-tag.
@@ -3966,7 +3969,12 @@ function drupal_pre_render_styles($elements) {
               // browser-caching. IE7 does not support a media type on the
               // @import statement, so we instead specify the media for the
               // group on the STYLE tag.
-              $import[] = '@import url("' . check_plain(file_create_url($item['data']) . '?' . $query_string) . '");';
+              if ($disable_query_string) {
+                $import[] = '@import url("' . check_plain(file_create_url($item['data'])) . '");';
+              }
+              else {
+                $import[] = '@import url("' . check_plain(file_create_url($item['data']) . '?' . $query_string) . '");';
+              }
             }
           }
           // In addition to IE's limit of 31 total CSS inclusion tags, it also
@@ -4009,8 +4017,13 @@ function drupal_pre_render_styles($elements) {
             // exists.
             // The dummy query string needs to be added to the URL to control
             // browser-caching.
-            $query_string_separator = (strpos($item['data'], '?') !== FALSE) ? '&' : '?';
-            $element['#attributes']['href'] = file_create_url($item['data']) . $query_string_separator . $query_string;
+            if ($disable_query_string) {
+              $element['#attributes']['href'] = file_create_url($item['data']);
+            }
+            else {
+              $query_string_separator = (strpos($item['data'], '?') !== FALSE) ? '&' : '?';
+              $element['#attributes']['href'] = file_create_url($item['data']) . $query_string_separator . $query_string;
+            }
             $element['#attributes']['media'] = $item['media'];
             $element['#browsers'] = $group['browsers'];
 
@@ -4934,6 +4947,9 @@ function drupal_get_js($scope = 'header', $javascript = NULL, $skip_alter = FALS
   // page request.
   $default_query_string = variable_get('css_js_query_string', '0');
 
+  // provide a way to disable the 'query_string' feature.
+  $disable_query_string = variable_get('drupal_disable_query_string', FALSE);
+
   // For inline JavaScript to validate as XHTML, all JavaScript containing
   // XHTML needs to be wrapped in CDATA. To make that backwards compatible
   // with HTML 4, we need to comment out the CDATA-tag.
@@ -5000,8 +5016,13 @@ function drupal_get_js($scope = 'header', $javascript = NULL, $skip_alter = FALS
           if ($item['defer']) {
             $js_element['#attributes']['defer'] = 'defer';
           }
-          $query_string_separator = (strpos($item['data'], '?') !== FALSE) ? '&' : '?';
-          $js_element['#attributes']['src'] = file_create_url($item['data']) . $query_string_separator . ($item['cache'] ? $query_string : REQUEST_TIME);
+          if ($disable_query_string) {
+            $js_element['#attributes']['src'] = file_create_url($item['data']);
+          }
+          else {
+            $query_string_separator = (strpos($item['data'], '?') !== FALSE) ? '&' : '?';
+            $js_element['#attributes']['src'] = file_create_url($item['data']) . $query_string_separator . ($item['cache'] ? $query_string : REQUEST_TIME);
+          }
           $processed[$index++] = theme('html_tag', array('element' => $js_element));
         }
         else {
